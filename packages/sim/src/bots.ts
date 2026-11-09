@@ -132,9 +132,7 @@ function greedyBot(): Bot {
           }
         }
         const stopScore =
-          state.playsThisTurn >= data.config.hand.minPlaysPerTurn
-            ? value(data, afterTurnEnd(data, state))
-            : -Infinity;
+          state.playsThisTurn >= data.config.hand.minPlaysPerTurn ? value(data, afterTurnEnd(data, state)) : -Infinity;
         if (!best || stopScore >= bestScore) break;
         playCard(data, state, best.uid, best.choices);
       }

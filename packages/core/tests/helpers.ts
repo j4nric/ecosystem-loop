@@ -14,9 +14,7 @@ export function withConfig(patch: (c: GameData['config']) => void): GameData {
 }
 
 /** Expedition mit kontrollierter Hand und leerem Wald (keine Tiere). */
-export function setup(
-  opts: { hand?: string[]; draw?: string[]; d?: GameData; seed?: string } = {},
-): ExpeditionState {
+export function setup(opts: { hand?: string[]; draw?: string[]; d?: GameData; seed?: string } = {}): ExpeditionState {
   const d = opts.d ?? data;
   const s = createExpedition(d, { deck: d.config.starterDeck, seed: opts.seed ?? 'test' });
   let uid = 1000;

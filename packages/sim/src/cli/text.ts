@@ -115,7 +115,9 @@ export function describeEvent(d: GameData, s: ExpeditionState, e: GameEvent): st
     case 'cardDrawn':
       return null;
     case 'cardPlayed':
-      return `▶ ${cardName(d, e.card)} → ${Object.values(e.choices).map((v) => (d.animals.has(v) ? animalName(d, v) : z(v))).join(', ')}`;
+      return `▶ ${cardName(d, e.card)} → ${Object.values(e.choices)
+        .map((v) => (d.animals.has(v) ? animalName(d, v) : z(v)))
+        .join(', ')}`;
     case 'triggered': {
       const t = d.cards.get(e.card)?.triggers.find((x) => x.id === e.trigger);
       return `  ${t?.icon ?? '!'} ${t?.name.de ?? e.trigger} in ${z(e.zone)}${e.disturbance ? ' (Störung)' : ''}`;

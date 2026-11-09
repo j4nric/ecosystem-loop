@@ -104,7 +104,11 @@ describe('Karten und Schwellen', () => {
     const s = setup({ hand: ['thunderstorm'] });
     neutralForest(s);
     setValues(s, 'b', { moisture: 1 });
-    expect(warnings(data, s).filter((w) => w.trigger === 'fire').map((w) => w.zone)).toEqual(['b']);
+    expect(
+      warnings(data, s)
+        .filter((w) => w.trigger === 'fire')
+        .map((w) => w.zone),
+    ).toEqual(['b']);
   });
 });
 

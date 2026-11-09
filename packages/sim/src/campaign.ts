@@ -42,7 +42,10 @@ export interface CampaignOptions {
   maxTurnsSafety?: number;
 }
 
-export function runCampaign(data: GameData, opts: CampaignOptions): { results: ExpeditionResult[]; notebook: Notebook } {
+export function runCampaign(
+  data: GameData,
+  opts: CampaignOptions,
+): { results: ExpeditionResult[]; notebook: Notebook } {
   const nb = emptyNotebook();
   const bot = createBot(opts.bot, opts.seed);
   const pickRng: RngHolder = { rng: seedFrom(`scenario:${opts.seed}`) };

@@ -19,7 +19,7 @@ cards:
     triggers:
       - id: fire
         name: { de: Feuer }
-        icon: "🔥"
+        icon: '🔥'
         at: zone
         when: [{ stat: moisture, lte: 1 }, { noTag: fireproof }]
         disturbance: true
@@ -28,7 +28,7 @@ cards:
           - { adjust: deadwood, by: 3, at: zone }
       - id: flood # VORSCHLAG – im Handover erwähnt ("im Sumpf eine Flut"), aber nicht definiert
         name: { de: Flut }
-        icon: "🌊"
+        icon: '🌊'
         at: zone
         when: [{ stat: moisture, gte: 4 }]
         disturbance: true
@@ -48,7 +48,7 @@ cards:
     triggers:
       - id: windthrow
         name: { de: Baumsturz }
-        icon: "🌲"
+        icon: '🌲'
         at: zone
         when: [{ stat: density, gte: 4 }]
         disturbance: true
@@ -74,7 +74,7 @@ cards:
     triggers:
       - id: meadow
         name: { de: Blütenwiese }
-        icon: "🌼"
+        icon: '🌼'
         at: zone
         when: [{ stat: light, gte: 3 }]
         effects:

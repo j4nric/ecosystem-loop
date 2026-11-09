@@ -80,7 +80,9 @@ function saveNotebook(path: string, nb: Notebook): void {
 
 function renderState(d: GameData, s: ExpeditionState): void {
   const warn = warnings(d, s);
-  console.log(`\n══ Zug ${s.turn} · Stapel ${s.drawPile.length} · Ablage ${s.discardPile.length} · gespielt ${s.playsThisTurn} ══`);
+  console.log(
+    `\n══ Zug ${s.turn} · Stapel ${s.drawPile.length} · Ablage ${s.discardPile.length} · gespielt ${s.playsThisTurn} ══`,
+  );
   for (const z of s.zones) {
     const v = z.values;
     const w = warn.filter((x) => x.zone === z.id).map((x) => x.icon ?? '!');
@@ -98,7 +100,9 @@ function renderState(d: GameData, s: ExpeditionState): void {
     console.log(`   ${i + 1}) ${card.name.de.padEnd(12)} ${describeCard(d, card)}`);
   });
   const r = report(d, s);
-  console.log(`  Wertung jetzt: ${r.points} Punkte (${r.species.map((a) => animalName(d, a)).join(', ') || 'keine Tiere'})`);
+  console.log(
+    `  Wertung jetzt: ${r.points} Punkte (${r.species.map((a) => animalName(d, a)).join(', ') || 'keine Tiere'})`,
+  );
 }
 
 function renderAnimals(d: GameData, s: ExpeditionState, nb: Notebook): void {
@@ -109,7 +113,9 @@ function renderAnimals(d: GameData, s: ExpeditionState, nb: Notebook): void {
       console.log(`   ? ${seen.padEnd(14)} Stufe ${a.tier} – Bedingungen unbekannt (erst nach Dokumentation sichtbar)`);
       continue;
     }
-    const ok = s.zones.filter((z) => holdsAll(a.conditions, { data: d, state: s, zone: z })).map((z) => z.id.toUpperCase());
+    const ok = s.zones
+      .filter((z) => holdsAll(a.conditions, { data: d, state: s, zone: z }))
+      .map((z) => z.id.toUpperCase());
     console.log(
       `   ✓ ${a.name.de.padEnd(14)} Stufe ${a.tier} – ${a.conditions.map((c) => describeCondition(d, c)).join(', ')}` +
         `  → Karte ${cardName(d, a.card)}${a.eats.length ? `, frisst ${a.eats.map((x) => animalName(d, x)).join(', ')}` : ''}` +
@@ -185,7 +191,8 @@ async function main(): Promise<void> {
       } else if (cmd === 't') {
         renderAnimals(data, s, nb);
       } else if (cmd === 'z') {
-        if (!canEndTurn(data, s)) console.log(`  Kartenzwang: erst mindestens ${data.config.hand.minPlaysPerTurn} Karte spielen.`);
+        if (!canEndTurn(data, s))
+          console.log(`  Kartenzwang: erst mindestens ${data.config.hand.minPlaysPerTurn} Karte spielen.`);
         else endTurn(data, s);
       } else if (cmd === 'x') {
         if (!canEndExpedition(s)) console.log('  Aussteigen geht nur zu Zugbeginn.');
@@ -193,7 +200,8 @@ async function main(): Promise<void> {
       } else if (/^\d+$/.test(cmd)) {
         const inst = s.hand[Number(cmd) - 1];
         if (!inst) console.log('  Keine solche Karte.');
-        else if (!legalPlays(data, s).some((p) => p.uid === inst.uid)) console.log('  Diese Karte ist gerade nicht spielbar.');
+        else if (!legalPlays(data, s).some((p) => p.uid === inst.uid))
+          console.log('  Diese Karte ist gerade nicht spielbar.');
         else {
           const choices = await chooseTargets(data, s, inst.uid);
           if (choices) playCard(data, s, inst.uid, choices);
