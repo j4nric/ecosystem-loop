@@ -1,0 +1,33 @@
+# Globale Regelparameter. Alles hier ist Balancing – Änderungen brauchen keinen Code.
+
+values:
+  min: 0
+  max: 5            # Skala der vier Zustandswerte (später evtl. 0–100 für Prozentwerte)
+
+hand:
+  size: 4           # Am Zugbeginn wird auf diese Handgröße nachgezogen
+  minPlaysPerTurn: 1 # Kartenzwang: mindestens so viele Karten pro Zug
+  maxPlaysPerTurn: null # null = beliebig viele
+
+deck:
+  minSize: 8
+  maxSize: 10
+  maxCopiesPerCard: 2
+
+end:
+  onEmptyDrawPile: true # Expedition endet, wenn zu Zugbeginn nichts mehr nachzuziehen ist
+  maxTurns: null        # optionales hartes Zuglimit
+
+arrival:
+  delayTurns: 0         # Züge, die Bedingungen erfüllt sein müssen, bevor ein Tier einzieht (0 = sofort)
+  perZonePerTurn: 1     # Höchstens so viele Einzüge je Zone und Zug (Zufall wählt bei Konkurrenz)
+  cardOnArrival: every  # every = bei jedem Einzug eine Kopie in den Stapel; firstPerSpecies = einmal je Art und Expedition
+
+predation:
+  extinctionTurns: 3    # Beute verlässt die Zone nach so vielen Zügen gemeinsam mit ihrem Fresser
+
+notebook:
+  recordOn: end         # end = nur was beim Abschluss dokumentiert ist; arrival = jeder Einzug zählt
+
+# Startdeck ohne Freischaltungen (8 Karten). Weitere Karten kommen aus dem Notizbuch-Pool.
+starterDeck: [thunderstorm, thunderstorm, storm, storm, drought, drought, seeds, seeds]

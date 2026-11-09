@@ -1,0 +1,168 @@
+# Karten sind Eingriffe. Feste Effekte, Variabilität steckt in der Zone (Schwellen).
+#
+# slots     – was der Spieler wählt: zone | neighbor (of) | otherZone (of, kein Nachbar) |
+#             animal (in) | handCard. Optional "when": Bedingungen an die gewählte Zone.
+# effects   – werden der Reihe nach angewendet.
+# triggers  – Schwellen. "when" wird VOR dem Grundeffekt geprüft (check: before),
+#             mit check: after danach. Folgen mit disturbance: true zählen als Störung.
+# Effekt-Ziele: "at" = Slot, scope: self (Standard) | neighbors (alle Nachbarn).
+
+cards:
+  # ---------- Grundkräfte ----------
+  - id: thunderstorm
+    name: { de: Gewitter }
+    source: base
+    slots:
+      - { id: zone, kind: zone }
+    effects:
+      - { adjust: moisture, by: 2, at: zone }
+    triggers:
+      - id: fire
+        name: { de: Feuer }
+        icon: "🔥"
+        at: zone
+        when: [{ stat: moisture, lte: 1 }, { noTag: fireproof }]
+        disturbance: true
+        effects:
+          - { set: density, value: 0, at: zone }
+          - { adjust: deadwood, by: 3, at: zone }
+      - id: flood # VORSCHLAG – im Handover erwähnt ("im Sumpf eine Flut"), aber nicht definiert
+        name: { de: Flut }
+        icon: "🌊"
+        at: zone
+        when: [{ stat: moisture, gte: 4 }]
+        disturbance: true
+        effects:
+          - { adjust: density, by: -1, at: zone }
+          - { adjust: moisture, by: 1, at: zone, scope: neighbors }
+
+  - id: storm
+    name: { de: Sturm }
+    source: base
+    slots:
+      - { id: zone, kind: zone }
+      - { id: fall, kind: neighbor, of: zone } # Richtung, in die ein Baum stürzt
+    effects:
+      - { adjust: density, by: -1, at: zone }
+      - { adjust: deadwood, by: 1, at: zone }
+    triggers:
+      - id: windthrow
+        name: { de: Baumsturz }
+        icon: "🌲"
+        at: zone
+        when: [{ stat: density, gte: 4 }]
+        disturbance: true
+        effects:
+          - { adjust: light, by: 2, at: fall }
+
+  - id: drought
+    name: { de: Dürre }
+    source: base
+    slots:
+      - { id: zone, kind: zone }
+    effects:
+      - { adjust: moisture, by: -2, at: zone }
+    # Sumpf → Lichtung bei Feuchte 0 regelt zones.yaml (Zonenwechsel am Zugende)
+
+  - id: seeds
+    name: { de: Samenflug }
+    source: base
+    slots:
+      - { id: zone, kind: zone }
+    effects:
+      - { adjust: density, by: 1, at: zone }
+    triggers:
+      - id: meadow
+        name: { de: Blütenwiese }
+        icon: "🌼"
+        at: zone
+        when: [{ stat: light, gte: 3 }]
+        effects:
+          - { addTag: flowers, at: zone }
+
+  # ---------- Tierkarten ----------
+  - id: decomposition
+    name: { de: Zersetzung }
+    source: animal
+    slots:
+      - { id: zone, kind: zone }
+    effects:
+      - { adjust: deadwood, by: -1, at: zone }
+      - { adjust: moisture, by: 1, at: zone }
+
+  - id: pollination
+    name: { de: Bestäubung }
+    source: animal
+    slots:
+      - { id: zone, kind: zone }
+      - { id: target, kind: neighbor, of: zone }
+    effects:
+      - { adjust: density, by: 1, at: target }
+
+  - id: mist
+    name: { de: Nebel }
+    source: animal
+    slots:
+      - { id: zone, kind: zone }
+    effects:
+      - { adjust: moisture, by: 1, at: zone, scope: neighbors }
+
+  - id: tree_hollow
+    name: { de: Baumhöhle }
+    source: animal
+    slots:
+      - { id: zone, kind: zone }
+    effects:
+      - { addTag: nest, at: zone }
+
+  - id: long_flight
+    name: { de: Fernflug }
+    source: animal
+    slots:
+      - { id: zone, kind: zone }
+    effects:
+      - { adjust: density, by: 1, at: zone }
+
+  - id: shy
+    name: { de: Scheu }
+    source: animal
+    slots:
+      - { id: zone, kind: zone, when: [{ hasAnimals: true }] }
+      - { id: animal, kind: animal, in: zone }
+      - { id: to, kind: neighbor, of: zone }
+    effects:
+      - { moveAnimal: animal, from: zone, to: to }
+
+  - id: trail
+    name: { de: Trampelpfad }
+    source: animal
+    slots:
+      - { id: zone, kind: zone }
+      - { id: other, kind: otherZone, of: zone }
+    effects:
+      - { connect: [zone, other] }
+
+  - id: fruit_rain
+    name: { de: Fruchtregen }
+    source: animal
+    slots:
+      - { id: zone, kind: zone }
+    effects:
+      - { include: seeds } # Samenflug inkl. seiner Schwelle
+      - { addTag: fruit, at: zone, scope: neighbors } # "Nahrung" – noch ohne Wirkung
+
+  - id: aerie
+    name: { de: Horst }
+    source: animal
+    slots:
+      - { id: zone, kind: zone }
+    effects:
+      - { addTag: fireproof, at: zone } # dauerhaft: Zone brennt nie mehr
+
+  - id: carrion
+    name: { de: Kadaver }
+    source: animal
+    slots:
+      - { id: zone, kind: zone }
+    effects:
+      - { addTag: carrion, at: zone } # lockt Aasfresser (zweite Ebene, noch nicht ausgearbeitet)

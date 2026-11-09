@@ -1,0 +1,15 @@
+# Startzustände des Waldes. "adjust" verschiebt die Werte der Karte (zones.yaml),
+# "zones" überschreibt einzelne Zonen gezielt.
+
+scenarios:
+  - id: standard
+    name: { de: Unberührt }
+  - id: dry
+    name: { de: Ausgetrocknet }
+    adjust: { moisture: -2 }
+  - id: flooded
+    name: { de: Überflutet }
+    adjust: { moisture: 2, light: -1 }
+  - id: burnt
+    name: { de: Abgebrannt }
+    adjust: { density: -3, deadwood: 2, light: 1 }
