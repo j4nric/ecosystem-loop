@@ -1,11 +1,11 @@
 {
-  "name": "urwald",
+  "name": "being-god",
   "version": "1.0.0",
-  "description": "Urwald-Ökosystem-Spiel – Regel-Engine, Simulation und Bots",
+  "description": "Being God (ain't easy) – Ökosystem-Spiel für iOS/Android",
   "scripts": {
-    "play": "tsx src/cli/play.ts",
-    "sim": "tsx src/cli/simulate.ts",
-    "validate": "tsx src/cli/validate.ts",
+    "play": "tsx packages/sim/src/cli/play.ts",
+    "sim": "tsx packages/sim/src/cli/simulate.ts",
+    "validate": "tsx packages/sim/src/cli/validate.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run test && npm run validate"
@@ -19,10 +19,6 @@
     "url": "https://github.com/j4nric/ecosystem-loop/issues"
   },
   "homepage": "https://github.com/j4nric/ecosystem-loop#readme",
-  "dependencies": {
-    "yaml": "^2.9.1",
-    "zod": "^4.6.7"
-  },
   "devDependencies": {
     "@types/node": "^22.20.5",
     "tsx": "^4.23.15",
@@ -33,5 +29,8 @@
   "type": "module",
   "engines": {
     "node": ">=22"
-  }
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }

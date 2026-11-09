@@ -7,8 +7,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
-import { holdsAll } from '../core/conditions.ts';
 import {
+  holdsAll,
   canEndExpedition,
   canEndTurn,
   createExpedition,
@@ -21,12 +21,18 @@ import {
   RuleError,
   slotOptions,
   warnings,
-} from '../core/engine.ts';
-import { cardPool, emptyNotebook, isDiscovered, recordExpedition, validateDeck, type Notebook } from '../core/meta.ts';
-import type { GameData } from '../core/schema.ts';
-import type { Choices, ExpeditionState } from '../core/state.ts';
-import { loadGameData } from '../node/load.ts';
-import { defaultDeck } from '../sim/bots.ts';
+  cardPool,
+  emptyNotebook,
+  isDiscovered,
+  recordExpedition,
+  validateDeck,
+  type Notebook,
+  type GameData,
+  type Choices,
+  type ExpeditionState,
+} from '@being-god/core';
+import { loadGameData } from '@being-god/core/node';
+import { defaultDeck } from '../bots.ts';
 import {
   animalName,
   cardName,

@@ -1,7 +1,7 @@
-import { getZone } from '../src/core/conditions.ts';
-import { createExpedition } from '../src/core/engine.ts';
-import type { GameData, Values } from '../src/core/schema.ts';
-import type { ExpeditionState } from '../src/core/state.ts';
+import { getZone } from '../src/conditions.ts';
+import { createExpedition } from '../src/engine.ts';
+import type { GameData, Values } from '../src/schema.ts';
+import type { ExpeditionState } from '../src/state.ts';
 import { loadGameData } from '../src/node/load.ts';
 
 export const data: GameData = loadGameData();
