@@ -4,9 +4,9 @@
  *   npm run sim -- [--bot greedy|random] [--runs 200] [--expeditions 4] [--seed 1] [--scenario standard|random] [--json]
  */
 import { parseArgs } from 'node:util';
-import { loadGameData } from '../node/load.ts';
-import type { BotName } from '../sim/bots.ts';
-import { simulate } from '../sim/campaign.ts';
+import { loadGameData } from '@being-god/core/node';
+import type { BotName } from '../bots.ts';
+import { simulate } from '../campaign.ts';
 import { animalName } from './text.ts';
 
 const { values: a } = parseArgs({

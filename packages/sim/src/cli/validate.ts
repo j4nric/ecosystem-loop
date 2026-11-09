@@ -1,6 +1,6 @@
 /** Prüft die Spieldaten und gibt eine Übersicht aus:  npm run validate */
-import { DataError } from '../core/data.ts';
-import { loadGameData } from '../node/load.ts';
+import { DataError } from '@being-god/core';
+import { loadGameData } from '@being-god/core/node';
 import { describeCard, describeCondition } from './text.ts';
 
 try {

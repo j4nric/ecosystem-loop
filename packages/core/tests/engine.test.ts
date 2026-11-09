@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getZone } from '../src/core/conditions.ts';
+import { getZone } from '../src/conditions.ts';
 import {
   canEndExpedition,
   createExpedition,
@@ -10,7 +10,7 @@ import {
   report,
   RuleError,
   warnings,
-} from '../src/core/engine.ts';
+} from '../src/engine.ts';
 import { addAnimal, animalsIn, data, neutralForest, setValues, setup, uidOf, withConfig } from './helpers.ts';
 
 describe('Karten und Schwellen', () => {

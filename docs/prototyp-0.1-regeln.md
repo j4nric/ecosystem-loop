@@ -1,8 +1,11 @@
-# Regeln im Prototyp
+# Regeln im Prototyp 0.1 (Expeditions-Modell)
+
+> **Historisch.** Beschreibt die Engine aus PR #1, die noch dem Handover folgt. Das aktuelle Konzept steht in
+> [konzept.md](konzept.md); die Engine wird in den nächsten PRs darauf umgebaut.
 
 Dieses Dokument hält fest, wie das Konzept aus dem [Handover](handover.md) umgesetzt ist – inklusive
 der Auslegungen, die beim Programmieren nötig waren. Alles, was als **Parameter** markiert ist,
-steht in `data/config.yaml` und lässt sich ohne Code ändern.
+steht in `packages/core/data/config.yaml` und lässt sich ohne Code ändern.
 
 ## Zugablauf
 

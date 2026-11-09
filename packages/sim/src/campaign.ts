@@ -2,11 +2,19 @@
  * Kampagnen-Simulation: mehrere Expeditionen hintereinander mit wachsendem Notizbuch.
  * Beantwortet z. B. „Ist Stufe 2 in Expedition 1 erreichbar, Stufe 4 in Expedition 3–4?“
  */
-import { createExpedition, report } from '../core/engine.ts';
-import { emptyNotebook, recordExpedition, validateDeck, type Notebook } from '../core/meta.ts';
-import { nextInt, seedFrom, type RngHolder } from '../core/rng.ts';
-import type { GameData } from '../core/schema.ts';
-import type { EndReason } from '../core/state.ts';
+import {
+  createExpedition,
+  report,
+  emptyNotebook,
+  recordExpedition,
+  validateDeck,
+  type Notebook,
+  nextInt,
+  seedFrom,
+  type RngHolder,
+  type GameData,
+  type EndReason,
+} from '@being-god/core';
 import { createBot, type BotName } from './bots.ts';
 
 export interface ExpeditionResult {

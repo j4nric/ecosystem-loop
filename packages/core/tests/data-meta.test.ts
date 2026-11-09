@@ -2,11 +2,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
-import { buildGameData, DataError, type RawData } from '../src/core/data.ts';
-import { endExpedition } from '../src/core/engine.ts';
-import { cardPool, emptyNotebook, recordExpedition, validateDeck } from '../src/core/meta.ts';
+import { buildGameData, DataError, type RawData } from '../src/data.ts';
+import { endExpedition } from '../src/engine.ts';
+import { cardPool, emptyNotebook, recordExpedition, validateDeck } from '../src/meta.ts';
 import { DEFAULT_DATA_DIR } from '../src/node/load.ts';
-import { simulate } from '../src/sim/campaign.ts';
 import { addAnimal, data, setup } from './helpers.ts';
 
 function raw(): RawData {
@@ -61,16 +60,5 @@ describe('Notizbuch und Deck', () => {
     expect(validateDeck(data, nb, ['seeds'])).not.toEqual([]);
     expect(validateDeck(data, nb, [...data.config.starterDeck, 'tree_hollow'])).not.toEqual([]);
     expect(validateDeck(data, nb, [...data.config.starterDeck, 'seeds'])).not.toEqual([]);
-  });
-});
-
-describe('Simulation', () => {
-  it('läuft deterministisch mit beiden Bots', () => {
-    for (const bot of ['random', 'greedy'] as const) {
-      const opts = { bot, runs: 3, expeditions: 2, seed: 's', scenario: 'random' };
-      const a = simulate(data, opts);
-      expect(a.perExpedition).toHaveLength(2);
-      expect(simulate(data, opts)).toEqual(a);
-    }
   });
 });

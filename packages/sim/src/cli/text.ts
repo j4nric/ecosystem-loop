@@ -2,9 +2,17 @@
  * Deutsche Texte für Konsole: Kartentexte und Steckbriefe werden aus den Daten erzeugt,
  * Ereignisse aus dem Log in Sätze übersetzt.
  */
-import { getZone } from '../core/conditions.ts';
-import type { Card, Condition, Effect, GameData, Slot, Stat } from '../core/schema.ts';
-import type { ExpeditionState, GameEvent } from '../core/state.ts';
+import {
+  getZone,
+  type Card,
+  type Condition,
+  type Effect,
+  type GameData,
+  type Slot,
+  type Stat,
+  type ExpeditionState,
+  type GameEvent,
+} from '@being-god/core';
 
 export const STAT_LABEL: Record<Stat, string> = {
   light: 'Licht',

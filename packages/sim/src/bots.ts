@@ -16,11 +16,15 @@ import {
   playCard,
   report,
   type Play,
-} from '../core/engine.ts';
-import { cardPool, type Notebook } from '../core/meta.ts';
-import { nextFloat, nextInt, seedFrom, type RngHolder } from '../core/rng.ts';
-import type { GameData } from '../core/schema.ts';
-import type { ExpeditionState } from '../core/state.ts';
+  cardPool,
+  type Notebook,
+  nextFloat,
+  nextInt,
+  seedFrom,
+  type RngHolder,
+  type GameData,
+  type ExpeditionState,
+} from '@being-god/core';
 
 export interface Bot {
   name: string;

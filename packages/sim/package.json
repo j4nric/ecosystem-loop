@@ -1,0 +1,10 @@
+{
+  "name": "@being-god/sim",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bots, Balancing-Simulation und Konsolen-Prototyp",
+  "dependencies": {
+    "@being-god/core": "*"
+  }
+}

@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import { buildGameData } from '../core/data.ts';
-import type { GameData } from '../core/schema.ts';
+import { buildGameData } from '../data.ts';
+import type { GameData } from '../schema.ts';
 
 export const DEFAULT_DATA_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../data');
 
