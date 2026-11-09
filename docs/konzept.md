@@ -74,19 +74,19 @@ Flachland–Küste. Der Fluss ist die Lebensader: Er grenzt an alles außer sich
 
 Jede Zone hat **drei gemeinsame Werte** ✅ und **einen Sonderwert ihrer Geografie** ✅, jeweils 0–5:
 
-| Wert | Bedeutung |
-| --- | --- |
-| Licht | Sonne bis Schatten |
-| Feuchte | trocken bis nass |
+| Wert       | Bedeutung                |
+| ---------- | ------------------------ |
+| Licht      | Sonne bis Schatten       |
+| Feuchte    | trocken bis nass         |
 | Vegetation | kahl bis dicht bewachsen |
 
-| Geografie | Sonderwert 💡 | Bedeutung |
-| --- | --- | --- |
-| Berge | Schnee | Schneedecke und Gletscher, speist im Frühling den Fluss |
-| Wald | Totholz | Zersetzung, Nährstoffe und Brandgefahr |
-| Flachland | Boden | Nährstoffe; wird durch Überweidung und Ackerbau ausgelaugt |
-| Fluss | Wasserstand | vom ausgetrockneten Bett bis zum Hochwasser |
-| Küste | Salz | Salzgehalt; Süßwasser vom Fluss senkt ihn |
+| Geografie | Sonderwert 💡 | Bedeutung                                                  |
+| --------- | ------------- | ---------------------------------------------------------- |
+| Berge     | Schnee        | Schneedecke und Gletscher, speist im Frühling den Fluss    |
+| Wald      | Totholz       | Zersetzung, Nährstoffe und Brandgefahr                     |
+| Flachland | Boden         | Nährstoffe; wird durch Überweidung und Ackerbau ausgelaugt |
+| Fluss     | Wasserstand   | vom ausgetrockneten Bett bis zum Hochwasser                |
+| Küste     | Salz          | Salzgehalt; Süßwasser vom Fluss senkt ihn                  |
 
 Jede Geografie hat einen **Ruhewert** je Wert (ihren natürlichen Zustand). 💡 Alle zwei Runden bewegt sich
 jeder Wert um 1 auf seinen Ruhewert zu – das ist die langsame Selbstheilung.
@@ -100,54 +100,54 @@ Bei mehreren passenden Formen gilt die erste in der Tabelle.
 
 **Berge** (Sonderwert Schnee)
 
-| Form | Bedingung (Startwerte) | Lebensraum für |
-| --- | --- | --- |
-| Gletscher | Schnee 5 | – (speist den Fluss) |
-| Geröll · *verödet* | Vegetation 0, Schnee ≤ 1 | – |
-| **Alm** · *ideal* | Vegetation 2–3, Schnee 1–2, Licht ≥ 3 | Bienen, Kleinsäuger, Hirsche |
-| Bergwald | Vegetation ≥ 4 | Vögel, Greifvögel, Wölfe |
-| Fels | sonst | Echsen, Greifvögel (Nistplatz) |
+| Form               | Bedingung (Startwerte)                | Lebensraum für                 |
+| ------------------ | ------------------------------------- | ------------------------------ |
+| Gletscher          | Schnee 5                              | – (speist den Fluss)           |
+| Geröll · _verödet_ | Vegetation 0, Schnee ≤ 1              | –                              |
+| **Alm** · _ideal_  | Vegetation 2–3, Schnee 1–2, Licht ≥ 3 | Bienen, Kleinsäuger, Hirsche   |
+| Bergwald           | Vegetation ≥ 4                        | Vögel, Greifvögel, Wölfe       |
+| Fels               | sonst                                 | Echsen, Greifvögel (Nistplatz) |
 
 **Wald** (Sonderwert Totholz)
 
-| Form | Bedingung | Lebensraum für |
-| --- | --- | --- |
-| Brandfläche · *verödet, vorübergehend* | Vegetation ≤ 1, Totholz ≥ 3 | Käfer – und fruchtbar für den Neuaufwuchs |
-| Trockenwald | Feuchte ≤ 1, Vegetation ≥ 3 | Echsen; hohe Brandgefahr |
-| **Urwald** · *ideal* | Vegetation 5, Feuchte ≥ 4, Totholz 2–3 | Primaten, Vögel, alle Waldarten |
-| Lichter Wald | Licht ≥ 3, Vegetation 2–3 | Hirsche, Vögel, Bienen |
-| Mischwald | sonst | Käfer, Kleinsäuger, Wölfe |
+| Form                                   | Bedingung                              | Lebensraum für                            |
+| -------------------------------------- | -------------------------------------- | ----------------------------------------- |
+| Brandfläche · _verödet, vorübergehend_ | Vegetation ≤ 1, Totholz ≥ 3            | Käfer – und fruchtbar für den Neuaufwuchs |
+| Trockenwald                            | Feuchte ≤ 1, Vegetation ≥ 3            | Echsen; hohe Brandgefahr                  |
+| **Urwald** · _ideal_                   | Vegetation 5, Feuchte ≥ 4, Totholz 2–3 | Primaten, Vögel, alle Waldarten           |
+| Lichter Wald                           | Licht ≥ 3, Vegetation 2–3              | Hirsche, Vögel, Bienen                    |
+| Mischwald                              | sonst                                  | Käfer, Kleinsäuger, Wölfe                 |
 
 **Flachland** (Sonderwert Boden)
 
-| Form | Bedingung | Lebensraum für |
-| --- | --- | --- |
-| Ödland · *verödet* | Vegetation 0, Feuchte ≤ 1 | – |
-| Moor | Feuchte ≥ 4 | Frösche, Käfer |
-| **Blumenwiese** · *ideal* | Vegetation 2–4, Boden ≥ 4, Licht ≥ 3 | Bienen, Kleinsäuger, Hirsche, Menschen |
-| Steppe | Feuchte ≤ 2 | Echsen, Kleinsäuger, Wölfe |
-| Buschland | Vegetation 5 | Kleinsäuger, Vögel |
-| Wiese | sonst | Käfer, Kleinsäuger, Hirsche, Menschen |
+| Form                      | Bedingung                            | Lebensraum für                         |
+| ------------------------- | ------------------------------------ | -------------------------------------- |
+| Ödland · _verödet_        | Vegetation 0, Feuchte ≤ 1            | –                                      |
+| Moor                      | Feuchte ≥ 4                          | Frösche, Käfer                         |
+| **Blumenwiese** · _ideal_ | Vegetation 2–4, Boden ≥ 4, Licht ≥ 3 | Bienen, Kleinsäuger, Hirsche, Menschen |
+| Steppe                    | Feuchte ≤ 2                          | Echsen, Kleinsäuger, Wölfe             |
+| Buschland                 | Vegetation 5                         | Kleinsäuger, Vögel                     |
+| Wiese                     | sonst                                | Käfer, Kleinsäuger, Hirsche, Menschen  |
 
 **Fluss** (Sonderwert Wasserstand)
 
-| Form | Bedingung | Lebensraum für |
-| --- | --- | --- |
-| Trockenes Flussbett · *verödet* | Wasserstand 0 | – |
-| Hochwasser · *Störung* | Wasserstand 5 | – (überflutet Nachbarn: Feuchte +1, Vegetation −1) |
-| Bach | Wasserstand 1–2 | Plankton, Frösche |
-| **Aue** · *ideal* | Wasserstand 3, Vegetation ≥ 4 | Fische, Frösche, Vögel, Menschen |
-| Strom | sonst | Plankton, Fische |
+| Form                            | Bedingung                     | Lebensraum für                                     |
+| ------------------------------- | ----------------------------- | -------------------------------------------------- |
+| Trockenes Flussbett · _verödet_ | Wasserstand 0                 | –                                                  |
+| Hochwasser · _Störung_          | Wasserstand 5                 | – (überflutet Nachbarn: Feuchte +1, Vegetation −1) |
+| Bach                            | Wasserstand 1–2               | Plankton, Frösche                                  |
+| **Aue** · _ideal_               | Wasserstand 3, Vegetation ≥ 4 | Fische, Frösche, Vögel, Menschen                   |
+| Strom                           | sonst                         | Plankton, Fische                                   |
 
 **Küste** (Sonderwert Salz)
 
-| Form | Bedingung | Lebensraum für |
-| --- | --- | --- |
-| Salzwüste · *verödet* | Salz 5, Feuchte ≤ 2 | – |
-| **Mangrove** · *ideal* | Vegetation ≥ 4, Salz 2–3, Feuchte ≥ 4 | Fische (Kinderstube), Frösche, Vögel |
-| Riff | Licht ≥ 4, Salz ≥ 3 | Plankton, Fische |
-| Watt | Feuchte ≥ 4, Vegetation ≤ 2 | Plankton, Vögel |
-| Strand | sonst | Echsen |
+| Form                   | Bedingung                             | Lebensraum für                       |
+| ---------------------- | ------------------------------------- | ------------------------------------ |
+| Salzwüste · _verödet_  | Salz 5, Feuchte ≤ 2                   | –                                    |
+| **Mangrove** · _ideal_ | Vegetation ≥ 4, Salz 2–3, Feuchte ≥ 4 | Fische (Kinderstube), Frösche, Vögel |
+| Riff                   | Licht ≥ 4, Salz ≥ 3                   | Plankton, Fische                     |
+| Watt                   | Feuchte ≥ 4, Vegetation ≤ 2           | Plankton, Vögel                      |
+| Strand                 | sonst                                 | Echsen                               |
 
 ### 4.3 Kopplungen zwischen Zonen 💡
 
@@ -166,8 +166,8 @@ Jede Zone hat eine **Stufe von 1 bis 5**: ihre Reife als Lebensraum.
 - Stufe 4 und 5 sind **nur in der Idealform** erreichbar. Stufe 5 verlangt zusätzlich ≥ 4 Arten in der Zone.
   Das ist die schwer erreichbare Obergrenze.
 - Sie fällt um 1 bei verödeter Form, nach einer Störung (Feuer, Hochwasser …) oder beim Wechsel in eine andere Form.
-- Die Zonenstufe begrenzt die Evolution: Eine Art der Entwicklungsstufe *n* kann nur in einer Zone mit
-  Stufe ≥ *n − 2* entstehen. Hohes Leben braucht reife Lebensräume.
+- Die Zonenstufe begrenzt die Evolution: Eine Art der Entwicklungsstufe _n_ kann nur in einer Zone mit
+  Stufe ≥ _n − 2_ entstehen. Hohes Leben braucht reife Lebensräume.
 
 ## 5. Das Leben
 
@@ -187,6 +187,7 @@ Jede Art hat pro Zone einen **Bestand von 0–9**.
 ### 5.2 Evolution ✅
 
 Höhere Arten **entstehen aus niedrigeren** entlang eines Stammbaums. Eine Art entwickelt sich weiter, wenn in einer Zone
+
 - ihr Bestand hoch genug ist (💡 ≥ 5),
 - die Form für die neue Art passt,
 - die Zonenstufe reicht,
@@ -200,21 +201,21 @@ muss sein Gleichgewicht bewusst erschüttern – das ist das zentrale Risiko-Wer
 
 ### 5.3 Stammbaum 💡 (Vorschlag)
 
-| Stufe | Art | entsteht aus | frisst | Gabe (Karte) |
-| --- | --- | --- | --- | --- |
-| 1 | Plankton | – (Startleben im Wasser) | Licht | *Algenblüte*: Vegetation +1 in einer Wasserzone, Licht −1 |
-| 1 | Käfer | – (Startleben an Land) | Totholz | *Zersetzung*: Totholz −1, Boden +1 in einer Nachbarzone |
-| 2 | Fisch | Plankton | Plankton | *Laichzug*: 1 Fisch wandert flussaufwärts oder flussabwärts |
-| 2 | Biene | Käfer | Vegetation (Blüten) | *Bestäubung*: Vegetation +1 |
-| 3 | Frosch | Fisch | Käfer, Bienen | *Regenruf*: Feuchte +1 |
-| 4 | Echse | Frosch | Käfer | *Sonnenbad*: Licht +1, Feuchte −1 |
-| 5 | Kleinsäuger | Echse | Vegetation | *Graben*: Boden +1, Vegetation −1 |
-| 5 | Vogel | Echse | Käfer, Fische | *Samenflug*: Vegetation +1 in beliebiger Zone |
-| 6 | Hirsch | Kleinsäuger | Vegetation | *Äsen*: Vegetation −1 (gegen Verbuschung) |
-| 6 | Wolf | Kleinsäuger (braucht Hirsche) | Hirsch, Kleinsäuger | *Jagd*: Bestand eines Pflanzenfressers −2 |
-| 6 | Greifvogel | Vogel | Kleinsäuger, Fische | *Späherblick*: nächstes Ereignis abwenden oder verschieben |
-| 6 | Primat | Kleinsäuger (nur Urwald) | Vegetation (Früchte) | *Fruchtregen*: Vegetation +1 in allen Nachbarzonen |
-| 7 | **Mensch** | Primat (Zone Stufe ≥ 5, am Fluss) | alles | siehe 5.4 |
+| Stufe | Art         | entsteht aus                      | frisst               | Gabe (Karte)                                                |
+| ----- | ----------- | --------------------------------- | -------------------- | ----------------------------------------------------------- |
+| 1     | Plankton    | – (Startleben im Wasser)          | Licht                | _Algenblüte_: Vegetation +1 in einer Wasserzone, Licht −1   |
+| 1     | Käfer       | – (Startleben an Land)            | Totholz              | _Zersetzung_: Totholz −1, Boden +1 in einer Nachbarzone     |
+| 2     | Fisch       | Plankton                          | Plankton             | _Laichzug_: 1 Fisch wandert flussaufwärts oder flussabwärts |
+| 2     | Biene       | Käfer                             | Vegetation (Blüten)  | _Bestäubung_: Vegetation +1                                 |
+| 3     | Frosch      | Fisch                             | Käfer, Bienen        | _Regenruf_: Feuchte +1                                      |
+| 4     | Echse       | Frosch                            | Käfer                | _Sonnenbad_: Licht +1, Feuchte −1                           |
+| 5     | Kleinsäuger | Echse                             | Vegetation           | _Graben_: Boden +1, Vegetation −1                           |
+| 5     | Vogel       | Echse                             | Käfer, Fische        | _Samenflug_: Vegetation +1 in beliebiger Zone               |
+| 6     | Hirsch      | Kleinsäuger                       | Vegetation           | _Äsen_: Vegetation −1 (gegen Verbuschung)                   |
+| 6     | Wolf        | Kleinsäuger (braucht Hirsche)     | Hirsch, Kleinsäuger  | _Jagd_: Bestand eines Pflanzenfressers −2                   |
+| 6     | Greifvogel  | Vogel                             | Kleinsäuger, Fische  | _Späherblick_: nächstes Ereignis abwenden oder verschieben  |
+| 6     | Primat      | Kleinsäuger (nur Urwald)          | Vegetation (Früchte) | _Fruchtregen_: Vegetation +1 in allen Nachbarzonen          |
+| 7     | **Mensch**  | Primat (Zone Stufe ≥ 5, am Fluss) | alles                | siehe 5.4                                                   |
 
 Damit entsteht eine Kette über alle Geografien: Wasser → Land → Wald → Flachland. Kein Lebensraum genügt allein.
 
@@ -223,7 +224,7 @@ Damit entsteht eine Kette über alle Geografien: Wasser → Land → Wald → Fl
 Der Mensch ist die höchste Stufe, aber **kein Sieg**. Er bringt die stärksten Karten und verbraucht
 das Ökosystem:
 
-- **Karten:** *Feuer* (gezielte Brandrodung, 0 Odem), *Ackerbau* (Boden −1, Vegetation fest +2), *Siedlung* (Mensch-Bestand +2).
+- **Karten:** _Feuer_ (gezielte Brandrodung, 0 Odem), _Ackerbau_ (Boden −1, Vegetation fest +2), _Siedlung_ (Mensch-Bestand +2).
 - **Kosten:** Jede Runde senkt jeder Mensch-Bestand die Harmonie ein wenig. Ackerbau laugt den Boden aus. Menschen
   jagen alle Pflanzenfresser.
 - **Wertung:** Solange Menschen leben, zählt jede Runde doppelt.
@@ -247,13 +248,13 @@ am dringendsten bräuchte. Das ist der zentrale Tausch.
 
 Hand mit 4 Karten, nach jeder Runde wird auf 4 nachgezogen. Ist der Stapel leer, wird die Ablage gemischt.
 
-| Kategorie | Odem | Charakter | Beispiele |
-| --- | --- | --- | --- |
-| Naturgewalten | 0 | grob, mit Schwellen und Nebenwirkungen | Gewitter, Dürre, Sturm, Frost |
-| Gaben | 1–2 | präzise, ein Wert ±1 | Regen, Sonne, Samen, Dünger |
-| Wunder | 3–5 | Korrektur von Fehlern | *Heilung* (Zone zum Ruhewert), *Arche* (Art vor dem Aussterben retten: Bestand +2), *Stille* (nächstes Ereignis entfällt) |
-| Gaben der Arten | 0–2 | kommen ins Deck, wenn eine Art erstmals entsteht | siehe Stammbaum |
-| Menschenkarten | 0–2 | stark, mit Langzeitkosten | Feuer, Ackerbau, Siedlung |
+| Kategorie       | Odem | Charakter                                        | Beispiele                                                                                                                 |
+| --------------- | ---- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Naturgewalten   | 0    | grob, mit Schwellen und Nebenwirkungen           | Gewitter, Dürre, Sturm, Frost                                                                                             |
+| Gaben           | 1–2  | präzise, ein Wert ±1                             | Regen, Sonne, Samen, Dünger                                                                                               |
+| Wunder          | 3–5  | Korrektur von Fehlern                            | _Heilung_ (Zone zum Ruhewert), _Arche_ (Art vor dem Aussterben retten: Bestand +2), _Stille_ (nächstes Ereignis entfällt) |
+| Gaben der Arten | 0–2  | kommen ins Deck, wenn eine Art erstmals entsteht | siehe Stammbaum                                                                                                           |
+| Menschenkarten  | 0–2  | stark, mit Langzeitkosten                        | Feuer, Ackerbau, Siedlung                                                                                                 |
 
 Die Schwellen-Logik aus Prototyp 0.1 bleibt: Gewitter auf trockener Zone wird Feuer, Sturm auf dichter Zone wird Baumsturz.
 Gefahren werden **sichtbar angezeigt** (🔥 auf der Zone), nie als versteckte Prozentzahl.
@@ -264,46 +265,47 @@ Die **Harmonie (0–100)** ist das Lebenszeichen der Welt. Sie startet bei 💡 
 
 💡 Veränderung pro Runde:
 
-| Quelle | Wirkung |
-| --- | --- |
-| Zone in Idealform | +2 |
-| Zone in verödeter Form | −3 |
-| Arten am Leben | +0,5 pro Art |
-| Art ausgestorben | −10 (einmalig) |
-| Hunger / Überpopulation in einer Zone | −1 |
-| Mensch-Bestand | −0,5 pro Tier |
+| Quelle                                | Wirkung        |
+| ------------------------------------- | -------------- |
+| Zone in Idealform                     | +2             |
+| Zone in verödeter Form                | −3             |
+| Arten am Leben                        | +0,5 pro Art   |
+| Art ausgestorben                      | −10 (einmalig) |
+| Hunger / Überpopulation in einer Zone | −1             |
+| Mensch-Bestand                        | −0,5 pro Tier  |
 
 Bei 0 kollabiert die Welt und die Partie endet. Die Harmonie wird als Lebensbalken ganz oben
 angezeigt. Die Insel reagiert sichtbar: Farben werden blasser, Nebel zieht auf.
 
 ## 8. Fehler ausbügeln oder bewusst in Kauf nehmen ✅
 
-| Mittel | Kosten | Zweck |
-| --- | --- | --- |
-| Selbstheilung | gratis, aber langsam (±1 alle 2 Runden zum Ruhewert) | kleine Fehler verwachsen von selbst |
-| Gaben | 1–2 Odem | gezielt nachsteuern |
-| Wunder | 3–5 Odem | große Fehler schnell reparieren |
-| Arche | 4 Odem | eine Art vor dem Aussterben retten |
-| Gezielte Störung | Harmonie-Einbruch, Zonenstufe −1 | Selektionsdruck für Evolution, Brandfläche als Neuanfang |
+| Mittel           | Kosten                                               | Zweck                                                    |
+| ---------------- | ---------------------------------------------------- | -------------------------------------------------------- |
+| Selbstheilung    | gratis, aber langsam (±1 alle 2 Runden zum Ruhewert) | kleine Fehler verwachsen von selbst                      |
+| Gaben            | 1–2 Odem                                             | gezielt nachsteuern                                      |
+| Wunder           | 3–5 Odem                                             | große Fehler schnell reparieren                          |
+| Arche            | 4 Odem                                               | eine Art vor dem Aussterben retten                       |
+| Gezielte Störung | Harmonie-Einbruch, Zonenstufe −1                     | Selektionsdruck für Evolution, Brandfläche als Neuanfang |
 
 ## 9. Ereignisse ✅
 
 Ereignisse werden **eine Runde vorher angekündigt**. Der Spieler kann sich vorbereiten, abwenden
-(*Stille*, *Späherblick*) oder sie für Selektionsdruck nutzen.
+(_Stille_, _Späherblick_) oder sie für Selektionsdruck nutzen.
 
 💡 Pool (mit jedem Jahr wahrscheinlicher und stärker):
 
-| Ereignis | Wirkung |
-| --- | --- |
-| Hitzesommer | alle Zonen Feuchte −1 |
-| Kälteeinbruch | Berge Schnee +2, alle Zonen Vegetation −1 |
-| Blitzschlag | Gewitter auf zufälliger Zone (kann Feuer auslösen) |
-| Seuche | dichteste Population −3 |
-| Sturmflut | Küste Salz +2, Flachland Feuchte +1 |
-| Heuschrecken | Flachland Vegetation −2 |
+| Ereignis             | Wirkung                                              |
+| -------------------- | ---------------------------------------------------- |
+| Hitzesommer          | alle Zonen Feuchte −1                                |
+| Kälteeinbruch        | Berge Schnee +2, alle Zonen Vegetation −1            |
+| Blitzschlag          | Gewitter auf zufälliger Zone (kann Feuer auslösen)   |
+| Seuche               | dichteste Population −3                              |
+| Sturmflut            | Küste Salz +2, Flachland Feuchte +1                  |
+| Heuschrecken         | Flachland Vegetation −2                              |
 | Meteorit (ab Jahr 8) | eine Zone fällt auf Stufe 1, starker Selektionsdruck |
 
 **Jahreszeiten** 💡 (wirken jede Runde):
+
 - Frühling: Vegetation +1 in Zonen mit Feuchte ≥ 2, Schneeschmelze
 - Sommer: Feuchte −1
 - Herbst: Totholz +1, Vegetation −1 im Wald
@@ -315,9 +317,10 @@ Ereignisse werden **eine Runde vorher angekündigt**. Der Spieler kann sich vorb
 solange Menschen leben. Langes Überleben und hohes Leben zählen also beide.
 
 **Schöpfungsbuch** ✅ (das frühere Notizbuch): Jede Art, die zum ersten Mal entsteht, wird dauerhaft eingetragen.
+
 - Ihre Bedingungen werden sichtbar.
 - Ihre Gabe kommt in den Pool für Startdecks (8–10 Karten).
-- Wunder werden über Meilensteine freigeschaltet, z. B. *Arche* nach dem ersten Aussterben.
+- Wunder werden über Meilensteine freigeschaltet, z. B. _Arche_ nach dem ersten Aussterben.
 
 Progression bedeutet früheren Zugang zu Werkzeugen, nicht mehr Macht.
 
@@ -325,29 +328,29 @@ Progression bedeutet früheren Zugang zu Werkzeugen, nicht mehr Macht.
 
 ## 11. Was aus Prototyp 0.1 bleibt
 
-| Bleibt | Ändert sich |
-| --- | --- |
-| Datengetriebene Engine, Bedingungs- und Effektsprache, Seeds, Bots, Simulation | Expedition mit Ausstieg → Überleben bis zum Kollaps |
-| Karten mit festen Effekten und sichtbaren Schwellen | Kartenstapel läuft nicht mehr leer (Ablage wird gemischt) |
-| Kartenzwang (💡 mindestens 1 Karte, Naturgewalten gratis) | Odem als Kosten |
-| Tierkarten kommen ins Deck | Tiere ziehen nicht ein, sondern entstehen durch Evolution; Bestände statt An/Aus |
-| Schöpfungsbuch (Notizbuch) | 5 feste Geografien mit Formen und Zonenstufe statt wechselnder Zonentypen |
+| Bleibt                                                                         | Ändert sich                                                                      |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| Datengetriebene Engine, Bedingungs- und Effektsprache, Seeds, Bots, Simulation | Expedition mit Ausstieg → Überleben bis zum Kollaps                              |
+| Karten mit festen Effekten und sichtbaren Schwellen                            | Kartenstapel läuft nicht mehr leer (Ablage wird gemischt)                        |
+| Kartenzwang (💡 mindestens 1 Karte, Naturgewalten gratis)                      | Odem als Kosten                                                                  |
+| Tierkarten kommen ins Deck                                                     | Tiere ziehen nicht ein, sondern entstehen durch Evolution; Bestände statt An/Aus |
+| Schöpfungsbuch (Notizbuch)                                                     | 5 feste Geografien mit Formen und Zonenstufe statt wechselnder Zonentypen        |
 
 ## 12. Offene Punkte
 
 - [ ] Alle 💡-Vorschläge bestätigen oder ändern: Formen, Stammbaum, Odem-Formel, Harmonie-Tabelle, Kartenzwang
 - [ ] Zahlenwerte per Simulation balancieren. Ziel: Ein guter Spieler erreicht Stufe 6 in Jahr 5–7, den Menschen nur selten.
-- [ ] Name für „Odem“ in der englischen Version (*Breath*? *Grace*? *Divinity*?)
+- [ ] Name für „Odem“ in der englischen Version (_Breath_? _Grace_? _Divinity_?)
 - [ ] Tutorial und Einstieg (erste Partie stark geführt?)
 - [ ] Monetarisierung und Online-Funktionen – bewusst später ✅
 
 ## 13. Fahrplan
 
-| PR | Inhalt |
-| --- | --- |
-| #2 (dieser) | Konzept 0.2, Projektstruktur (Workspaces), Umbenennung |
-| #3 | Engine v2: Geografien, Formen, Zonenstufe, Jahreszeiten, Odem, Harmonie |
-| #4 | Populationen, Nahrungsketten, Evolution, Mensch, Ereignisse; Bots und Balancing |
-| #5 | App-Gerüst: Vite + React Three Fiber + Capacitor, Insel mit Platzhalter-Modellen, Engine angebunden |
-| #6 | Mobile-Bedienung (Karten auf Zonen ziehen), Harmonie-Anzeige, Speichern |
-| danach | Art-Pass (Low-Poly-Modelle pro Form), Sound, Tutorial, Store-Vorbereitung |
+| PR          | Inhalt                                                                                              |
+| ----------- | --------------------------------------------------------------------------------------------------- |
+| #2 (dieser) | Konzept 0.2, Projektstruktur (Workspaces), Umbenennung                                              |
+| #3          | Engine v2: Geografien, Formen, Zonenstufe, Jahreszeiten, Odem, Harmonie                             |
+| #4          | Populationen, Nahrungsketten, Evolution, Mensch, Ereignisse; Bots und Balancing                     |
+| #5          | App-Gerüst: Vite + React Three Fiber + Capacitor, Insel mit Platzhalter-Modellen, Engine angebunden |
+| #6          | Mobile-Bedienung (Karten auf Zonen ziehen), Harmonie-Anzeige, Speichern                             |
+| danach      | Art-Pass (Low-Poly-Modelle pro Form), Sound, Tutorial, Store-Vorbereitung                           |

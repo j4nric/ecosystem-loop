@@ -4,17 +4,84 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+
+# Neuere Pushes auf denselben Branch brechen ältere Läufe ab.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  check:
+  quality:
+    name: Format, Lint, Typecheck
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run check
-      - name: Balancing-Kurzlauf
-        run: npm run sim -- --bot greedy --runs 20 --expeditions 4
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+
+  test:
+    name: Tests + Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run test:coverage
+
+  game-data:
+    name: Spieldaten + Simulation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Spieldaten validieren
+        run: npm run validate
+      - name: Simulation (random, alle Szenarien)
+        run: npm run sim -- --bot random --runs 200 --scenario random
+      - name: Simulation (greedy)
+        run: npm run sim -- --bot greedy --runs 20 --scenario random
+
+  audit:
+    name: Abhängigkeiten (Sicherheit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Bekannte Sicherheitslücken (high/critical) in Laufzeit-Abhängigkeiten
+        run: npm audit --omit=dev --audit-level=high
+
+  # Ein einzelner Pflicht-Check für den Branch-Schutz.
+  ci-ok:
+    name: CI ok
+    if: always()
+    needs: [quality, test, game-data, audit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Alle Jobs erfolgreich?
+        run: |
+          echo '${{ toJSON(needs) }}'
+          [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" = "false" ]

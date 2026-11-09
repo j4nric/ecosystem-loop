@@ -2,16 +2,8 @@
  * Baut aus rohen (z. B. YAML-)Objekten geprüfte GameData und kontrolliert Querverweise.
  * Plattformunabhängig – das Lesen der Dateien übernimmt src/node/load.ts.
  */
-import {
-  Animal,
-  Card,
-  Condition,
-  Config,
-  Scenario,
-  ZonesFile,
-  type Effect,
-  type GameData,
-} from './schema.ts';
+import type { Condition } from './schema.ts';
+import { Animal, Card, Config, Scenario, ZonesFile, type Effect, type GameData } from './schema.ts';
 import { z } from 'zod';
 
 export interface RawData {
@@ -41,8 +33,7 @@ export function buildGameData(raw: RawData): GameData {
   const cards = parse('cards.yaml', z.strictObject({ cards: z.array(Card) }), raw.cards)?.cards;
   const animals = parse('animals.yaml', z.strictObject({ animals: z.array(Animal) }), raw.animals)?.animals;
   const zones = parse('zones.yaml', ZonesFile, raw.zones);
-  const scenarios = parse('scenarios.yaml', z.strictObject({ scenarios: z.array(Scenario) }), raw.scenarios)
-    ?.scenarios;
+  const scenarios = parse('scenarios.yaml', z.strictObject({ scenarios: z.array(Scenario) }), raw.scenarios)?.scenarios;
   if (!config || !cards || !animals || !zones || !scenarios) throw new DataError(problems);
 
   const data: GameData = {
@@ -110,8 +101,7 @@ function checkReferences(d: GameData, p: string[]): void {
           const inc = d.cards.get(e.include);
           if (!inc) p.push(`${where}: include unbekannte Karte ${e.include}`);
           else
-            for (const s of inc.slots)
-              if (!slots.has(s.id)) p.push(`${where}: include ${inc.id} braucht Slot ${s.id}`);
+            for (const s of inc.slots) if (!slots.has(s.id)) p.push(`${where}: include ${inc.id} braucht Slot ${s.id}`);
         }
       }
     };

@@ -157,9 +157,7 @@ export const Scenario = z.strictObject({
   id: Id,
   name: Text,
   adjust: Values.partial().default({}),
-  zones: z
-    .record(z.string(), z.strictObject({ type: Id.optional(), values: Values.partial().optional() }))
-    .default({}),
+  zones: z.record(z.string(), z.strictObject({ type: Id.optional(), values: Values.partial().optional() })).default({}),
 });
 export type Scenario = z.infer<typeof Scenario>;
 

@@ -45,7 +45,9 @@ if (a.json) {
     `Bot ${a.bot} · ${a.runs} Kampagnen × ${a.expeditions} Expeditionen · Szenario ${a.scenario} · ${(ms / 1000).toFixed(1)} s\n`,
   );
   const tierHead = Array.from({ length: tiers }, (_, k) => `  S${k + 1}`.padStart(5)).join('');
-  console.log(`Exp.  Züge  Karten  Punkte │ Stufe dokumentiert${' '.repeat(Math.max(0, tiers * 5 - 18))} │ Stufe je erreicht │ Endgrund`);
+  console.log(
+    `Exp.  Züge  Karten  Punkte │ Stufe dokumentiert${' '.repeat(Math.max(0, tiers * 5 - 18))} │ Stufe je erreicht │ Endgrund`,
+  );
   console.log(`                          │${tierHead} │${tierHead} │`);
   for (const e of summary.perExpedition) {
     const reasons = Object.entries(e.endReasons)

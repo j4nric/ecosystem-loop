@@ -38,4 +38,20 @@ npm run check       # Typecheck + Tests + Datenprüfung (läuft auch in CI)
 
 ## Entwicklung
 
-Änderungen laufen über Pull Requests gegen `main`. CI führt `npm run check` und einen kurzen Simulationslauf aus.
+Änderungen laufen über Pull Requests gegen `main` (Squash-Merge). Vor jedem Push:
+
+```bash
+npm run check       # Format, Lint, Typecheck, Tests mit Coverage, Datenprüfung
+npm run format      # formatiert alles mit Prettier
+```
+
+Die CI (`.github/workflows/ci.yml`) prüft jeden PR in vier parallelen Jobs:
+
+| Job                     | Prüft                                                                                          |
+| ----------------------- | ---------------------------------------------------------------------------------------------- |
+| Format, Lint, Typecheck | Prettier, ESLint (inkl. vergessener `await`, unvollständiger `switch`), `tsc --strict`         |
+| Tests + Coverage        | Vitest; die Regel-Engine muss ≥ 80 % Zeilen-Coverage behalten                                  |
+| Spieldaten + Simulation | Schema und Querverweise der YAML-Daten; Bots spielen Kampagnen in allen Szenarien ohne Absturz |
+| Abhängigkeiten          | `npm audit` auf bekannte Sicherheitslücken                                                     |
+
+Der Sammel-Check **„CI ok“** ist nur grün, wenn alle Jobs grün sind. Dependabot hält Abhängigkeiten aktuell.

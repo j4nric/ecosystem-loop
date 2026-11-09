@@ -59,8 +59,7 @@ export function validateDeck(data: GameData, nb: Notebook, deck: readonly string
 export function recordExpedition(data: GameData, nb: Notebook, state: ExpeditionState): string[] {
   if (state.phase !== 'ended') throw new Error('Expedition läuft noch.');
   nb.expeditions++;
-  const documented =
-    data.config.notebook.recordOn === 'end' ? report(data, state).species : state.arrivedSpecies;
+  const documented = data.config.notebook.recordOn === 'end' ? report(data, state).species : state.arrivedSpecies;
   const fresh: string[] = [];
   for (const a of documented) {
     const e = nb.entries[a];

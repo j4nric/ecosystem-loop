@@ -12,10 +12,10 @@ steht in `packages/core/data/config.yaml` und lässt sich ohne Code ändern.
 1. **Karten spielen.** Der Spieler spielt nacheinander beliebig viele Handkarten
    (mindestens 1 = Kartenzwang; Parameter `hand.minPlaysPerTurn`, `hand.maxPlaysPerTurn`).
    Ist keine Karte spielbar, entfällt der Kartenzwang.
-2. **Jede Karte wirkt sofort.** Zuerst werden ihre Schwellen am Zustand *vor* dem Grundeffekt geprüft,
+2. **Jede Karte wirkt sofort.** Zuerst werden ihre Schwellen am Zustand _vor_ dem Grundeffekt geprüft,
    dann wirkt der Grundeffekt, dann die Folgen ausgelöster Schwellen.
-   → Die Reihenfolge der gespielten Karten zählt: *Dürre, dann Gewitter* auf Feuchte 3 brennt,
-   *Gewitter, dann Dürre* nicht.
+   → Die Reihenfolge der gespielten Karten zählt: _Dürre, dann Gewitter_ auf Feuchte 3 brennt,
+   _Gewitter, dann Dürre_ nicht.
 3. **Zugende** (in dieser Reihenfolge):
    1. Zonenwechsel (z. B. Sumpf → Lichtung bei Feuchte 0)
    2. Fressen (Ausrottungsregel, s. u.)
@@ -58,16 +58,16 @@ Jeder Einzug mischt eine Kopie der Tierkarte an zufälliger Stelle in den Nachzi
 
 ## Auslegungen und Vorschläge (bitte prüfen)
 
-| Thema | Umsetzung | Status |
-| --- | --- | --- |
-| Feuer-Schwelle | „Feuchte ≤ 1 vor dem Spielen“ (aus Handover übernommen) | offen laut Handover |
-| **Flut** | Gewitter auf Feuchte ≥ 4: Dichte −1, alle Nachbarn Feuchte +1, zählt als Störung | **neu vorgeschlagen** – im Handover nur erwähnt |
-| Sturm | Spieler wählt die Nachbarzone, in die der Baum stürzt | Auslegung |
-| Bestäubung | „Dichte +1 auf Nachbarzone“ einer frei gewählten Zone – an keinen Schmetterling gebunden | Auslegung |
-| Fruchtregen | Samenflug inkl. Schwelle + Merkmal „Früchte“ auf allen Nachbarzonen; Früchte wirken noch nicht | offen |
-| Kadaver | setzt Merkmal „Kadaver“; Aasfresser gibt es noch nicht | offen (2. Ebene) |
-| Horst | macht die Zone dauerhaft feuerfest | wie Handover |
-| Karteneffekte „ziehen“ und „abwerfen“ | Engine unterstützt `draw` und `discard`, noch keine Karte nutzt sie | bereit |
+| Thema                                 | Umsetzung                                                                                      | Status                                          |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Feuer-Schwelle                        | „Feuchte ≤ 1 vor dem Spielen“ (aus Handover übernommen)                                        | offen laut Handover                             |
+| **Flut**                              | Gewitter auf Feuchte ≥ 4: Dichte −1, alle Nachbarn Feuchte +1, zählt als Störung               | **neu vorgeschlagen** – im Handover nur erwähnt |
+| Sturm                                 | Spieler wählt die Nachbarzone, in die der Baum stürzt                                          | Auslegung                                       |
+| Bestäubung                            | „Dichte +1 auf Nachbarzone“ einer frei gewählten Zone – an keinen Schmetterling gebunden       | Auslegung                                       |
+| Fruchtregen                           | Samenflug inkl. Schwelle + Merkmal „Früchte“ auf allen Nachbarzonen; Früchte wirken noch nicht | offen                                           |
+| Kadaver                               | setzt Merkmal „Kadaver“; Aasfresser gibt es noch nicht                                         | offen (2. Ebene)                                |
+| Horst                                 | macht die Zone dauerhaft feuerfest                                                             | wie Handover                                    |
+| Karteneffekte „ziehen“ und „abwerfen“ | Engine unterstützt `draw` und `discard`, noch keine Karte nutzt sie                            | bereit                                          |
 
 ## Bekannte Grenzen
 

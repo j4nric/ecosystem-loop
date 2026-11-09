@@ -5,7 +5,9 @@ import { describeCard, describeCondition } from './text.ts';
 
 try {
   const d = loadGameData();
-  console.log(`✓ Spieldaten gültig: ${d.cards.size} Karten, ${d.animals.size} Tiere, ${d.mapZones.length} Zonen, ${d.scenarios.size} Szenarien\n`);
+  console.log(
+    `✓ Spieldaten gültig: ${d.cards.size} Karten, ${d.animals.size} Tiere, ${d.mapZones.length} Zonen, ${d.scenarios.size} Szenarien\n`,
+  );
   console.log('Karten:');
   for (const c of d.cards.values()) console.log(`  ${c.name.de.padEnd(13)} [${c.source}] ${describeCard(d, c)}`);
   console.log('\nTiere:');

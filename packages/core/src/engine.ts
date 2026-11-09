@@ -210,9 +210,7 @@ function resolveCard(data: GameData, state: ExpeditionState, card: Card, b: Choi
   if (depth > 4) throw new RuleError(`include-Kette zu tief bei ${card.id}`);
   const zoneOf = (slot: string) => getZone(state, b[slot] ?? slot);
   const fires = (check: 'before' | 'after') =>
-    card.triggers.filter(
-      (t) => t.check === check && holdsAll(t.when, { data, state, zone: zoneOf(t.at) }),
-    );
+    card.triggers.filter((t) => t.check === check && holdsAll(t.when, { data, state, zone: zoneOf(t.at) }));
 
   const before = fires('before');
   for (const e of card.effects) applyEffect(data, state, e, b, depth);
@@ -310,8 +308,7 @@ export function endTurn(data: GameData, state: ExpeditionState): void {
 }
 
 export function endExpedition(state: ExpeditionState): void {
-  if (!canEndExpedition(state))
-    throw new RuleError('Die Expedition kann nur zu Beginn eines Zuges beendet werden.');
+  if (!canEndExpedition(state)) throw new RuleError('Die Expedition kann nur zu Beginn eines Zuges beendet werden.');
   finish(state, 'voluntary');
 }
 
@@ -330,9 +327,7 @@ export function resolveEcosystem(data: GameData, state: ExpeditionState): void {
   // 2. Fressen: Beute verschwindet nach N Zugenden gemeinsam mit einem Fresser.
   for (const z of state.zones) {
     for (const prey of [...z.animals]) {
-      const predators = z.animals
-        .filter((p) => data.animals.get(p.id)?.eats.includes(prey.id))
-        .map((p) => p.id);
+      const predators = z.animals.filter((p) => data.animals.get(p.id)?.eats.includes(prey.id)).map((p) => p.id);
       prey.withPredatorTurns = predators.length > 0 ? prey.withPredatorTurns + 1 : 0;
       if (prey.withPredatorTurns >= data.config.predation.extinctionTurns) {
         z.animals = z.animals.filter((a) => a !== prey);
@@ -460,4 +455,3 @@ function emit(state: ExpeditionState, e: GameEvent): void {
 function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
 }
-
