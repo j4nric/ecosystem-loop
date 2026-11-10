@@ -57,7 +57,7 @@ describe('Strategie-Bots', () => {
     const forest = s.zones.find((z) => z.id === 'forest')!;
     forest.stats = { light: 2, moisture: 4, vegetation: 5, deadwood: 2 };
     expect(idealDistance(data, forest)).toBe(0);
-    forest.stats = { light: 2, moisture: 2, vegetation: 3, deadwood: 4 };
+    forest.stats = { light: 2, moisture: 2, vegetation: 2, deadwood: 4 };
     expect(idealDistance(data, forest)).toBe(2 + 2 + 1);
   });
 
@@ -180,9 +180,9 @@ describe('Kampagnen und Daten-Varianten', () => {
     applyTweak(raw, '+events.events[plague].scales=false');
     expect(() => applyTweak(raw, 'events.events[nope].scales=false')).toThrow(/Unbekannter Pfad/);
     expect(() => applyTweak(raw, 'config.turn.handSize')).toThrow(/ohne "="/);
-    const d = gameDataWith(['config.rules.life.food.perPrey=2']);
-    expect((d.params.life as { food: { perPrey: number } }).food.perPrey).toBe(2);
-    expect((data.params.life as { food: { perPrey: number } }).food.perPrey).toBe(1);
+    const d = gameDataWith(['config.rules.life.food.perPrey=3']);
+    expect((d.params.life as { food: { perPrey: number } }).food.perPrey).toBe(3);
+    expect((data.params.life as { food: { perPrey: number } }).food.perPrey).toBe(2);
   });
 
   it('die Messung schreibt Cockpit-Dateien', () => {

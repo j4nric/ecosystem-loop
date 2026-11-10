@@ -1,0 +1,110 @@
+{
+  "title": "Kampagne tuning-1: evolver",
+  "createdAt": "2026-11-10T12:00:00.000Z",
+  "model": "Engine v2 · Daten-Stand Tuning-Runde 1",
+  "bot": "evolver",
+  "runs": 200,
+  "scenario": "all",
+  "metrics": [
+    {
+      "label": "Runden Partie 1 (Median)",
+      "value": 53,
+      "unit": " Rd."
+    },
+    {
+      "label": "Runden Partie 5 (Median)",
+      "value": 56,
+      "unit": " Rd."
+    },
+    {
+      "label": "Partie 5 vs. ohne Buch (Runden)",
+      "value": -10.4,
+      "unit": " %"
+    },
+    {
+      "label": "Punkte Partie 5 vs. ohne Buch",
+      "value": -71.5,
+      "unit": " P."
+    },
+    {
+      "label": "Stufe 6 Partie 5 vs. ohne Buch",
+      "value": -7.5,
+      "unit": " %-Pkt."
+    },
+    {
+      "label": "Kartenpool vor Partie 5",
+      "value": 27.5,
+      "unit": " Karten"
+    }
+  ],
+  "charts": [
+    {
+      "title": "Runden je Partie der Kampagne",
+      "xLabel": "Partie",
+      "yFormat": "num",
+      "x": [1, 2, 3, 4, 5],
+      "series": [
+        {
+          "name": "mit Schöpfungsbuch",
+          "values": [53, 55, 51, 51.5, 56]
+        },
+        {
+          "name": "ohne Buch (gleiche Seeds)",
+          "values": [53, 55.5, 52.5, 55, 62.5]
+        }
+      ],
+      "caption": "Median der Runden. Kontrolle: gleiche Seeds und Szenarien, Startdeck aus dem leeren Buch."
+    },
+    {
+      "title": "Hohes Leben je Partie der Kampagne",
+      "xLabel": "Partie",
+      "yFormat": "pct",
+      "x": [1, 2, 3, 4, 5],
+      "series": [
+        {
+          "name": "Stufe 6 mit Buch",
+          "values": [0.025, 0.1, 0.025, 0.025, 0.075]
+        },
+        {
+          "name": "Stufe 6 ohne Buch",
+          "values": [0.025, 0.1, 0.1, 0.075, 0.15]
+        },
+        {
+          "name": "Stufe 5 mit Buch",
+          "values": [0.65, 0.65, 0.85, 0.675, 0.6]
+        },
+        {
+          "name": "Stufe 5 ohne Buch",
+          "values": [0.65, 0.625, 0.575, 0.65, 0.775]
+        }
+      ],
+      "caption": "Anteil der Partien, in denen eine Art der Stufe 5 bzw. 6 gelebt hat."
+    },
+    {
+      "title": "Meilensteine erreicht",
+      "xLabel": "nach Partie",
+      "yFormat": "pct",
+      "x": [1, 2, 3, 4, 5],
+      "series": [
+        {
+          "name": "first_extinction",
+          "values": [0.975, 1, 1, 1, 1]
+        },
+        {
+          "name": "weathered",
+          "values": [1, 1, 1, 1, 1]
+        },
+        {
+          "name": "first_year",
+          "values": [1, 1, 1, 1, 1]
+        },
+        {
+          "name": "higher_life",
+          "values": [1, 1, 1, 1, 1]
+        }
+      ],
+      "caption": "Anteil der Kampagnen, die den Meilenstein bis zu dieser Partie erreicht haben."
+    }
+  ],
+  "notes": "Freischaltungen: Partie 5 mit Buch 56 statt 62.5 Runden ohne Buch (-10.4 %), Stufe 6 in 7.5 % statt 15 %."
+}

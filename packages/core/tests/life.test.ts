@@ -244,11 +244,11 @@ describe('Der Mensch (Konzept 5.4)', () => {
 });
 
 describe('Harmonie und Odem mit Leben (Konzept 6.1, 7)', () => {
-  it('+0,5 je lebender Art', () => {
+  it('+0,25 je lebender Art', () => {
     const s = bare();
     setPops(s, 'river', { plankton: 2, fish: 1 });
     setPops(s, 'forest', { beetle: 2 });
-    expect(harmonyParts(data, s)).toContainEqual({ source: 'species', zone: null, amount: 1.5 });
+    expect(harmonyParts(data, s)).toContainEqual({ source: 'species', zone: null, amount: 0.75 });
   });
 
   it('Odem-Bonus ab 6 lebenden Arten', () => {

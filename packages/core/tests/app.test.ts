@@ -98,6 +98,7 @@ describe('Partie-Ende: gameOver', () => {
     s.harmony = 1;
     s.score = 17;
     setStats(s, 'mountains', { vegetation: 0, snow: 0, moisture: 0 });
+    setStats(s, 'river', { water: 2 }); // Bach: der Frühling macht den Fluss nicht zur Aue (+2)
     const { state, events } = endTurn(s);
     expect(state.phase).toBe('over');
     expect(events.at(-1)).toEqual({ type: 'gameOver', round: 1, score: state.score });

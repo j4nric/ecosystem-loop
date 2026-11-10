@@ -186,15 +186,15 @@ type Range = { min: number; max: number } | null;
  */
 const IDEALS: Record<string, Range[]> = {
   mountains: [{ min: 3, max: 5 }, null, { min: 2, max: 3 }, { min: 1, max: 2 }],
-  forest: [null, { min: 4, max: 5 }, { min: 5, max: 5 }, { min: 2, max: 3 }],
+  forest: [null, { min: 4, max: 5 }, { min: 4, max: 5 }, { min: 2, max: 3 }],
   plains: [
     { min: 3, max: 5 },
     { min: 0, max: 3 },
     { min: 2, max: 4 },
     { min: 4, max: 5 },
   ],
-  river: [null, null, { min: 4, max: 5 }, { min: 3, max: 3 }],
-  coast: [null, { min: 4, max: 5 }, { min: 4, max: 5 }, { min: 2, max: 3 }],
+  river: [null, null, { min: 3, max: 5 }, { min: 3, max: 3 }],
+  coast: [null, { min: 4, max: 5 }, { min: 3, max: 5 }, { min: 2, max: 3 }],
 };
 
 /** Abstand der Werte zur Idealform: Summe der Schritte außerhalb der Zielbereiche. */

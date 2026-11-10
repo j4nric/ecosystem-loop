@@ -47,7 +47,9 @@ describe('Absturz-Test', () => {
     const s = newGame(data, { seed: 1 });
     s.hand = [1, 2, 3, 4].map((uid) => ({ uid: 900 + uid, card: uid <= 2 ? 'seeds' : 'rain' }));
     s.forecast = null;
-    s.zones.find((z) => z.id === 'forest')!.stats = { light: 2, moisture: 4, vegetation: 4, deadwood: 2 };
+    s.zones.find((z) => z.id === 'forest')!.stats = { light: 2, moisture: 4, vegetation: 3, deadwood: 2 };
+    // Nur der Wald ist einen Samen von der Idealform entfernt (der Fluss als Bach nicht).
+    s.zones.find((z) => z.id === 'river')!.stats.water = 2;
     const plays = legalPlays(data, s).filter((p) => p.card === 'seeds');
     const best = plays.reduce((a, b) => (scorePlay(data, s, b) > scorePlay(data, s, a) ? b : a));
     expect(best.targets.zone).toBe('forest');

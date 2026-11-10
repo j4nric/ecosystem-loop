@@ -31,11 +31,11 @@ describe('Harmonie (Konzept 7)', () => {
     expect(harmonyParts(data, s)).toEqual([{ source: 'disturbance', zone: 'mountains', amount: -2 }]);
   });
 
-  it('Arten zählen +0,5 je lebender Art (vorbereitet für Phase 2)', () => {
+  it('Arten zählen +0,25 je lebender Art (vorbereitet für Phase 2)', () => {
     const s = game({ life: false });
     s.zones[0]!.populations = { beetle: 2, bee: 0 };
     s.zones[1]!.populations = { beetle: 1, plankton: 3 };
-    expect(harmonyParts(data, s)).toContainEqual({ source: 'species', zone: null, amount: 1 });
+    expect(harmonyParts(data, s)).toContainEqual({ source: 'species', zone: null, amount: 0.5 });
   });
 
   it('bleibt in 0–100; bei 0 kollabiert die Welt', () => {
