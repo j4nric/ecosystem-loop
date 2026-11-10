@@ -1,0 +1,115 @@
+{
+  "games": [
+    {
+      "rounds": 100,
+      "score": 254,
+      "tier": 3,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 51.8
+    },
+    {
+      "rounds": 107,
+      "score": 526.5,
+      "tier": 4,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 66.7
+    },
+    {
+      "rounds": 110.5,
+      "score": 620.5,
+      "tier": 4,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 78.3
+    },
+    {
+      "rounds": 113,
+      "score": 481,
+      "tier": 4,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 54.9
+    },
+    {
+      "rounds": 115.5,
+      "score": 555,
+      "tier": 4,
+      "tier5": 0.025,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 56.9
+    }
+  ],
+  "control": [
+    {
+      "rounds": 100,
+      "score": 254,
+      "tier": 3,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 51.8
+    },
+    {
+      "rounds": 92,
+      "score": 309.5,
+      "tier": 3,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 63
+    },
+    {
+      "rounds": 98.5,
+      "score": 252,
+      "tier": 3,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 61.8
+    },
+    {
+      "rounds": 107,
+      "score": 281.5,
+      "tier": 3,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 66.6
+    },
+    {
+      "rounds": 95.5,
+      "score": 269,
+      "tier": 3,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 47.9
+    }
+  ],
+  "poolSize": [16.0, 23.75, 25.375, 25.8, 25.9],
+  "milestones": {
+    "first_extinction": [1.0, 1.0, 1.0, 1.0, 1.0],
+    "weathered": [1.0, 1.0, 1.0, 1.0, 1.0],
+    "first_year": [1.0, 1.0, 1.0, 1.0, 1.0],
+    "higher_life": [0.175, 0.775, 0.95, 1.0, 1.0]
+  },
+  "lastDeck": {
+    "silence": 40,
+    "balance": 40,
+    "rain": 40,
+    "seeds": 40,
+    "fertilizer": 40,
+    "sun": 40,
+    "ark": 40,
+    "healing": 40,
+    "thunderstorm": 40,
+    "storm": 40
+  }
+}
