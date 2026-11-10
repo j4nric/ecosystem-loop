@@ -24,7 +24,8 @@ packages/core           @being-god/core – Regel-Engine (plattformunabhängig, 
   src/data.ts           buildGameData: Rohdaten → geprüfte GameData inkl. Querverweise (DATA_FILES)
   src/rng.ts            deterministischer Zufall (mulberry32, Zustand im Spielstand)
   src/cards/            deck.ts (Nachziehen, Ablage mischen), play.ts (Ziele, Kosten, Schwellen, Ausspielen),
-                        effects.ts (Effektsprache), text.ts (Kartentexte aus Effekten, Textbausteine)
+                        effects.ts (Effektsprache), worldcard.ts (Weltkarten: alle Zonen, je Geografie),
+                        text.ts (Kartentexte aus Effekten, Textbausteine)
   src/schema/           zod-Schemas: common (Ids, Texte, Bedingungen, Effekte), world, cards, life,
                         events (Ereignisse + Meta), game (Config, Harmonie, Szenarien, GameData)
   src/rules/            Regel-Module (je Datei ein Modul, Registry in index.ts, Schnittstelle in module.ts)
@@ -125,7 +126,7 @@ Das Nachziehen gehört nicht zur Pipeline, sondern zu `step` (Beginn der neuen R
 | `map.yaml`         | Zonen der Insel, Geografie je Zone, Nachbarschaft, Startwerte                           |
 | `seasons.yaml`     | Jahreszeiten und ihre Effekte                                                           |
 | `couplings.yaml`   | Kopplungen zwischen Zonen (Bedingung → Effekt)                                          |
-| `cards.yaml`       | Kategorien; Karten mit Kosten, Slots, Effekten, Schwellen                               |
+| `cards.yaml`       | Kategorien; Karten mit Kosten, Reichweite, Slots, Effekten (je Geografie), Schwellen    |
 | `harmony.yaml`     | Start, Kollaps, Beiträge zur Harmonie pro Runde                                         |
 | `species.yaml`     | Stammbaum: Stufe, Vorfahr, Lebensraum, Nahrung, Jagd, Gaben, Evolutionsbedingungen      |
 | `events.yaml`      | Ereignisse: Gewicht, frühestes Jahr, Zielzone, Effekte oder Karte, Skalierung           |
@@ -159,6 +160,29 @@ gleich beschrieben werden.
 
 **Schwellen** (`triggers`) einer Karte prüfen Bedingungen an einem Slot vor oder nach dem Grundeffekt und
 können als Störung zählen (🔥 Feuer, Baumsturz …).
+
+**Reichweite** (`reach`, Konzept 6.2, Variante C): `zone` (Standard) wirkt auf die gewählten Slots. `world`
+(Wetter, Naturkräfte) wirkt ohne Zielwahl auf alle Zonen: Weltkarten haben keine Zonen-/Art-Slots (ein
+`choice`-Slot ist erlaubt), die jeweilige Zone heißt `self` (`at` weglassen). `effects` wirken in jeder Zone,
+`byGeography.<geografie>` zusätzlich nur in Zonen dieser Geografie; Schwellen gelten je Zone.
+
+```yaml
+- id: rain
+  category: weather
+  reach: world
+  byGeography:
+    forest: [{ adjust: moisture, by: 1 }]
+    mountains: [{ adjust: snow, by: 1 }]
+```
+
+Ablauf (`src/cards/worldcard.ts`), damit die Reihenfolge der Zonen nichts entscheidet: `before`-Schwellen aller
+Zonen gegen den Zustand vor der Karte → Grundwirkung (Effekte auf die Zone selbst sofort; Ausstrahlungen mit
+`scope` ≠ self werden je Zone und Wert summiert und einmal angewendet) → zonenlose Effekte (Ziehen, Odem,
+Ereignis) einmal → `after`-Schwellen aller Zonen → Folgen je Schwelle in allen auslösenden Zonen (Ausstrahlungen
+und Odem wieder summiert). Die Datenprüfung verlangt: Werte passen zur Geografie (Schnee nur in den Bergen),
+Ausstrahlungen nur mit `adjust`, `population`, `disturb`. `legalPlays` liefert für eine Weltkarte genau einen Zug
+mit `targets: {}` (bzw. einen je Wahl), `preview` die Änderungen aller Zonen. Als Ereigniskarte (`events.yaml →
+card`) wirkt eine Weltkarte mit Zielzone nur dort, ohne Zielzone auf allen Zonen.
 
 ## Web-App (`apps/web`)
 

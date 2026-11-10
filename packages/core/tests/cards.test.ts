@@ -10,7 +10,15 @@ const triggered = (events: GameEvent[]) => events.flatMap((e) => (e.type === 'tr
 
 describe('Kosten in Odem (Konzept 6.1/6.2)', () => {
   it('Karten kosten laut Kategorie: Naturgewalten 0, Gaben 1–2, Wunder 3–5, Arten und Menschen 0–2', () => {
-    const range = { force: [0, 0], gift: [1, 2], miracle: [3, 5], species: [0, 2], human: [0, 2] } as const;
+    // Wetter (Weltkarten): Kosten-Spanne ist Platzhalter, bis game-data die Wetterkarten umgestellt hat.
+    const range = {
+      force: [0, 0],
+      weather: [0, 2],
+      gift: [1, 2],
+      miracle: [3, 5],
+      species: [0, 2],
+      human: [0, 2],
+    } as const;
     for (const c of data.cards.values()) {
       const [lo, hi] = range[c.category as keyof typeof range];
       expect(c.cost, c.id).toBeGreaterThanOrEqual(lo);
@@ -29,7 +37,7 @@ describe('Kosten in Odem (Konzept 6.1/6.2)', () => {
 
   it('gespielte Karten landen auf der Ablage und werden gezählt', () => {
     const s = game({ hand: ['rain'], breath: 1 });
-    const { state } = play(s, 'rain', { zone: 'coast' });
+    const { state } = play(s, 'rain', {});
     expect(state.hand).toEqual([]);
     expect(state.discardPile.map((c) => c.card)).toEqual(['rain']);
     expect(state.cardPlays).toEqual({ rain: 1 });
@@ -139,7 +147,6 @@ describe('Dürre, Sturm, Frost', () => {
 describe('Gaben und Wunder', () => {
   it('Gaben ändern genau einen Wert um 1', () => {
     const cases: [string, string, string, number][] = [
-      ['rain', 'forest', 'moisture', 1],
       ['dry_wind', 'forest', 'moisture', -1],
       ['sun', 'forest', 'light', 1],
       ['shade', 'forest', 'light', -1],

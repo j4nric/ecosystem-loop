@@ -6,10 +6,15 @@
 #             Effekte auf Werte, die eine Zone nicht hat, verpuffen.
 # triggers  – Schwellen: "when" wird VOR dem Grundeffekt geprüft (check: before), mit check: after danach.
 #             disturbance: true = die Folge ist eine Störung der Zone (Zonenstufe, Harmonie, Selektionsdruck).
+# reach     – zone (Standard): wirkt auf die gewählten Slots. world: ohne Zielwahl auf alle Zonen (Wetter,
+#             Naturkräfte). Weltkarten haben keine Zonen-/Art-Slots (choice erlaubt); die Zone heißt "self"
+#             (at weglassen). effects wirken in jeder Zone, byGeography.<geografie> zusätzlich nur dort;
+#             Schwellen gelten je Zone. Ausstrahlungen (scope ≠ self) nur mit adjust, population, disturb.
 # Der Kartentext wird aus Effekten und Schwellen erzeugt.
 
 categories:
   - { id: force, name: { de: Naturgewalt, en: Force of nature } }
+  - { id: weather, name: { de: Wetter, en: Weather } }
   - { id: gift, name: { de: Gabe, en: Gift } }
   - { id: miracle, name: { de: Wunder, en: Miracle } }
   - { id: species, name: { de: Gabe der Arten, en: Gift of the species } }
@@ -103,12 +108,18 @@ cards:
           - { adjust: deadwood, by: 1, at: zone }
 
   # ---------- Gaben (1–2 Odem, präzise: ein Wert ±1) ----------
+  # Weltkarte (reach: world): wirkt ohne Ziel auf alle Zonen, je Geografie unterschiedlich.
   - id: rain
     name: { de: Regen, en: Rain }
-    category: gift
+    category: weather
     cost: 1
-    slots: [{ id: zone, kind: zone }]
-    effects: [{ adjust: moisture, by: 1, at: zone }]
+    reach: world
+    byGeography:
+      mountains: [{ adjust: snow, by: 1 }]
+      forest: [{ adjust: moisture, by: 1 }]
+      plains: [{ adjust: moisture, by: 1 }]
+      river: [{ adjust: water, by: 1 }]
+      coast: [{ adjust: salt, by: -1 }]
 
   - id: dry_wind
     name: { de: Trockenwind, en: Dry wind }

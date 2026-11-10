@@ -2,6 +2,7 @@
 import type { CardView, GameView, Locale, StatView, ZoneView } from './api.ts';
 import { applyEffect } from './cards/effects.ts';
 import { firingTriggers, getCard } from './cards/play.ts';
+import { isWorldCard, worldWarnings } from './cards/worldcard.ts';
 import { cardShort, cardText, slotLabel } from './cards/text.ts';
 import { forecastView } from './describe.ts';
 import { idealDistance, targetStatus } from './targets.ts';
@@ -14,12 +15,32 @@ import type { Card, GameData } from './schema/index.ts';
 import type { GameState, ZoneState } from './state.ts';
 import { geographyOf, seasonOf, statsOf, yearOf } from './world.ts';
 
+/** Schwellen der Weltkarten auf der Hand je Karte und Zone (einmal je Ansicht berechnet). */
+type WorldFiring = Map<string, Map<string, Set<string>>>;
+
+function worldFiring(data: GameData, state: GameState): WorldFiring {
+  const out: WorldFiring = new Map();
+  for (const inst of state.hand) {
+    const card = getCard(data, inst.card);
+    if (isWorldCard(card) && card.triggers.length > 0 && !out.has(card.id))
+      out.set(card.id, worldWarnings(data, state, card));
+  }
+  return out;
+}
+
 /**
  * Sichtbare Gefahren: Schwellen von Handkarten, die mit dieser Zone als erstem Ziel auslösen würden.
  * check "before" gegen den Zustand, check "after" gegen eine Kopie mit angewandten Grundeffekten
  * (nur Effekte auf den ersten Slot oder alle Zonen – weitere Slots sind hier noch nicht gewählt).
+ * Weltkarten: Schwellen, die beim Ausspielen in dieser Zone auslösen würden.
  */
-function warnings(data: GameData, state: GameState, zone: ZoneState, locale: Locale): ZoneView['warnings'] {
+function warnings(
+  data: GameData,
+  state: GameState,
+  zone: ZoneState,
+  locale: Locale,
+  world: WorldFiring,
+): ZoneView['warnings'] {
   const out: ZoneView['warnings'] = [];
   const seen = new Set<string>();
   const push = (card: Card, ids: Set<string>) => {
@@ -30,6 +51,10 @@ function warnings(data: GameData, state: GameState, zone: ZoneState, locale: Loc
     if (seen.has(inst.card)) continue;
     seen.add(inst.card);
     const card = getCard(data, inst.card);
+    if (isWorldCard(card)) {
+      push(card, world.get(card.id)?.get(zone.id) ?? new Set());
+      continue;
+    }
     const first = card.slots[0];
     if (!first || first.kind !== 'zone') continue;
     const bound = { [first.id]: zone.id };
@@ -61,7 +86,7 @@ export function nextBreathIncome(data: GameData, state: GameState): number {
   return sim.phase === 'play' ? sim.breath - state.breath : 0;
 }
 
-function zoneView(data: GameData, state: GameState, zone: ZoneState, locale: Locale): ZoneView {
+function zoneView(data: GameData, state: GameState, zone: ZoneState, locale: Locale, world: WorldFiring): ZoneView {
   const geo = geographyOf(data, zone);
   const form = data.forms.get(zone.form)?.form;
   const ideal = data.ideals.get(geo.id);
@@ -101,13 +126,14 @@ function zoneView(data: GameData, state: GameState, zone: ZoneState, locale: Loc
         count: populationOf(zone, sp.id),
         group: sp.group,
       })),
-    warnings: warnings(data, state, zone, locale),
+    warnings: warnings(data, state, zone, locale, world),
   };
 }
 
 export function view(data: GameData, state: GameState, locale: Locale = 'de'): GameView {
   const season = seasonOf(data, state.round);
   const playable = new Set(legalPlays(data, state).map((p) => p.uid));
+  const firing = worldFiring(data, state);
   const hand: CardView[] = state.hand.map((inst) => {
     const card = getCard(data, inst.card);
     return {
@@ -115,7 +141,7 @@ export function view(data: GameData, state: GameState, locale: Locale = 'de'): G
       card: card.id,
       name: card.name[locale],
       category: card.category,
-      reach: 'zone', // Platzhalter bis Weltkarten im Schema stehen (engine-dev)
+      reach: card.reach,
       cost: card.cost,
       text: cardText(data, card, locale),
       short: cardShort(data, card, locale),
@@ -139,7 +165,7 @@ export function view(data: GameData, state: GameState, locale: Locale = 'de'): G
     harmony: { value: state.harmony, max: data.harmony.max, trend: state.harmonyTrend },
     breath: { value: state.breath, max: breathParams(data).max, nextIncome: nextBreathIncome(data, state) },
     score: state.score,
-    zones: state.zones.map((z) => zoneView(data, state, z, locale)),
+    zones: state.zones.map((z) => zoneView(data, state, z, locale, firing)),
     hand,
     drawPile: state.drawPile.length,
     discardPile: state.discardPile.length,
