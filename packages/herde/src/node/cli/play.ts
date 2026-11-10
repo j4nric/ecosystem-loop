@@ -77,7 +77,7 @@ function render(v: HerdeView): void {
       (evo.mature
         ? ' · REIF (e = springen)'
         : evo.missing
-          ? ` · zur Reife fehlen ${evo.missing.traits} Merkmal(e)` +
+          ? ` · zur Reife fehlen auf dieser Stufe ${evo.missing.traits} Merkmal(e)` +
             (evo.missing.oneOf ? `, eines aus ${evo.missing.oneOf.map(name).join('/')}` : '')
           : ''),
   );

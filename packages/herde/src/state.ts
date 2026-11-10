@@ -4,7 +4,7 @@
  */
 
 /** Version des Zustandsformats; bei inkompatiblen Änderungen erhöhen (validateState lehnt alte Stände ab). */
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
 
 export interface Pos {
   x: number;
@@ -35,12 +35,19 @@ export interface HerdState {
   thirst: number;
   /** zuletzt besuchte Felder (älteste zuerst) */
   trail: Pos[];
-  /** Merkmale (traits.yaml) in der Reihenfolge der Wahl; bleiben über den Stufensprung */
+  /** Merkmale (traits.yaml) in der Reihenfolge der Wahl; ihre Wirkung bleibt über den Stufensprung */
   traits: string[];
+  /**
+   * Zahl der Merkmale beim Erreichen der aktuellen Stufe: `traits` ab diesem Index wurden auf der aktuellen Stufe
+   * gewählt (zählen für die Reife bei `mature.scope: stage`).
+   */
+  traitsAtStage: number;
   /** Zähler des Erlebten je Erfahrung (traits.yaml → experiences) */
   experience: Record<string, number>;
   /** angebotene Merkmale (leer = kein Angebot) */
   offer: string[];
+  /** wie oft ein Angebot seit der letzten Wahl liegen geblieben ist (Rotation des Angebots, ohne Zufall) */
+  offerTurn: number;
 }
 
 export interface PackState {

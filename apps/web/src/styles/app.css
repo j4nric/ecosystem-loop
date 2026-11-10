@@ -1089,6 +1089,11 @@ textarea {
   text-align: center;
 }
 
+/* frühere Stufe: wirkt, zählt aber nicht für die Reife */
+.trait-list--earlier {
+  color: var(--ink-soft);
+}
+
 .xp {
   list-style: none;
   margin: 4px 0;
@@ -1138,6 +1143,13 @@ textarea {
 .tag--good {
   background: rgba(79, 154, 58, 0.18);
   color: #2f6b22;
+}
+
+/* erreicht, aber noch nicht im Angebot bzw. Merkmal einer früheren Stufe */
+.tag--muted {
+  background: rgba(60, 60, 60, 0.1);
+  color: var(--ink-soft);
+  font-weight: 600;
 }
 
 .evo__next {

@@ -28,8 +28,10 @@ describe('newGame', () => {
       thirst: 0,
       trail: [],
       traits: [],
+      traitsAtStage: 0,
       experience: Object.fromEntries([...data.experiences.keys()].map((id) => [id, 0])),
       offer: [],
+      offerTurn: 0,
     });
     expect(s.packs).toEqual([{ id: 1, x: 5, y: 2, size: 1, fed: 0, hungry: 0 }]);
     expect(s.nextPackId).toBe(2);

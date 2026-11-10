@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import type { HerdeData, HerdeView, StageNeedsView } from '@being-god/herde';
 import { locale, t } from '../i18n/index.ts';
 import {
+  countedText,
   evolutionBadge,
   experienceRows,
   missingOnIsland,
   missingText,
   needRows,
+  ownedTraits,
   traitInfo,
   type NeedRow,
 } from '../logic/evolution.ts';
@@ -116,6 +118,7 @@ export function EvolutionPanel({
   const nextRows = evo.next ? needRows(t, data, locale, view, evo.next, evo.stage) : [];
   const lacking = missingOnIsland(nextRows);
   const maturity = missingText(t, data, locale, evo);
+  const counted = countedText(t, evo);
   return (
     <div
       className="overlay overlay--sheet"
@@ -141,15 +144,14 @@ export function EvolutionPanel({
             <p className="muted">{t.evoNoTraits}</p>
           ) : (
             <ul className="trait-list">
-              {evo.traits.map((id) => {
-                const info = traitInfo(data, locale, id);
-                return (
-                  <li key={id}>
-                    <span aria-hidden>{info.icon}</span>
-                    <b>{info.name}</b> – {info.effect}
-                  </li>
-                );
-              })}
+              {ownedTraits(data, locale, evo).map((info) => (
+                <li key={info.id} className={info.role === 'earlier' ? 'trait-list--earlier' : undefined}>
+                  <span aria-hidden>{info.icon}</span>
+                  <b>{info.name}</b> – {info.effect}
+                  {info.role === 'counted' && <em className="tag tag--good">{t.evoCountsTag}</em>}
+                  {info.role === 'earlier' && <em className="tag tag--muted">{t.evoEarlierTag}</em>}
+                </li>
+              ))}
             </ul>
           )}
 
@@ -168,7 +170,8 @@ export function EvolutionPanel({
                   {row.trait ? (
                     <>
                       {t.evoExperienceNext(`${row.trait.icon} ${row.trait.name}`)}
-                      {row.available && <em className="tag tag--good">{t.evoAvailable}</em>}
+                      {row.status === 'offer' && <em className="tag tag--good">{t.evoInOffer}</em>}
+                      {row.status === 'later' && <em className="tag tag--muted">{t.evoLater}</em>}
                       {row.trait.forMaturity && <em className="tag">{t.evoForMaturity}</em>}
                     </>
                   ) : (
@@ -181,6 +184,7 @@ export function EvolutionPanel({
 
           <h3>{t.evoMaturity}</h3>
           <p className={evo.mature ? 'is-good' : undefined}>{maturity ?? t.evoLast}</p>
+          {counted && <p className="muted">{counted}</p>}
 
           {evo.next && (
             <section className="evo__next" aria-label={t.evoNext(stageName(data, locale, evo.next.id))}>

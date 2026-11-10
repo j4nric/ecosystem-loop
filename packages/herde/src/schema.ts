@@ -95,10 +95,14 @@ export type SeasonSet = z.infer<typeof SeasonSet>;
 export const Forage = z.strictObject({ food: Count, grow: z.record(Id, Count) });
 export type Forage = z.infer<typeof Forage>;
 
-/** Was die Stufe zur Reife für `next` braucht: so viele Merkmale insgesamt, optional eines aus `oneOf`. */
+/**
+ * Was die Stufe zur Reife für `next` braucht: so viele Merkmale, optional eines aus `oneOf`. `scope` legt fest,
+ * welche Merkmale zählen: `stage` (Standard) nur die auf dieser Stufe gewählten, `all` alle der Herde.
+ */
 export const Maturity = z.strictObject({
   traits: Count,
   oneOf: z.array(Id).optional(),
+  scope: z.enum(['stage', 'all']).optional(),
 });
 export type Maturity = z.infer<typeof Maturity>;
 

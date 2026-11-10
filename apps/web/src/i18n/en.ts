@@ -132,7 +132,7 @@ export const en: Strings = {
   evIceBegan: (n) => `The ice age begins: ${n} months of winter.`,
   evIceEnded: (n) => `The ice age is over. ${n} animals survived.`,
   evLost: 'The herd has died out.',
-  evTraitOffered: (traits) => `New trait to choose: ${traits}.`,
+  evTraitOffered: (traits) => `Traits to choose: ${traits}.`,
   evTraitPicked: (trait, effect) => `The herd develops ${trait}: ${effect}`,
   evMatured: (next) => `The herd is ready for the leap: ${next}.`,
   evEvolved: (from, to) => `New stage: ${to} (was ${from}).`,
@@ -205,12 +205,12 @@ export const en: Strings = {
     `It moves at most ${r.move === 1 ? 'one field' : `${r.move} fields`} per month and feeds on its own and the ${r.neighbors} neighbouring fields. Surplus becomes reserve, shortage eats into it, then animals die. ${capitalize(when(r.water))}: thirst without water nearby. ${capitalize(when(r.shelter))}: cold without shelter nearby. Calves are born depending on the reserve. What counts as food, water and shelter depends on the stage (see below).`,
   helpEvolution: 'Evolution',
   helpEvolutionText:
-    'The herd counts what it lives through. When an experience reaches its threshold, a trait becomes available; at the start of every season the herd offers some. Pick one or leave the offer – it comes again next season. Traits stay through all stages. With enough traits (including a specific one) the herd is mature: then you decide when it takes the leap to the next stage. No way back – and every stage needs different land. Tap the herd symbol at the bottom right for progress and a preview.',
+    'The herd counts what it lives through. When an experience reaches its threshold, a trait becomes available; at the start of every season the herd offers some. Pick one or leave the offer – then others take their turn next season. The effect of traits stays through all stages. Once the herd has picked enough new traits on its stage (including a specific one) it is mature – earlier traits do not count for this: then you decide when it takes the leap to the next stage. No way back – and every stage needs different land. Tap the herd symbol at the bottom right for progress and a preview.',
   helpTraits: 'Traits',
   helpStages: 'Stages',
   helpTraitFrom: (experience, at) => `from ${at} × ${experience}`,
   helpStageMature: (traits, oneOf) =>
-    `Mature with ${traits} ${traits === 1 ? 'trait' : 'traits'}${oneOf.length > 0 ? `, including ${orList(oneOf)}` : ''}.`,
+    `Mature with ${traits} new ${traits === 1 ? 'trait' : 'traits'}${oneOf.length > 0 ? `, including ${orList(oneOf)}` : ''}.`,
   helpCards: 'Cards',
   helpCardsText: (r) =>
     `At the start of every season you draw new cards, at most ${r.handMax} in hand. Tap a card, then a glowing field – the preview shows what happens to the field and whether the herd changes its intention. Rain works on the whole island.`,
@@ -229,14 +229,19 @@ export const en: Strings = {
   evoExperience: 'Experience',
   evoExperienceNext: (trait) => `→ ${trait}`,
   evoExperienceDone: 'all reached',
-  evoAvailable: 'to choose',
+  evoInOffer: 'on offer',
+  evoLater: 'reached – comes in a later offer',
   evoForMaturity: 'for maturity',
   evoMaturity: 'Maturity',
+  evoCounted: (n, required) =>
+    `Picked on this stage: ${n} of ${required} ${required === 1 ? 'trait' : 'traits'}. Earlier traits keep working but do not count.`,
+  evoCountsTag: 'counts for maturity',
+  evoEarlierTag: 'earlier stage – works, does not count',
   evoMissing: (traits, oneOf) => {
     const parts: string[] = [];
     if (traits > 0) parts.push(`${traits} more ${traits === 1 ? 'trait' : 'traits'}`);
     if (oneOf && oneOf.length > 0) parts.push(`including ${orList(oneOf)}`);
-    return parts.length > 0 ? `Still needed for maturity: ${parts.join(', ')}.` : 'Ready for the leap.';
+    return parts.length > 0 ? `Still needed for maturity on this stage: ${parts.join(', ')}.` : 'Ready for the leap.';
   },
   evoMature: (next) => `Mature! The herd can become ${next}.`,
   evoLast: 'Highest stage of this version. More stages will follow.',
@@ -258,9 +263,10 @@ export const en: Strings = {
   onIsland: (n) => (n > 0 ? `${fields(n)} on the island` : 'missing on the island'),
   blockedOnIsland: (n) => (n > 0 ? `${fields(n)} impassable` : 'none on the island'),
   evolveButton: (stage) => `Evolve into ${stage}`,
-  evolveTitle: (stage) => `Evolve into ${stage}?`,
+  evolveTitle: (stage) => `Evolve to the stage ${stage}?`,
   evolveIntro: 'Afterwards new needs apply:',
-  evolveWarning: 'No way back: the leap is final. The traits stay, but what helped the herd so far may harm it now.',
+  evolveWarning:
+    'No way back: the leap is final. The traits keep working, but only new ones count towards the next maturity. What helped the herd so far may harm it now.',
   evolveConfirm: 'Evolve',
   evolveCancel: 'Not yet',
   evolvedTitle: 'A new stage',
@@ -272,5 +278,6 @@ export const en: Strings = {
   offerHelpsMaturity: 'helps towards maturity',
   offerPick: 'Take trait',
   offerLater: 'Later',
-  offerLeave: 'You can leave the offer. It is renewed next season – at most one trait per season.',
+  offerLeave:
+    'You can leave the offer. Next season other reached traits take their turn; what maturity still needs stays in front. At most one trait per season.',
 };

@@ -12,7 +12,7 @@ data/landscapes.yaml  Landschaften: Futter-Maximum, Wachstum je Jahreszeit, walk
 data/cards.yaml       Karten: Ziel-Landschaften, Wirkung (transform/ignite/grow), Wildnis-Kosten, Ziehgewicht, global
 data/seasons.yaml     Jahreszeiten (fire), Monate je Jahreszeit, Monatsnamen
 data/stages.yaml      Stufen der Herde: Bedürfnisse (Futter, Wasser, Schutz und wann, Futter je Landschaft, Hindernisse,
-                      Schritte, Umkreis, Verluste, Gewichte der Herdenwahl), Folgestufe und Reife
+                      Schritte, Umkreis, Verluste, Gewichte der Herdenwahl), Folgestufe und Reife (mit mature.scope)
 data/traits.yaml      Erfahrungen (Zähler des Erlebten) und Merkmale (Schwelle, Wirkung auf Stufenwerte), Angebotsgröße
 data/params.yaml      Parameter (Herde zu Beginn, Feuer, Wölfe, Wildnis, Eiszeit, Karten)
 data/islands.yaml     Inseln als Zeichenraster mit Legende, Start von Herde und Rudeln
@@ -52,9 +52,11 @@ newGame(data, { seed, island? }): HerdeState
 step(data, state, action): { state, events }      // rein, wirft RuleError bei ungültigen Zügen
   action = { type: 'play', hand, x?, y? } | { type: 'advance' }
          | { type: 'pickTrait', trait }             // ein angebotenes Merkmal wählen
-         | { type: 'evolve' }                       // zur nächsten Stufe springen (nur wenn reif, unumkehrbar)
+         | { type: 'evolve' }                       // zur nächsten Stufe springen (nur wenn reif, unumkehrbar;
+                                                   // Merkmale wirken weiter, die Reife zählt neu)
 view(data, state): HerdeView                       // Felder, Herde, Rudel, Absicht, Hand mit Zielen, Datum, Eiszeit,
-                                                   // evolution (Stufe, Merkmale, Angebot, Erfahrung, Reife, Vorschau)
+                                                   // evolution (Stufe, Merkmale, davon zählend, Angebot, verfügbar,
+                                                   // Erfahrung, Reife, was auf dieser Stufe fehlt, Vorschau)
 legalPlays(data, state): Action[]                  // alle Kartenzüge; 'advance' geht immer
 legalActions(data, state): Action[]                // Kartenzüge, pickTrait je Angebot, evolve (wenn reif), advance
 validateState(data, unknown): { ok: true } | { ok: false, reason }
@@ -84,10 +86,17 @@ Daten: `buildData(raw)` (plattformunabhängig, z. B. für die App mit zur Build-
 9. **Wildnis** +`perMonth`; bei `max` beginnt die Eiszeit (`ice.months` Monate `ice.season`); endet sie mit
    lebender Herde, ist die Partie gewonnen. Stirbt die Herde aus, ist sie verloren.
 10. **Monat +1;** zu Beginn jeder Jahreszeit `drawPerSeason` Karten ziehen, höchstens `handMax` auf der Hand, und
-    bis zu `offerSize` verfügbare **Merkmale anbieten** (Reihenfolge der Daten, ein stehendes Angebot wird erneuert).
+    bis zu `offerSize` verfügbare **Merkmale anbieten**: zuerst die aus `mature.oneOf` der aktuellen Stufe, dann die
+    übrigen (je Reihenfolge der Daten). Ist ein Angebot liegen geblieben, rotiert es weiter (`herd.offerTurn`, ohne
+    Zufall): Reife-Merkmale bleiben vorn (höchstens `offerSize − 1`), die übrigen Plätze wandern durch den Rest.
 
 Zwischen den Monaten (wie Karten): `pickTrait` wählt ein Merkmal aus dem Angebot (danach ist es verbraucht – höchstens
 eines je Jahreszeit), `evolve` springt zur Folgestufe, sobald die Herde reif ist.
+
+**Reife je Stufe:** Bei `mature.scope: stage` (Standard, so in `stages.yaml`) zählen für die Reife nur Merkmale, die auf
+der aktuellen Stufe gewählt wurden (`herd.traits` ab Index `herd.traitsAtStage`); die Wirkung früherer Merkmale bleibt.
+Damit lässt sich keine Stufe überspringen. `scope: all` zählt alle Merkmale der Herde (Rückweg, falls der Inhaber die
+Entscheidung ändert – nur YAML).
 
 Die **Absicht** in `view` entsteht, indem die Schritte 1–3 auf einer Kopie laufen (mit demselben Seed-Zufall) und
 danach die Herdenwahl folgt – also genau so wie in `advance`. Die Herdenwahl selbst hat keinen Zufall.
@@ -144,5 +153,15 @@ Im Code mit `// AUSLEGUNG:` markiert:
   Verbuschung einen Monat zu wenig an.
 - **Eigenes Feld** (`herd.ts`): Die Herde darf immer bleiben, auch auf einem Feld, das ihre Stufe sonst nicht betritt
   (Altwald nach dem Sprung zum Wanderer).
+- **Erfahrung „fire“** (`traits.ts`): Nur ein Waldbrand zählt, kein Feuer durch die Blitz-Karte – sonst ließe sich
+  „Feuerscheu“ mit der eigenen Karte farmen.
+- **Erfahrung „ate“** (`traits.ts`): großzügig – die Herde steht auf einer passenden Landschaft und hat in diesem Monat
+  gefressen; woher das Futter im Umkreis kam, wird nicht geprüft.
+- **Erfahrung „moved“** (`traits.ts`): Luftlinie zwischen Start und Ziel des Monats (Chebyshev), nicht der Weg.
+- **Unerfüllbare Reife** (`traits.ts`): Sind alle passenden Merkmale schon auf früheren Stufen gewählt, gilt die
+  Bedingung als erfüllt (`required` wird auf das noch Wählbare gekappt, aus `oneOf` zählt dann auch ein früheres) –
+  sonst säße die Herde fest.
+- **Angebot beim Sprung** (`traits.ts`): Ein stehendes Angebot wird sofort nach den Reife-Merkmalen der neuen Stufe
+  geordnet; ein schon genutztes bleibt leer (weiterhin höchstens eine Wahl je Jahreszeit).
 - **Abgewehrtes Rudel** (`wolves.ts`): Reißt ein Rudel wegen `wolfGuard` kein Tier, ist das kein Angriff (kein
   Ereignis, keine Erfahrung) und das Rudel bleibt hungrig.

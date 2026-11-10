@@ -1,9 +1,9 @@
 /**
  * Anzeige der Entwicklung (rein, ohne DOM): Bedürfnisse einer Stufe mit dem, was die Insel heute bietet, gewählte
- * und angebotene Merkmale, Erfahrungsfortschritt, Reife und die Aktionen dazu. Regeln rechnet die Engine
- * (`view().evolution`); hier wird nur gezählt und benannt.
+ * und angebotene Merkmale, Erfahrungsfortschritt und Reife. Regeln rechnet die Engine (`view().evolution`); hier wird
+ * nur gezählt und benannt. Aktionen (`pickTrait`, `evolve`) kommen aus der Engine bzw. der View.
  */
-import type { Action, EvolutionView, HerdeData, HerdeView, StageNeedsView } from '@being-god/herde';
+import type { EvolutionView, HerdeData, HerdeView, StageNeedsView } from '@being-god/herde';
 import type { Strings } from '../i18n/de.ts';
 import type { Locale } from '../i18n/locale.ts';
 import { landName, seasonSet, stageName, textOf, traitName } from './format.ts';
@@ -150,6 +150,17 @@ export function traitInfo(data: HerdeData, locale: Locale, id: string, evo?: Evo
   };
 }
 
+/**
+ * Stand eines erreichten Merkmals: `offer` steht jetzt im Angebot, `later` ist erreicht und kommt in einem späteren
+ * Angebot (das Angebot rotiert), null noch nicht erreicht.
+ */
+export type TraitStatus = 'offer' | 'later' | null;
+
+export function traitStatus(evo: Pick<EvolutionView, 'offer' | 'available'>, id: string): TraitStatus {
+  if (evo.offer.includes(id)) return 'offer';
+  return evo.available.includes(id) ? 'later' : null;
+}
+
 export interface ExperienceRow {
   id: string;
   name: string;
@@ -159,15 +170,15 @@ export interface ExperienceRow {
   trait: TraitInfo | null;
   /** Fortschritt 0 … 1 bis zur Schwelle */
   share: number;
-  /** das Merkmal ist schon verfügbar (wird angeboten bzw. zur nächsten Jahreszeit) */
-  available: boolean;
+  /** das Merkmal ist erreicht: im Angebot (`offer`) oder in einem späteren Angebot (`later`); sonst null */
+  status: TraitStatus;
 }
 
 /** Erfahrungen mit Fortschritt zum nächsten Merkmal; was zur Reife fehlt, steht zuerst. */
 export function experienceRows(data: HerdeData, locale: Locale, evo: EvolutionView): ExperienceRow[] {
   const waiting = [...evo.offer, ...evo.available];
   const rows = evo.experience.map((e) => {
-    // Schwelle erreicht, Merkmal aber noch nicht gewählt: es steht zur Wahl (bzw. kommt zur nächsten Jahreszeit).
+    // Schwelle erreicht, Merkmal aber noch nicht gewählt: im Angebot oder in einem späteren Angebot.
     const reached = waiting.find((id) => data.traits.get(id)?.from === e.id);
     if (reached) {
       const trait = traitInfo(data, locale, reached, evo);
@@ -178,7 +189,7 @@ export function experienceRows(data: HerdeData, locale: Locale, evo: EvolutionVi
         at: trait.at,
         trait,
         share: 1,
-        available: true,
+        status: traitStatus(evo, reached),
       };
     }
     const trait = e.next ? traitInfo(data, locale, e.next.trait, evo) : null;
@@ -189,7 +200,7 @@ export function experienceRows(data: HerdeData, locale: Locale, evo: EvolutionVi
       at: e.next?.at ?? null,
       trait,
       share: e.next ? Math.min(1, e.value / Math.max(1, e.next.at)) : 1,
-      available: false,
+      status: null,
     };
   });
   const rank = (r: ExperienceRow) => (r.trait?.forMaturity ? 0 : r.trait ? 1 : 2);
@@ -197,6 +208,27 @@ export function experienceRows(data: HerdeData, locale: Locale, evo: EvolutionVi
     .map((r, i) => ({ r, i }))
     .sort((a, b) => rank(a.r) - rank(b.r) || a.i - b.i)
     .map(({ r }) => r);
+}
+
+/**
+ * Gewählte Merkmale mit ihrer Rolle für die Reife: `counted` zählt auf dieser Stufe, `earlier` stammt aus einer
+ * früheren Stufe (wirkt, zählt aber nicht); auf der letzten Stufe gibt es keine Reife (`none`).
+ */
+export interface OwnedTrait extends TraitInfo {
+  role: 'counted' | 'earlier' | 'none';
+}
+
+export function ownedTraits(data: HerdeData, locale: Locale, evo: EvolutionView): OwnedTrait[] {
+  return evo.traits.map((id) => ({
+    ...traitInfo(data, locale, id, evo),
+    role: evo.missing === null ? 'none' : evo.counted.includes(id) ? 'counted' : 'earlier',
+  }));
+}
+
+/** Wie viele Merkmale auf dieser Stufe schon für die Reife zählen; null auf der letzten Stufe. */
+export function countedText(t: Strings, evo: EvolutionView): string | null {
+  if (!evo.missing) return null;
+  return t.evoCounted(evo.counted.length, evo.missing.required);
 }
 
 /** Was zur Reife fehlt, als Satz; null auf der letzten Stufe. */
@@ -216,12 +248,4 @@ export function evolutionBadge(view: Pick<HerdeView, 'evolution' | 'over'>): Evo
   if (evo.offer.length > 0) return { kind: 'offer', count: evo.offer.length };
   if (evo.mature && evo.next) return { kind: 'mature', next: evo.next.id };
   return null;
-}
-
-/** Die Aktionen der Entwicklung, die gerade möglich sind (Merkmal wählen, springen) – wie `legalActions`. */
-export function evolutionActions(view: Pick<HerdeView, 'evolution' | 'over'>): Action[] {
-  if (view.over) return [];
-  const actions: Action[] = view.evolution.offer.map((trait) => ({ type: 'pickTrait', trait }));
-  if (view.evolution.mature) actions.push({ type: 'evolve' });
-  return actions;
 }

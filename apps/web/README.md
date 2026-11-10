@@ -101,12 +101,14 @@ URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
 - **Herde und Entwicklung** (Knopf mit dem Symbol der Stufe neben 📜; Punkt mit Zahl bei einem Angebot, ⬆ bei
   Reife; dazu ein goldener bzw. grüner Hinweis unter der Absicht): aktuelle Stufe mit Bedürfnissen (Futter mit
   Maximum, Wasser und Schutz mit Jahreszeiten, Hindernis, Schritte und Umkreis) und der Zahl passender Felder auf der
-  Insel, gewählte Merkmale mit Wirkung, Erfahrungen mit Balken bis zur Schwelle und dem Merkmal, das dann kommt
-  (Reife-Merkmale zuerst, gold), was zur Reife fehlt, und die **Vorschau der nächsten Stufe**: was sie braucht, wie
+  Insel, gewählte Merkmale mit Wirkung (markiert: „zählt für die Reife“ bzw. „frühere Stufe – wirkt, zählt nicht“,
+  aus `evolution.counted`), Erfahrungen mit Balken bis zur Schwelle und dem Merkmal, das dann kommt (Reife-Merkmale
+  zuerst, gold; erreichte Merkmale „im Angebot“ bzw. „kommt in einem späteren Angebot“), was zur Reife auf dieser
+  Stufe fehlt (gewählt x von y), und die **Vorschau der nächsten Stufe**: was sie braucht, wie
   viele Felder die Insel heute bietet, was nicht mehr als Futter zählt, was unpassierbar wird, und was ganz fehlt.
   Alles wird aus `view.evolution` gelesen und aus `view.cells` gezählt, keine Regel nachgebaut.
 - **Merkmal-Angebot:** 1–3 Karten (Symbol, Name, Wirkung, Erfahrung und Schwelle, „hilft zur Reife“), wählen, dann
-  „Merkmal annehmen“ (`pickTrait`); „Später“ lässt das Angebot liegen (wird zur nächsten Jahreszeit erneuert).
+  „Merkmal annehmen“ (`pickTrait`); „Später“ lässt das Angebot liegen (zur nächsten Jahreszeit rotiert es weiter, Reife-Merkmale bleiben vorn).
 - **Sprung:** bei Reife „Weiterentwickeln zu …“ → Dialog im Spiel mit den neuen Bedürfnissen und „Kein Zurück“ →
   `evolve`. Danach eine goldene Lichtsäule mit Ringen über der Herde und eine kurze Einblendung der neuen Stufe. Die
   Figuren sehen je Stufe anders aus (grasende Tiere, gedrungene Waldsammler, schlanke Wanderer; `STAGE_LOOK` in

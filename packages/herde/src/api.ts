@@ -102,17 +102,28 @@ export interface ExperienceView {
 /** Entwicklung der Herde: Stufe, Merkmale, Angebot, Erfahrung, Reife, Vorschau der nächsten Stufe. */
 export interface EvolutionView {
   stage: StageNeedsView;
-  /** gewählte Merkmale (Reihenfolge der Wahl) */
+  /** gewählte Merkmale (Reihenfolge der Wahl); alle wirken, auch die aus früheren Stufen */
   traits: string[];
+  /**
+   * Merkmale, die auf dieser Stufe für die Reife zählen (Teilmenge von `traits`). Bei `mature.scope: stage` nur die
+   * auf dieser Stufe gewählten; die übrigen Merkmale wirken, zählen aber nicht.
+   */
+  counted: string[];
   /** angebotene Merkmale; `pickTrait` mit einer dieser Ids */
   offer: string[];
-  /** Merkmale, deren Schwelle erreicht ist (werden zur nächsten Jahreszeit angeboten, falls nicht schon jetzt) */
+  /**
+   * Merkmale, deren Schwelle erreicht ist (Daten-Reihenfolge). Was davon nicht in `offer` steht, kommt in einem
+   * späteren Angebot (das Angebot rotiert, wenn es liegen bleibt).
+   */
   available: string[];
   experience: ExperienceView[];
   /** reif: `evolve` ist möglich */
   mature: boolean;
-  /** was zur Reife noch fehlt; null auf der letzten Stufe */
-  missing: { traits: number; oneOf: string[] | null } | null;
+  /**
+   * was zur Reife auf dieser Stufe noch fehlt; null auf der letzten Stufe. `required`: so viele zählende Merkmale
+   * braucht die Reife; `traits`: so viele fehlen davon noch; `oneOf`: eines davon muss noch gewählt werden.
+   */
+  missing: { required: number; traits: number; oneOf: string[] | null } | null;
   /** Bedürfnisse der nächsten Stufe (zum Vorplanen); null auf der letzten Stufe */
   next: StageNeedsView | null;
 }

@@ -1,7 +1,8 @@
 /**
  * Zufalls-Bot für den Absturz-Test (keine Messung, Logik vor Balancing). Spielt nur über die Fassade.
  * Sein Zufall ist ein eigener Seed-Strom, damit Läufe reproduzierbar bleiben und das Spiel nicht beeinflussen.
- * Merkmale: nimmt bevorzugt eines, das zur Reife fehlt, sonst ein zufälliges; springt, sobald die Herde reif ist.
+ * Merkmale: nimmt bevorzugt eines, das zur Reife fehlt, sonst ein zufälliges, solange es der Reife noch hilft (sonst
+ * spart er es für die nächste Stufe auf); springt, sobald die Herde reif ist.
  */
 import type { HerdeEvent, HerdeState, Outcome } from './api.ts';
 import { legalPlays, newGame, step, evolutionOf } from './game.ts';
@@ -50,8 +51,13 @@ export function playRandomGame(data: HerdeData, options: BotOptions): BotResult 
   while (!state.over && state.month < maxMonths) {
     const evo = evolutionOf(data, state);
     if (evo.offer.length > 0) {
-      const wanted = evo.offer.filter((id) => evo.missing?.oneOf?.includes(id));
-      apply(step(data, state, { type: 'pickTrait', trait: pick(bot, wanted.length > 0 ? wanted : evo.offer) }));
+      const missing = evo.missing;
+      const wanted = evo.offer.filter((id) => missing?.oneOf?.includes(id));
+      // Ein beliebiges Merkmal hilft der Reife nur, solange außer dem verlangten noch Plätze fehlen; sonst spart der
+      // Bot es für die nächste Stufe auf (dort zählen nur neu gewählte Merkmale). Auf der letzten Stufe nimmt er alles.
+      const free = missing === null || missing.traits > (missing.oneOf ? 1 : 0);
+      if (wanted.length > 0) apply(step(data, state, { type: 'pickTrait', trait: pick(bot, wanted) }));
+      else if (free && !evo.mature) apply(step(data, state, { type: 'pickTrait', trait: pick(bot, evo.offer) }));
     }
     if (evolutionOf(data, state).mature) {
       apply(step(data, state, { type: 'evolve' }));

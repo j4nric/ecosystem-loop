@@ -32,8 +32,10 @@ const StateSchema = z.strictObject({
     thirst: Count,
     trail: z.array(Pos),
     traits: z.array(z.string()),
+    traitsAtStage: Count,
     experience: z.record(z.string(), Count),
     offer: z.array(z.string()),
+    offerTurn: Count,
   }),
   packs: z.array(z.strictObject({ id: Count, x: Count, y: Count, size: Int.positive(), fed: Count, hungry: Count })),
   nextPackId: Count,
@@ -53,10 +55,13 @@ function problem(data: HerdeData, s: HerdeState): string | null {
   if (!data.stages.has(s.herd.stage)) return `unbekannte Stufe ${s.herd.stage}`;
   for (const id of s.herd.traits) if (!data.traits.has(id)) return `unbekanntes Merkmal ${id}`;
   if (new Set(s.herd.traits).size !== s.herd.traits.length) return 'Merkmal doppelt';
+  if (s.herd.traitsAtStage > s.herd.traits.length)
+    return `traitsAtStage ${s.herd.traitsAtStage} größer als die Zahl der Merkmale (${s.herd.traits.length})`;
   for (const id of Object.keys(s.herd.experience)) if (!data.experiences.has(id)) return `unbekannte Erfahrung ${id}`;
   for (const id of data.experiences.keys()) if (!(id in s.herd.experience)) return `Erfahrung ${id} fehlt`;
   if (s.herd.offer.length > data.offerSize)
     return `${s.herd.offer.length} Merkmale im Angebot (max. ${data.offerSize})`;
+  if (new Set(s.herd.offer).size !== s.herd.offer.length) return 'Merkmal doppelt im Angebot';
   for (const id of s.herd.offer) {
     const trait = data.traits.get(id);
     if (!trait) return `unbekanntes Merkmal ${id} im Angebot`;

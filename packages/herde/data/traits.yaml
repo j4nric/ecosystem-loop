@@ -1,21 +1,27 @@
 # Erfahrungen und Merkmale der Herde (Konzept 9.1). Zahlen sind Platzhalter (Logik vor Balancing).
 #
-# offerSize     so viele verfügbare Merkmale bietet die Engine zu Beginn einer Jahreszeit höchstens an (in der
-#               Reihenfolge dieser Datei); der Spieler wählt eines oder lässt das Angebot stehen
+# offerSize     so viele verfügbare Merkmale bietet die Engine zu Beginn einer Jahreszeit höchstens an: zuerst die
+#               aus mature.oneOf der aktuellen Stufe (stages.yaml), dann die übrigen, je in der Reihenfolge dieser
+#               Datei. Der Spieler wählt eines oder lässt das Angebot stehen; ein liegen gebliebenes Angebot rotiert
+#               zur nächsten Jahreszeit weiter (ohne Zufall), damit andere verfügbare Merkmale drankommen
 #
 # experiences   Zähler des Erlebten, je Monat geprüft (nach Fressen, Durst, Kälte und Wölfen, nur wenn die Herde
 #               lebt). when.type:
 #                 sheltered  Schutz in der Nähe in einer Jahreszeit, in der die Stufe Schutz braucht (+1)
 #                 watered    Wasser in der Nähe in einer Jahreszeit, in der die Stufe Wasser braucht (+1)
 #                 hunted     Wölfe haben gerissen, die Herde lebt (+1)
-#                 fire       ein Waldbrand hat das Feld der Herde oder ein Nachbarfeld erfasst (+1)
-#                 ate        die Herde steht auf einer der Landschaften `lands` und hat gefressen (+1)
+#                 fire       ein Waldbrand hat das Feld der Herde oder ein Nachbarfeld erfasst (+1); Feuer durch
+#                            die Blitz-Karte zählt nicht (sonst ließe sich das Merkmal mit der eigenen Karte farmen)
+#                 ate        die Herde steht auf einer der Landschaften `lands` und hat gefressen (+1); großzügig:
+#                            woher das Futter im Umkreis kam, wird nicht geprüft
 #                 on         die Herde steht auf einer der Landschaften `lands` (+1)
-#                 moved      gegangene Felder (+ Zahl der Felder)
+#                 moved      gegangene Felder in Luftlinie zwischen Start und Ziel des Monats (+ Zahl der Felder)
 #
 # traits        Merkmale: verfügbar, sobald die Erfahrung `from` den Wert `at` erreicht. effects ändern Zahlen der
-#               Stufe (stages.yaml): Wert × mul + add, in der Reihenfolge der Merkmale. Ganzzahlige Werte (move,
-#               reach, trail, thirstAfter, wolfGuard) werden gerundet. Merkmale bleiben über den Stufensprung.
+#               Stufe (stages.yaml): Wert × mul + add. Die Wirkungen werden in der Reihenfolge angewandt, in der
+#               die Herde die Merkmale gewählt hat (nicht in der Reihenfolge dieser Datei). Ganzzahlige Werte (move,
+#               reach, trail, thirstAfter, wolfGuard) werden gerundet. Die Wirkung bleibt über den Stufensprung; für
+#               die Reife zählen je nach mature.scope nur Merkmale der aktuellen Stufe.
 offerSize: 3
 experiences:
   - id: sheltered
@@ -28,7 +34,7 @@ experiences:
     name: { de: Durstige Monate am Wasser, en: Thirsty months by water }
     when: { type: watered }
   - id: fire
-    name: { de: Brände überlebt, en: Fires survived }
+    name: { de: Waldbrände überlebt, en: Wildfires survived }
     when: { type: fire }
   - id: forest
     name: { de: Monate im Gehölz gefressen, en: Months feeding in the woods }

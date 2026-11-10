@@ -173,7 +173,7 @@ export const de = {
   evIceBegan: (n: number) => `Die Eiszeit beginnt: ${n} Monate Winter.`,
   evIceEnded: (n: number) => `Die Eiszeit ist vorbei. ${n} Tiere haben überlebt.`,
   evLost: 'Die Herde ist ausgestorben.',
-  evTraitOffered: (traits: string) => `Neues Merkmal zur Wahl: ${traits}.`,
+  evTraitOffered: (traits: string) => `Merkmale zur Wahl: ${traits}.`,
   evTraitPicked: (trait: string, effect: string) => `Die Herde entwickelt ${trait}: ${effect}`,
   evMatured: (next: string) => `Die Herde ist reif für den Sprung: ${next}.`,
   evEvolved: (from: string, to: string) => `Neue Stufe: ${to} (bisher ${from}).`,
@@ -251,12 +251,12 @@ export const de = {
     `Sie zieht jeden Monat höchstens ${r.move === 1 ? 'ein Feld' : `${r.move} Felder`} und frisst aus dem eigenen und den ${r.neighbors} Nachbarfeldern. Überschuss wird Vorrat, Mangel zehrt ihn auf, danach sterben Tiere. ${capitalize(when(r.water))}: Durst ohne Wasser in der Nähe. ${capitalize(when(r.shelter))}: Kälte ohne Schutz in der Nähe. Nachwuchs gibt es je nach Vorrat. Was Futter, Wasser und Schutz ist, hängt von der Stufe ab (siehe unten).`,
   helpEvolution: 'Entwicklung',
   helpEvolutionText:
-    'Die Herde zählt, was sie erlebt. Erreicht eine Erfahrung ihre Schwelle, wird ein Merkmal verfügbar; zu Beginn jeder Jahreszeit bietet die Herde einige an. Du wählst eines oder lässt das Angebot liegen – zur nächsten Jahreszeit kommt es neu. Merkmale bleiben über alle Stufen. Hat die Herde genug Merkmale (darunter ein bestimmtes), ist sie reif: Dann entscheidest du, wann sie den Sprung zur nächsten Stufe macht. Kein Zurück – und jede Stufe braucht andere Landschaft. Tippe unten rechts auf das Symbol der Herde für den Stand und die Vorschau.',
+    'Die Herde zählt, was sie erlebt. Erreicht eine Erfahrung ihre Schwelle, wird ein Merkmal verfügbar; zu Beginn jeder Jahreszeit bietet die Herde einige an. Du wählst eines oder lässt das Angebot liegen – dann kommen zur nächsten Jahreszeit andere an die Reihe. Die Wirkung der Merkmale bleibt über alle Stufen. Hat die Herde auf ihrer Stufe genug neue Merkmale gewählt (darunter ein bestimmtes), ist sie reif – frühere Merkmale zählen dafür nicht: Dann entscheidest du, wann sie den Sprung zur nächsten Stufe macht. Kein Zurück – und jede Stufe braucht andere Landschaft. Tippe unten rechts auf das Symbol der Herde für den Stand und die Vorschau.',
   helpTraits: 'Merkmale',
   helpStages: 'Stufen',
   helpTraitFrom: (experience: string, at: number) => `ab ${at} × ${experience}`,
   helpStageMature: (traits: number, oneOf: string[]) =>
-    `Reif mit ${traits} ${traits === 1 ? 'Merkmal' : 'Merkmalen'}${oneOf.length > 0 ? `, darunter ${orList(oneOf)}` : ''}.`,
+    `Reif mit ${traits} ${traits === 1 ? 'neuen Merkmal' : 'neuen Merkmalen'}${oneOf.length > 0 ? `, darunter ${orList(oneOf)}` : ''}.`,
   helpCards: 'Karten',
   helpCardsText: (r: RuleNumbers) =>
     `Zu Beginn jeder Jahreszeit ziehst du neue Karten, höchstens ${r.handMax} auf der Hand. Karte antippen, dann ein leuchtendes Feld – die Vorschau zeigt, was mit dem Feld geschieht und ob die Herde ihre Absicht ändert. Regen wirkt auf die ganze Insel.`,
@@ -276,15 +276,20 @@ export const de = {
   evoExperience: 'Erfahrung',
   evoExperienceNext: (trait: string) => `→ ${trait}`,
   evoExperienceDone: 'alles erreicht',
-  evoAvailable: 'zur Wahl',
+  evoInOffer: 'im Angebot',
+  evoLater: 'erreicht – kommt in einem späteren Angebot',
   evoForMaturity: 'für die Reife',
   evoMaturity: 'Reife',
+  evoCounted: (n: number, required: number) =>
+    `Auf dieser Stufe gewählt: ${n} von ${required} ${required === 1 ? 'Merkmal' : 'Merkmalen'}. Frühere Merkmale wirken weiter, zählen aber nicht.`,
+  evoCountsTag: 'zählt für die Reife',
+  evoEarlierTag: 'frühere Stufe – wirkt, zählt nicht',
   evoMissing: (traits: number, oneOf: string[] | null) => {
     const parts: string[] = [];
     if (traits > 0) parts.push(`noch ${traits} ${traits === 1 ? 'Merkmal' : 'Merkmale'}`);
     if (oneOf && oneOf.length > 0)
       parts.push(oneOf.length === 1 ? `darunter ${oneOf[0]}` : `darunter ${orList(oneOf)}`);
-    return parts.length > 0 ? `Zur Reife fehlen ${parts.join(', ')}.` : 'Reif für den Sprung.';
+    return parts.length > 0 ? `Zur Reife fehlen auf dieser Stufe ${parts.join(', ')}.` : 'Reif für den Sprung.';
   },
   evoMature: (next: string) => `Reif! Die Herde kann zu ${next} werden.`,
   evoLast: 'Höchste Stufe dieser Version. Weitere Stufen folgen.',
@@ -307,10 +312,10 @@ export const de = {
   onIsland: (n: number) => (n > 0 ? `${fields(n)} auf der Insel` : 'fehlt auf der Insel'),
   blockedOnIsland: (n: number) => (n > 0 ? `${fields(n)} unpassierbar` : 'keines auf der Insel'),
   evolveButton: (stage: string) => `Weiterentwickeln zu ${stage}`,
-  evolveTitle: (stage: string) => `Zu ${stage} weiterentwickeln?`,
+  evolveTitle: (stage: string) => `Weiterentwickeln zur Stufe ${stage}?`,
   evolveIntro: 'Danach gelten neue Bedürfnisse:',
   evolveWarning:
-    'Kein Zurück: Der Sprung ist endgültig. Die Merkmale bleiben, aber was der Herde bisher half, kann ihr jetzt schaden.',
+    'Kein Zurück: Der Sprung ist endgültig. Die Merkmale wirken weiter, für die nächste Reife zählen aber nur neue. Was der Herde bisher half, kann ihr jetzt schaden.',
   evolveConfirm: 'Weiterentwickeln',
   evolveCancel: 'Noch nicht',
   evolvedTitle: 'Eine neue Stufe',
@@ -323,7 +328,7 @@ export const de = {
   offerPick: 'Merkmal annehmen',
   offerLater: 'Später',
   offerLeave:
-    'Du kannst das Angebot liegen lassen. Zur nächsten Jahreszeit wird es erneuert – höchstens ein Merkmal je Jahreszeit.',
+    'Du kannst das Angebot liegen lassen. Zur nächsten Jahreszeit kommen dann andere erreichte Merkmale an die Reihe; was zur Reife fehlt, bleibt vorn. Höchstens ein Merkmal je Jahreszeit.',
 };
 
 export type Strings = typeof de;

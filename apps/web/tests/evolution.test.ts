@@ -1,4 +1,4 @@
-/** Entwicklung in der Oberfläche: Zählen aus der View, Texte, Zuordnung der Aktionen, Meldungen, alte Spielstände. */
+/** Entwicklung in der Oberfläche: Zählen aus der View, Texte, Hinweis an der Herde, Meldungen, alte Spielstände. */
 import { describe, expect, it, vi } from 'vitest';
 import { legalActions, newGame, step, view, type CellView, type HerdeState, type HerdeView } from '@being-god/herde';
 import { loadData } from '@being-god/herde/node';
@@ -7,15 +7,17 @@ import { MemorySaveStore } from '../src/client/SaveStore.ts';
 import { de } from '../src/i18n/de.ts';
 import { en } from '../src/i18n/en.ts';
 import {
+  countedText,
   countLands,
-  evolutionActions,
   evolutionBadge,
   experienceRows,
   landCounts,
   missingOnIsland,
   missingText,
   needRows,
+  ownedTraits,
   traitInfo,
+  traitStatus,
 } from '../src/logic/evolution.ts';
 import { describeEvents } from '../src/logic/events.ts';
 import { forecastLines, ruleNumbers, seasonHint } from '../src/logic/format.ts';
@@ -130,17 +132,75 @@ describe('Merkmale, Erfahrung und Reife', () => {
     expect(traitInfo(data, 'en', 'thick_fur').forMaturity).toBe(false);
   });
 
-  it('Erfahrungsfortschritt: Wert gegen Schwelle, Reife-Merkmale zuerst, verfügbare markiert', () => {
+  it('Erfahrungsfortschritt: Wert gegen Schwelle, Reife-Merkmale zuerst, erreichte markiert', () => {
     const s = constructed({}, (st) => {
       st.herd.experience = { ...st.herd.experience, forest: 2, sheltered: 3 };
     });
     const rows = experienceRows(data, 'de', view(data, s).evolution);
-    expect(rows[0]).toMatchObject({ id: 'forest', value: 2, at: 4, share: 0.5, available: false });
+    expect(rows[0]).toMatchObject({ id: 'forest', value: 2, at: 4, share: 0.5, status: null });
     expect(rows[0]!.trait?.forMaturity).toBe(true);
     const sheltered = rows.find((r) => r.id === 'sheltered')!;
-    expect(sheltered).toMatchObject({ value: 3, at: 3, share: 1, available: true });
+    // Erreicht, aber (noch) kein Angebot: kommt in einem späteren Angebot.
+    expect(sheltered).toMatchObject({ value: 3, at: 3, share: 1, status: 'later' });
     expect(sheltered.trait?.name).toBe('Dichtes Fell');
     expect(rows).toHaveLength(data.experiences.size);
+  });
+
+  it('zwei Zustände: im Angebot oder erreicht und in einem späteren Angebot (Rotation der Engine)', () => {
+    // Vier erreichte Merkmale, das Angebot der Engine fasst drei: eines wartet auf ein späteres Angebot.
+    let s = constructed({}, (st) => {
+      st.herd.experience = { ...st.herd.experience, forest: 4, sheltered: 3, hunted: 2, watered: 4 };
+      st.month = 2; // letzter Monat des Frühlings: der nächste Schritt beginnt den Sommer
+      st.herd.fat = 20;
+    });
+    s = step(data, s, { type: 'advance' }).state;
+    const evo = view(data, s).evolution;
+    expect(evo.offer).toEqual(['forest_wise', 'thick_fur', 'vigilant']);
+    expect(evo.available).toEqual(['thick_fur', 'vigilant', 'frugal', 'forest_wise']);
+    expect(traitStatus(evo, 'forest_wise')).toBe('offer');
+    expect(traitStatus(evo, 'frugal')).toBe('later');
+    expect(traitStatus(evo, 'endurance')).toBeNull();
+    const rows = experienceRows(data, 'de', evo);
+    expect(rows.find((r) => r.id === 'watered')).toMatchObject({ status: 'later' });
+    expect(rows.find((r) => r.id === 'hunted')).toMatchObject({ status: 'offer' });
+    expect(de.evoInOffer).toBe('im Angebot');
+    expect(de.evoLater).toBe('erreicht – kommt in einem späteren Angebot');
+    expect(de.offerLeave).toContain('andere erreichte Merkmale');
+    expect(en.offerLeave).toContain('other reached traits');
+  });
+
+  it('Merkmale dieser Stufe zählen für die Reife, frühere wirken nur', () => {
+    const s = constructed({}, (st) => {
+      st.herd.stage = 'gatherer';
+      st.herd.traits = ['thick_fur', 'forest_wise', 'vigilant'];
+      st.herd.traitsAtStage = 2;
+    });
+    const evo = view(data, s).evolution;
+    expect(evo.counted).toEqual(['vigilant']);
+    expect(ownedTraits(data, 'de', evo).map((i) => [i.id, i.role])).toEqual([
+      ['thick_fur', 'earlier'],
+      ['forest_wise', 'earlier'],
+      ['vigilant', 'counted'],
+    ]);
+    expect(countedText(de, evo)).toBe(
+      'Auf dieser Stufe gewählt: 1 von 3 Merkmalen. Frühere Merkmale wirken weiter, zählen aber nicht.',
+    );
+    expect(countedText(en, evo)).toBe(
+      'Picked on this stage: 1 of 3 traits. Earlier traits keep working but do not count.',
+    );
+    expect(missingText(de, data, 'de', evo)).toBe(
+      'Zur Reife fehlen auf dieser Stufe noch 2 Merkmale, darunter Weitblick oder Ausdauer.',
+    );
+    // Letzte Stufe: keine Reife, keine Rolle.
+    const last = view(
+      data,
+      constructed({}, (st) => {
+        st.herd.stage = 'wanderer';
+        st.herd.traits = ['thick_fur'];
+      }),
+    ).evolution;
+    expect(ownedTraits(data, 'de', last)[0]!.role).toBe('none');
+    expect(countedText(de, last)).toBeNull();
   });
 
   it('Merkmal gewählt: Erfahrung ohne weiteres Merkmal zeigt „alles erreicht“', () => {
@@ -149,13 +209,17 @@ describe('Merkmale, Erfahrung und Reife', () => {
       st.herd.traits = ['thick_fur'];
     });
     const row = experienceRows(data, 'de', view(data, s).evolution).find((r) => r.id === 'sheltered')!;
-    expect(row).toMatchObject({ at: null, trait: null, share: 1, available: false });
+    expect(row).toMatchObject({ at: null, trait: null, share: 1, status: null });
   });
 
   it('was zur Reife fehlt, als Satz; reif; letzte Stufe', () => {
     const start = view(data, constructed()).evolution;
-    expect(missingText(de, data, 'de', start)).toBe('Zur Reife fehlen noch 2 Merkmale, darunter Waldkundig.');
-    expect(missingText(en, data, 'en', start)).toBe('Still needed for maturity: 2 more traits, including Forest-wise.');
+    expect(missingText(de, data, 'de', start)).toBe(
+      'Zur Reife fehlen auf dieser Stufe noch 2 Merkmale, darunter Waldkundig.',
+    );
+    expect(missingText(en, data, 'en', start)).toBe(
+      'Still needed for maturity on this stage: 2 more traits, including Forest-wise.',
+    );
     const gatherer = view(
       data,
       constructed({}, (s) => {
@@ -164,7 +228,7 @@ describe('Merkmale, Erfahrung und Reife', () => {
       }),
     ).evolution;
     expect(missingText(de, data, 'de', gatherer)).toBe(
-      'Zur Reife fehlen noch 1 Merkmal, darunter Weitblick oder Ausdauer.',
+      'Zur Reife fehlen auf dieser Stufe noch 1 Merkmal, darunter Weitblick oder Ausdauer.',
     );
     const mature = view(
       data,
@@ -185,52 +249,47 @@ describe('Merkmale, Erfahrung und Reife', () => {
   });
 });
 
-describe('Hinweis und Aktionen', () => {
+describe('Hinweis an der Herde', () => {
   const engineEvolution = (s: HerdeState) =>
     legalActions(data, s).filter((a) => a.type === 'pickTrait' || a.type === 'evolve');
 
-  it('Angebot: Badge mit Zahl, pickTrait je Angebot wie legalActions', () => {
+  it('Angebot: Badge mit Zahl; die Engine bietet pickTrait je Angebot', () => {
     const s = constructed({}, (st) => {
       st.herd.experience = { ...st.herd.experience, sheltered: 3, hunted: 2 };
       st.herd.offer = ['thick_fur', 'vigilant'];
     });
     const v = view(data, s);
     expect(evolutionBadge(v)).toEqual({ kind: 'offer', count: 2 });
-    expect(evolutionActions(v)).toEqual([
-      { type: 'pickTrait', trait: 'thick_fur' },
-      { type: 'pickTrait', trait: 'vigilant' },
-    ]);
-    expect(evolutionActions(v)).toEqual(engineEvolution(s));
+    expect(engineEvolution(s)).toEqual(v.evolution.offer.map((trait) => ({ type: 'pickTrait', trait })));
     // Die Wahl geht durch die Engine: Angebot verbraucht, Merkmal gewählt.
-    const after = step(data, s, evolutionActions(v)[0]!).state;
+    const after = step(data, s, { type: 'pickTrait', trait: 'thick_fur' }).state;
     expect(view(data, after).evolution.traits).toEqual(['thick_fur']);
     expect(view(data, after).evolution.offer).toEqual([]);
   });
 
-  it('Reife: Badge mit Folgestufe, evolve wie legalActions; nach dem Sprung neue Stufe', () => {
+  it('Reife: Badge mit Folgestufe; nach dem Sprung neue Stufe, Reife beginnt neu', () => {
     const s = constructed({}, (st) => {
       st.herd.traits = ['thick_fur', 'forest_wise'];
     });
     const v = view(data, s);
     expect(evolutionBadge(v)).toEqual({ kind: 'mature', next: 'gatherer' });
-    expect(evolutionActions(v)).toEqual([{ type: 'evolve' }]);
-    expect(evolutionActions(v)).toEqual(engineEvolution(s));
+    expect(engineEvolution(s)).toEqual([{ type: 'evolve' }]);
     const after = view(data, step(data, s, { type: 'evolve' }).state);
     expect(after.herd.stage).toBe('gatherer');
+    expect(after.evolution.counted).toEqual([]);
     expect(evolutionBadge(after)).toBeNull();
   });
 
-  it('nichts zu tun: kein Badge, keine Aktion; nach dem Ende auch nicht', () => {
+  it('nichts zu tun: kein Badge; nach dem Ende auch nicht', () => {
     const s = constructed();
     expect(evolutionBadge(view(data, s))).toBeNull();
-    expect(evolutionActions(view(data, s))).toEqual([]);
     const over = constructed({}, (st) => {
       st.herd.traits = ['thick_fur', 'forest_wise'];
       st.herd.offer = ['vigilant'];
       st.over = 'lost';
     });
     expect(evolutionBadge(view(data, over))).toBeNull();
-    expect(evolutionActions(view(data, over))).toEqual(engineEvolution(over));
+    expect(engineEvolution(over)).toEqual([]);
   });
 });
 
@@ -249,7 +308,7 @@ describe('Meldungen der Entwicklung', () => {
       { x: 3, y: 4 },
     );
     expect(notices.map((n) => n.text)).toEqual([
-      'Neues Merkmal zur Wahl: 🧥 Dichtes Fell, 👁 Wachsamkeit.',
+      'Merkmale zur Wahl: 🧥 Dichtes Fell, 👁 Wachsamkeit.',
       'Die Herde entwickelt Waldkundig: Größerer Vorrat.',
       'Die Herde ist reif für den Sprung: Waldsammler.',
       'Neue Stufe: Waldsammler (bisher Grasende Herde).',
@@ -263,6 +322,11 @@ describe('Meldungen der Entwicklung', () => {
       y: 0,
     });
     expect(english.notices[0]!.text).toBe('New stage: Wanderers of the open land (was Forest gatherers).');
+  });
+
+  it('Titel des Sprung-Dialogs', () => {
+    expect(de.evolveTitle('Waldsammler')).toBe('Weiterentwickeln zur Stufe Waldsammler?');
+    expect(en.evolveTitle('Forest gatherers')).toBe('Evolve to the stage Forest gatherers?');
   });
 });
 

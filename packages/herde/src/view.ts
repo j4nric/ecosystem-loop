@@ -72,11 +72,12 @@ export function evolutionOf(data: HerdeData, s: HerdeState): EvolutionView {
   return {
     stage: stageNeeds(data, s, s.herd.stage),
     traits: [...s.herd.traits],
+    counted: m.counted,
     offer: [...s.herd.offer],
     available: availableTraits(data, s),
     experience,
     mature: m.mature && !s.over,
-    missing: m.next === null ? null : { traits: m.missingTraits, oneOf: m.missingOneOf },
+    missing: m.next === null ? null : { required: m.required, traits: m.missingTraits, oneOf: m.missingOneOf },
     next: m.next === null ? null : stageNeeds(data, s, m.next),
   };
 }

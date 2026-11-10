@@ -22,7 +22,10 @@
 # choice                   Gewichte der Herdenwahl (Konzept 5): food × Futter in Reichweite (gedeckelt auf den
 #                          Fressbedarf); water, shelter, wolves (je Rudelstärke) und recent jeweils × Herdengröße;
 #                          stay ist ein kleiner Bonus für das eigene Feld
-# next, mature             Folgestufe und Reife: mature.traits Merkmale insgesamt, davon eines aus mature.oneOf
+# next, mature             Folgestufe und Reife: mature.traits Merkmale, davon eines aus mature.oneOf.
+#                          mature.scope: welche Merkmale zählen – stage (Standard): nur die auf dieser Stufe
+#                          gewählten; all: alle der Herde. Die Wirkung früherer Merkmale bleibt in beiden Fällen.
+#                          Verfügbare Merkmale aus mature.oneOf stehen im Angebot zuerst.
 stages:
   - id: herd
     name: { de: Grasende Herde, en: Grazing herd }
@@ -48,7 +51,7 @@ stages:
       recent: 0.3
       stay: 0.01
     next: gatherer
-    mature: { traits: 2, oneOf: [forest_wise] }
+    mature: { traits: 2, oneOf: [forest_wise], scope: stage }
 
   # Waldsammler: Früchte in Busch, Wald und Altwald; Wiese zählt nicht; Wasser das ganze Jahr.
   - id: gatherer
@@ -79,7 +82,7 @@ stages:
       recent: 0.3
       stay: 0.01
     next: wanderer
-    mature: { traits: 3, oneOf: [far_sight, endurance] }
+    mature: { traits: 3, oneOf: [far_sight, endurance], scope: stage }
 
   # Wanderer der offenen Landschaft: Wiese und Steppe, Wasser, weite Wege; Altwald ist ein Hindernis.
   - id: wanderer
