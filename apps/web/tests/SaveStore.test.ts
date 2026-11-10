@@ -1,11 +1,24 @@
-/** SaveStore: flüchtige und localStorage-Ablage – ohne DOM, mit einfachem Stub. */
+/** SaveStore: flüchtige und localStorage-Ablage, alter Spielstand (Konzept 0.4) – ohne DOM, mit einfachem Stub. */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { newBook, newGame, STATE_VERSION } from '@being-god/core';
-import { loadGameData } from '@being-god/core/node';
-import { LocalBookStore, LocalSaveStore, MemorySaveStore, type SavedGame } from '../src/client/SaveStore.ts';
+import { newGame } from '@being-god/herde';
+import { loadData } from '@being-god/herde/node';
+import {
+  LEGACY_KEYS,
+  LocalSaveStore,
+  MemorySaveStore,
+  parseSaved,
+  SAVE_KEY,
+  type SavedGame,
+} from '../src/client/SaveStore.ts';
 
-const data = loadGameData();
-const game = (): SavedGame => ({ version: 1, seed: 's', savedAt: 1, state: newGame(data, { seed: 's' }) });
+const data = loadData();
+const game = (): SavedGame => ({
+  version: 2,
+  seed: 's',
+  savedAt: 1,
+  state: newGame(data, { seed: 's' }),
+  log: [{ month: 0, text: 'Hallo', tone: 'info' }],
+});
 
 class StorageStub {
   readonly items = new Map<string, string>();
@@ -27,16 +40,42 @@ class StorageStub {
 describe('MemorySaveStore', () => {
   it('speichert Kopien und kann geleert werden', () => {
     const store = new MemorySaveStore();
-    expect(store.load()).toBeNull();
+    expect(store.load()).toEqual({ kind: 'none' });
     const g = game();
     store.save(g);
     const loaded = store.load();
-    expect(loaded).toEqual(g);
-    expect(loaded).not.toBe(g);
-    loaded!.state.round = 99;
-    expect(store.load()!.state.round).toBe(g.state.round);
+    expect(loaded).toEqual({ kind: 'game', game: g });
+    if (loaded.kind !== 'game') throw new Error('kein Stand');
+    loaded.game.state.month = 99;
+    const again = store.load();
+    expect(again.kind === 'game' && again.game.state.month).toBe(0);
     store.clear();
-    expect(store.load()).toBeNull();
+    expect(store.load()).toEqual({ kind: 'none' });
+  });
+
+  it('meldet einen vorgegebenen Anfangszustand (z. B. alter Stand)', () => {
+    expect(new MemorySaveStore({ kind: 'legacy' }).load()).toEqual({ kind: 'legacy' });
+  });
+});
+
+describe('parseSaved', () => {
+  it('liest die Hülle und filtert kaputte Protokoll-Einträge', () => {
+    const g = game();
+    const raw = JSON.stringify({ ...g, log: [...g.log, { text: 1 }, null] });
+    expect(parseSaved(raw)).toEqual(g);
+  });
+
+  it('lehnt fremde Formate ab', () => {
+    expect(parseSaved('kein json')).toBeNull();
+    expect(parseSaved('null')).toBeNull();
+    expect(parseSaved(JSON.stringify({ ...game(), version: 1 }))).toBeNull();
+    expect(parseSaved(JSON.stringify({ ...game(), seed: 3 }))).toBeNull();
+    expect(parseSaved(JSON.stringify({ ...game(), state: null }))).toBeNull();
+  });
+
+  it('übernimmt einen Stand ohne Protokoll', () => {
+    const { log: _log, ...rest } = game();
+    expect(parseSaved(JSON.stringify(rest))?.log).toEqual([]);
   });
 });
 
@@ -54,45 +93,46 @@ describe('LocalSaveStore', () => {
     g.window = previous;
   });
 
-  it('speichert, lädt und löscht über localStorage', () => {
-    const store = new LocalSaveStore('test.key');
-    expect(store.load()).toBeNull();
+  it('speichert und lädt einen Spielstand unter dem neuen Schlüssel', () => {
+    const store = new LocalSaveStore();
+    expect(store.load()).toEqual({ kind: 'none' });
     store.save(game());
-    expect(storage.items.has('test.key')).toBe(true);
-    expect(store.load()).toEqual(game());
+    expect(storage.items.has(SAVE_KEY)).toBe(true);
+    expect(store.load()).toEqual({ kind: 'game', game: game() });
     store.clear();
-    expect(store.load()).toBeNull();
+    expect(store.load()).toEqual({ kind: 'none' });
   });
 
-  it('verwirft fremde Formate und andere Zustandsversionen', () => {
-    const store = new LocalSaveStore('k');
-    storage.items.set('k', 'kein json');
-    expect(store.load()).toBeNull();
-    storage.items.set('k', JSON.stringify({ version: 2, seed: 's', state: {} }));
-    expect(store.load()).toBeNull();
-    const old = game();
-    storage.items.set('k', JSON.stringify({ ...old, state: { ...old.state, version: STATE_VERSION - 1 } }));
-    expect(store.load()).toBeNull();
+  it('verwirft einen alten Spielstand (Konzept 0.4) samt Buch und Deck und meldet ihn einmal', () => {
+    storage.setItem('being-god.save.v1', JSON.stringify({ version: 1, seed: 'x', state: { round: 3 } }));
+    storage.setItem('being-god.book.v1', '{}');
+    storage.setItem('being-god.deck.v1', '[]');
+    const store = new LocalSaveStore();
+    expect(store.load()).toEqual({ kind: 'legacy' });
+    for (const key of LEGACY_KEYS) expect(storage.items.has(key)).toBe(false);
+    expect(store.load()).toEqual({ kind: 'none' });
   });
 
-  it('speichert das Schöpfungsbuch unter eigenem Schlüssel und verwirft ungültige Bücher', () => {
-    const books = new LocalBookStore('buch');
-    expect(books.load()).toBeNull();
-    const book = { ...newBook(), games: 3 };
-    books.save(book);
-    expect(books.load()).toEqual(book);
-    storage.items.set('buch', JSON.stringify({ version: 1, games: -1 }));
-    expect(books.load()).toBeNull();
+  it('bevorzugt einen neuen Stand, räumt aber die alten Schlüssel auf', () => {
+    storage.setItem('being-god.save.v1', '{}');
+    const store = new LocalSaveStore();
+    store.save(game());
+    expect(store.load().kind).toBe('game');
+    expect(storage.items.has('being-god.save.v1')).toBe(false);
+  });
+
+  it('meldet einen unlesbaren Stand als kaputt und entfernt ihn', () => {
+    storage.setItem(SAVE_KEY, '{kaputt');
+    const store = new LocalSaveStore();
+    expect(store.load()).toEqual({ kind: 'broken' });
+    expect(storage.items.has(SAVE_KEY)).toBe(false);
+  });
+
+  it('wirft nie, auch wenn der Speicher blockiert ist', () => {
+    const store = new LocalSaveStore();
     storage.failing = true;
-    expect(() => books.save(book)).not.toThrow();
-    expect(books.load()).toBeNull();
-  });
-
-  it('wirft nie, auch wenn der Speicher gesperrt ist', () => {
-    const store = new LocalSaveStore('k');
-    storage.failing = true;
+    expect(store.load()).toEqual({ kind: 'none' });
     expect(() => store.save(game())).not.toThrow();
-    expect(store.load()).toBeNull();
     expect(() => store.clear()).not.toThrow();
   });
 });

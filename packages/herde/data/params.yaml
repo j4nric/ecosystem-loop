@@ -12,6 +12,7 @@ wolves:
   maxSize: 3
   foundRadius: 3 # neue Rudel gründen sich in diesem Umkreis im Gehölz
   starveAfter: 8 # nach so vielen hungrigen Monaten verliert ein Rudel an Stärke
+  starveReset: 4 # danach zählt der Hunger von hier aus weiter (Prototyp: starveAfter / 2)
   spawnChance: 0.04 # Chance je Monat, dass ohne Rudel neue einwandern
   spawnMinWood: 5 # dafür nötige Zahl an Gehölz-Feldern
 wild:

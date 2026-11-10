@@ -1,31 +1,19 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
-import type { CardView, Targets } from '@core/api';
-import type { DeckStore, GameClient } from './client/index.ts';
-import { initialDeck } from './logic/deck.ts';
-import { isWorldCard, worldTints, zoneEffects, zoneTints } from './logic/ideal.ts';
-import { worldDropAction } from './logic/targeting.ts';
+import { useCallback, useMemo, useState } from 'react';
+import type { Action, Pos } from '@being-god/herde';
+import type { GameClient, StartupNotice } from './client/index.ts';
 import { t } from './i18n/index.ts';
+import { monthsToNextSeason } from './logic/format.ts';
 import { IslandScene } from './scene/IslandScene.tsx';
-import type { ZonePicker } from './scene/registry.ts';
-import { useReducedMotion } from './state/motion.ts';
+import { haptic, useReducedMotion } from './state/motion.ts';
 import { hasSeenTutorial, markTutorialSeen } from './state/tutorialStore.ts';
-import { useCardDrag } from './state/useCardDrag.ts';
 import { useGame } from './state/useGame.ts';
-import { useTargeting } from './state/useTargeting.ts';
-import { DragOverlay } from './ui/DragOverlay.tsx';
-import { Effects, type EffectsApi } from './ui/Effects.tsx';
 import { GameOver } from './ui/GameOver.tsx';
 import { Hand } from './ui/Hand.tsx';
-import { Book } from './ui/Book.tsx';
 import { Help } from './ui/Help.tsx';
-import { Hud } from './ui/Hud.tsx';
-import { CardDetail } from './ui/CardDetail.tsx';
-import { DeckPicker } from './ui/DeckPicker.tsx';
-import { PlayActions, PlayPreview } from './ui/PlayPreview.tsx';
-import { ChoiceChips } from './ui/ChoiceChips.tsx';
+import { CardSheet, FieldSheet, LogSheet } from './ui/Sheets.tsx';
+import { StatusBar } from './ui/StatusBar.tsx';
 import { Toasts } from './ui/Toasts.tsx';
 import { Tutorial } from './ui/Tutorial.tsx';
-import { ZoneSheet } from './ui/ZoneSheet.tsx';
 
 /** `?tutorial` zeigt die Einführung erneut, `?notutorial` nie (Tests). */
 function initialTutorial(): boolean {
@@ -34,345 +22,208 @@ function initialTutorial(): boolean {
   return params.has('tutorial') || !hasSeenTutorial();
 }
 
-/** Startdeck-Schritt: beim ersten Start nach der Einführung oder vor einer neuen Partie. */
-type DeckStep = 'first' | 'new' | null;
+const samePos = (a: Pos | null, b: Pos | null) => !!a && !!b && a.x === b.x && a.y === b.y;
 
-export function App({ client, decks }: { client: GameClient; decks: DeckStore }) {
-  const { view, dispatch, newGame, toasts, incompatible, dismissIncompatible } = useGame(client);
+export function App({ client }: { client: GameClient }) {
   const reducedMotion = useReducedMotion();
-  const [selectedZone, setSelectedZone] = useState<string | null>(null);
+  const { view, log, toasts, running, run, stop, dispatch, newGame } = useGame(client, reducedMotion);
+  const data = client.data;
+  const [selectedCard, setSelectedCard] = useState<number | null>(null);
+  const [chosen, setChosen] = useState<Pos | null>(null);
+  const [infoCell, setInfoCell] = useState<Pos | null>(null);
+  const [logOpen, setLogOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [bookOpen, setBookOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(initialTutorial);
-  /** Nur die Einführung beim ersten Start führt danach zur Startdeck-Auswahl (nicht die aus der Hilfe). */
-  const firstStart = useRef(tutorialOpen);
-  const [deckStep, setDeckStep] = useState<DeckStep>(null);
-  const [detailUid, setDetailUid] = useState<number | null>(null);
-  const pickerRef = useRef<ZonePicker | null>(null);
+  const [overSeen, setOverSeen] = useState(false);
+  const [startup, setStartup] = useState<StartupNotice>(() => client.takeStartupNotice());
 
-  const fxRef = useRef<EffectsApi | null>(null);
-  const zoneIds = useMemo(() => new Set(view.zones.map((z) => z.id)), [view.zones]);
-  const hand = view.hand;
-  const play = useCallback(
-    (uid: number, targets: Targets) => {
-      // Gezielte Karte fliegt zur ersten Zielzone, Weltkarte löst eine Welle über die Insel aus; die
-      // Wertänderungen steigen danach über den Zonen auf (Effects).
-      const card = hand.find((c) => c.uid === uid);
-      if (card && isWorldCard(card)) fxRef.current?.worldWave(uid);
-      else fxRef.current?.flyCard(uid, Object.values(targets).find((v) => zoneIds.has(v)) ?? null);
-      dispatch({ type: 'play', uid, targets });
-    },
-    [dispatch, zoneIds, hand],
-  );
-  const targeting = useTargeting(client, view, play);
-  const { cancel: cancelTargeting, startAt, start: startTargeting } = targeting;
+  const card = selectedCard === null ? undefined : view.hand[selectedCard];
+  const clearSelection = useCallback(() => {
+    setSelectedCard(null);
+    setChosen(null);
+  }, []);
 
-  const drag = useCardDrag({
-    client,
-    pickerRef,
-    onStart: useCallback(() => {
-      cancelTargeting();
-      setSelectedZone(null);
-      setDetailUid(null);
-    }, [cancelTargeting]),
-    onDrop: useCallback((card: CardView, zoneId: string) => void startAt(card, zoneId), [startAt]),
-    // Weltkarte über der Spielfläche losgelassen: ohne Slots sofort ausspielen, sonst erst die Wahl (Chips).
-    onDropWorld: useCallback(
-      (card: CardView) => {
-        if (worldDropAction(card) === 'play') play(card.uid, {});
-        else startTargeting(card);
-      },
-      [play, startTargeting],
-    ),
-    onLongPress: useCallback(
-      (card: CardView) => {
-        cancelTargeting();
-        setSelectedZone(null);
-        setDetailUid(card.uid);
-      },
-      [cancelTargeting],
-    ),
-  });
-  const dragging = drag.drag;
+  const subscribeReports = useCallback<GameClient['subscribeReports']>((l) => client.subscribeReports(l), [client]);
 
-  const dragCard = dragging?.card;
-  const dragValid = dragging?.valid;
-  const dragWorld = dragging?.world ?? false;
-
-  // Weltkarte beim Ziehen: eine Vorschau ohne Ziele für alle Zonen (nur Karten ohne Wahl-Slot).
-  const worldDragPreview = useMemo(() => {
-    if (!dragCard || !dragWorld || dragCard.slots.length > 0) return null;
-    return client.preview(dragCard.uid, {});
-  }, [client, dragCard, dragWorld]);
-  const dragEffects = useMemo(() => zoneEffects(worldDragPreview, view.zones), [worldDragPreview, view.zones]);
-
-  const dragPreview = useMemo(() => {
-    if (dragWorld) return worldDragPreview;
-    if (!dragging?.zone || !dragging.valid.has(dragging.zone) || dragging.card.slots.length !== 1) return null;
-    const slot = dragging.card.slots[0]!;
-    return client.preview(dragging.card.uid, { [slot.id]: dragging.zone });
-  }, [client, dragging, dragWorld, worldDragPreview]);
-
-  // Beim Ziehen: jede gültige Zone nach der Wirkung auf ihre Idealform einfärben (nur Karten mit einem Slot);
-  // Weltkarte: alle betroffenen Zonen zugleich.
-  const dragTints = useMemo(() => {
-    if (dragWorld) return worldTints(dragEffects);
-    const slot = dragCard?.slots[0];
-    if (!dragCard || !dragValid || !slot || dragCard.slots.length !== 1) return null;
-    return zoneTints(dragValid, (zone) => client.preview(dragCard.uid, { [slot.id]: zone }));
-  }, [client, dragCard, dragValid, dragWorld, dragEffects]);
-  const dragTargets = useMemo(
-    () =>
-      dragWorld
-        ? dragEffects.length > 0
-          ? new Set(dragEffects.map((e) => e.zone))
-          : null // Weltkarte mit Wahl-Slot: Wirkung erst nach der Wahl bekannt, nichts abdunkeln
-        : (dragValid ?? null),
-    [dragWorld, dragEffects, dragValid],
-  );
-
-  const onZoneTap = useCallback(
-    (zoneId: string) => {
-      if (targeting.targeting) targeting.pickZone(zoneId);
-      else setSelectedZone((current) => (current === zoneId ? null : zoneId));
-    },
-    [targeting],
-  );
+  const action: Action | null = useMemo(() => {
+    if (!card) return null;
+    if (card.global) return { type: 'play', hand: card.index };
+    return chosen ? { type: 'play', hand: card.index, x: chosen.x, y: chosen.y } : null;
+  }, [card, chosen]);
+  // Vorschau: `step` auf dem Zustand (rein), danach `view` – nur wenn ein vollständiger Zug feststeht.
+  const preview = useMemo(() => (action ? client.preview(action) : null), [client, action]);
 
   const onCardTap = useCallback(
-    (card: CardView) => {
-      setDetailUid(null);
-      if (targeting.targeting?.card.uid === card.uid) {
-        targeting.cancel();
-        return;
-      }
-      setSelectedZone(null);
-      // Nicht spielbare Karten zeigen beim Antippen ihren vollen Text.
-      if (!card.playable) {
-        targeting.cancel();
-        setDetailUid(card.uid);
-        return;
-      }
-      targeting.start(card);
+    (index: number) => {
+      if (running) return;
+      haptic();
+      setInfoCell(null);
+      setChosen(null);
+      setSelectedCard((current) => (current === index ? null : index));
     },
-    [targeting],
+    [running],
   );
 
-  const startNewGame = useCallback(
-    (deck?: readonly string[]) => {
-      setSelectedZone(null);
-      setDetailUid(null);
-      setDeckStep(null);
-      targeting.cancel();
-      newGame(deck);
+  const onCellTap = useCallback(
+    (pos: Pos) => {
+      if (card && !card.global) {
+        if (card.targets.some((p) => samePos(p, pos))) {
+          haptic();
+          setChosen(pos);
+        }
+        return;
+      }
+      if (card) return;
+      setInfoCell((current) => (samePos(current, pos) ? null : pos));
     },
-    [newGame, targeting],
+    [card],
   );
+
+  const play = useCallback(() => {
+    if (!action) return;
+    haptic(20);
+    dispatch(action);
+    clearSelection();
+  }, [action, dispatch, clearSelection]);
+
+  const runMonths = useCallback(
+    (months: number) => {
+      clearSelection();
+      setInfoCell(null);
+      run(months);
+    },
+    [run, clearSelection],
+  );
+
+  const startNewGame = useCallback(() => {
+    clearSelection();
+    setInfoCell(null);
+    setLogOpen(false);
+    setOverSeen(false);
+    newGame();
+  }, [newGame, clearSelection]);
 
   const closeTutorial = useCallback(() => {
     markTutorialSeen();
     setTutorialOpen(false);
-    if (firstStart.current) setDeckStep('first');
-    firstStart.current = false;
   }, []);
 
-  const deckSetup = useMemo(() => (deckStep ? client.deckSetup() : null), [client, deckStep]);
-  const checkDeck = useCallback((deck: readonly string[]) => client.checkDeck(deck), [client]);
-  const deckStart = useMemo(
-    () => (deckSetup ? initialDeck(decks.load(), deckSetup.standard, checkDeck) : []),
-    [deckSetup, decks, checkDeck],
-  );
-  const detailCard = detailUid === null ? undefined : view.hand.find((c) => c.uid === detailUid);
-
-  const active = targeting.targeting;
-  // Während eines Kartenzugs zeigt das Sheet die erste gewählte Zielzone, sonst die angetippte Zone.
-  const firstSlot = active?.card.slots[0];
-  const targetZoneId = active && firstSlot ? (active.targets[firstSlot.id] ?? null) : null;
-  const focusZone = dragging ? (dragging.world ? null : dragging.zone) : active ? targetZoneId : selectedZone;
-  const zone = view.zones.find((z) => z.id === focusZone);
-  const speciesSlot = targeting.editSlot?.kind === 'species';
-
-  const chips = targeting.chipSlot && targeting.editSlot && (
-    <ChoiceChips
-      options={targeting.chipOptions}
-      selected={targeting.chosenChip}
-      onPick={targeting.pickChip}
-      label={targeting.editSlot.label}
-    />
-  );
-  const preview = active && targeting.complete && (
-    <PlayPreview
-      card={active.card}
-      preview={targeting.preview}
-      shownZone={zone?.id ?? null}
-      effects={targeting.world ? targeting.effects : undefined}
-    >
-      {chips}
-    </PlayPreview>
-  );
-  const actions = active && targeting.complete && (
-    <PlayActions
-      card={active.card}
-      preview={targeting.preview}
-      onPlay={targeting.confirm}
-      onCancel={targeting.cancel}
-    />
-  );
+  const infoView = infoCell ? view.cells[infoCell.y * view.width + infoCell.x] : undefined;
+  const over = view.over !== null;
+  const targets = card && !card.global ? card.targets : null;
 
   return (
     <div className="app">
       <IslandScene
-        zones={view.zones}
-        round={view.round}
-        harmony={view.harmony.value / Math.max(1, view.harmony.max)}
-        season={view.season.id}
-        selectedZone={focusZone}
-        validTargets={dragging ? dragTargets : active ? targeting.validZones : null}
-        tints={dragging ? dragTints : active ? targeting.tints : null}
+        data={data}
+        view={view}
+        targets={targets}
+        grown={card?.global ? (preview?.grown ?? null) : null}
+        selected={chosen ?? infoCell}
+        previewIntent={preview?.intentChanged ? preview.intentAfter : null}
+        running={running}
         reducedMotion={reducedMotion}
-        pickerRef={pickerRef}
-        onZoneTap={onZoneTap}
-        onBackgroundTap={() => setSelectedZone(null)}
+        subscribeReports={subscribeReports}
+        onCellTap={onCellTap}
+        onBackgroundTap={() => setInfoCell(null)}
       />
 
-      <Effects client={client} reducedMotion={reducedMotion} apiRef={fxRef} />
-
       <div className="top">
-        <Hud
+        <StatusBar
+          data={data}
           view={view}
-          isMock={client.isMock}
-          reducedMotion={reducedMotion}
           onHelp={() => setHelpOpen(true)}
-          onBook={() => setBookOpen(true)}
+          onTutorial={() => setTutorialOpen(true)}
           onNewGame={() => {
-            if (view.phase === 'play' && !window.confirm(t.newGameConfirm)) return;
-            setDeckStep('new');
+            if (!over && !window.confirm(t.newGameConfirm)) return;
+            startNewGame();
           }}
         />
         <Toasts toasts={toasts} />
       </div>
 
-      <footer
-        className={`dock${dragging ? ' is-dragging' : ''}${!dragging && active && targeting.world && targeting.complete ? ' is-world-preview' : ''}`}
-      >
-        {!dragging && detailCard && !active && (
-          <CardDetail
-            card={detailCard}
-            onClose={() => setDetailUid(null)}
-            onPlay={() => {
-              setDetailUid(null);
-              targeting.start(detailCard);
-            }}
+      <footer className="dock">
+        {card && (
+          <CardSheet
+            data={data}
+            card={card.card}
+            wild={card.wild}
+            global={card.global}
+            chosen={chosen !== null}
+            preview={preview}
+            onCancel={clearSelection}
           />
         )}
-        {!dragging && active && targeting.complete && zone && (
-          <ZoneSheet
-            zone={zone}
-            zones={view.zones}
-            onClose={targeting.cancel}
-            changes={targeting.preview?.changes}
-            footer={actions}
-          >
-            {preview}
-          </ZoneSheet>
+        {!card && infoView && !logOpen && (
+          <FieldSheet data={data} view={view} cell={infoView} onClose={() => setInfoCell(null)} />
         )}
-        {!dragging && active && targeting.complete && !zone && (
-          <section
-            className={`sheet sheet--compact${targeting.world ? ' sheet--world' : ''}`}
-            role="dialog"
-            aria-label={active.card.name}
-          >
-            <div className="sheet__body">{preview}</div>
-            <div className="sheet__footer">{actions}</div>
-          </section>
-        )}
-        {!dragging && active && targeting.slot && (
-          <div className="target-banner" role="status">
-            <div>
-              <b>{active.card.name}</b>
-              <span>
-                {!targeting.slotSupported
-                  ? t.unsupportedSlot(targeting.slot.kind)
-                  : speciesSlot
-                    ? t.chooseSpecies(targeting.slot.label)
-                    : targeting.chipSlot
-                      ? t.chooseOption(targeting.slot.label)
-                      : t.chooseTarget(targeting.slot.label)}
-              </span>
-              {chips || <small>{active.card.text}</small>}
-            </div>
-            <button type="button" className="btn" onClick={targeting.cancel}>
-              {t.cancel}
-            </button>
-          </div>
-        )}
-        {!dragging && zone && !active && !detailCard && (
-          <ZoneSheet zone={zone} zones={view.zones} onClose={() => setSelectedZone(null)} />
-        )}
-        <div className="dock__bar">
-          <span className="dock__info">
-            {t.playsInfo(view.playsThisTurn, view.minPlays)}
-            <small>
-              {t.drawPile(view.drawPile)} · {t.discardPile(view.discardPile)}
-            </small>
-          </span>
-          <button
-            type="button"
-            className="btn btn--primary"
-            disabled={!view.canEndTurn}
-            onClick={() => {
-              targeting.cancel();
-              setSelectedZone(null);
-              dispatch({ type: 'endTurn' });
-            }}
-          >
-            {t.endTurn}
-          </button>
-        </div>
-        <Hand
-          cards={view.hand}
-          activeUid={active?.card.uid ?? null}
-          draggingUid={dragging?.card.uid ?? null}
-          onCardTap={onCardTap}
-          pointer={drag}
-        />
-      </footer>
+        {!card && logOpen && <LogSheet data={data} log={log} onClose={() => setLogOpen(false)} />}
 
-      {dragging && (
-        <DragOverlay
-          drag={dragging}
-          zones={view.zones}
-          preview={dragPreview}
-          effects={dragEffects}
-          ghostRef={drag.ghostRef}
-        />
-      )}
+        <Hand data={data} cards={view.hand} selected={selectedCard} disabled={running || over} onTap={onCardTap} />
 
-      {view.phase === 'over' && (
-        <GameOver
-          view={view}
-          result={client.lastResult()}
-          onNewGame={() => setDeckStep('new')}
-          onBook={() => setBookOpen(true)}
-        />
-      )}
-
-      {incompatible && (
-        <div className="overlay" role="alertdialog" aria-modal="true" aria-labelledby="incompatible-title">
-          <div className="overlay__panel">
-            <h2 id="incompatible-title">{t.incompatibleTitle}</h2>
-            <p>{t.incompatibleText}</p>
-            <div className="overlay__actions">
-              <button type="button" className="btn" onClick={dismissIncompatible}>
-                {t.later}
+        <div className="controls">
+          {card ? (
+            <>
+              <button type="button" className="btn" onClick={clearSelection}>
+                {t.cancel}
               </button>
+              <button type="button" className="btn btn--primary btn--wide" disabled={!preview} onClick={play}>
+                {card.global ? t.play : t.place}
+              </button>
+            </>
+          ) : over ? (
+            <>
+              <span className="controls__over">{t.overBar(view.over === 'won')}</span>
+              <button type="button" className="btn btn--primary" onClick={startNewGame}>
+                {t.newGame}
+              </button>
+            </>
+          ) : running ? (
+            <button type="button" className="btn btn--primary btn--wide" onClick={stop}>
+              {t.stop}
+            </button>
+          ) : (
+            <>
               <button
                 type="button"
-                className="btn btn--primary"
-                autoFocus
-                onClick={() => startNewGame(deckStartFor(client, decks))}
+                className="btn btn--primary btn--wide"
+                onClick={() => runMonths(monthsToNextSeason(data, view.month))}
               >
-                {t.newGame}
+                {t.playSeason} ▶▶
+              </button>
+              <button type="button" className="btn" onClick={() => runMonths(1)}>
+                {t.playMonth}
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className={`btn btn--icon${logOpen ? ' is-active' : ''}`}
+            aria-label={t.log}
+            aria-pressed={logOpen}
+            onClick={() => {
+              clearSelection();
+              setInfoCell(null);
+              setLogOpen((o) => !o);
+            }}
+          >
+            📜
+          </button>
+        </div>
+      </footer>
+
+      {over && !overSeen && !running && (
+        <GameOver data={data} view={view} onNewGame={startNewGame} onViewIsland={() => setOverSeen(true)} />
+      )}
+
+      {startup && (
+        <div className="overlay" role="alertdialog" aria-modal="true" aria-labelledby="startup-title">
+          <div className="overlay__panel">
+            <h2 id="startup-title">{startup === 'legacy' ? t.legacyTitle : t.incompatibleTitle}</h2>
+            <p>{startup === 'legacy' ? t.legacyText : t.incompatibleText}</p>
+            <div className="overlay__actions">
+              <button type="button" className="btn btn--primary" autoFocus onClick={() => setStartup(null)}>
+                {t.ok}
               </button>
             </div>
           </div>
@@ -381,6 +232,7 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
 
       {helpOpen && (
         <Help
+          data={data}
           onClose={() => setHelpOpen(false)}
           onTutorial={() => {
             setHelpOpen(false);
@@ -388,27 +240,7 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
           }}
         />
       )}
-      {bookOpen && <Book book={client.getBook()} onClose={() => setBookOpen(false)} />}
-      {tutorialOpen && <Tutorial onDone={closeTutorial} />}
-      {deckSetup && (
-        <DeckPicker
-          setup={deckSetup}
-          initial={deckStart}
-          check={checkDeck}
-          onStart={(deck) => {
-            decks.save(deck);
-            startNewGame(deck);
-          }}
-          onQuickStart={() => startNewGame(deckSetup.standard)}
-          onClose={() => setDeckStep(null)}
-        />
-      )}
+      {tutorialOpen && !startup && <Tutorial onDone={closeTutorial} />}
     </div>
   );
-}
-
-/** Gemerktes Startdeck, wenn es noch gültig ist, sonst das Standarddeck. */
-function deckStartFor(client: GameClient, decks: DeckStore): string[] {
-  const setup = client.deckSetup();
-  return initialDeck(decks.load(), setup.standard, (d) => client.checkDeck(d));
 }

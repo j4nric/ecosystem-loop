@@ -1,9 +1,9 @@
-import type { Locale } from '@core/api';
 import { de, type Strings } from './de.ts';
 import { en } from './en.ts';
-import { pickLocale } from './locale.ts';
+import { pickLocale, type Locale } from './locale.ts';
 
-const dictionaries: Record<Locale, Strings> = { de, en };
+export type { Locale, Strings };
+export const dictionaries: Record<Locale, Strings> = { de, en };
 
 /** Gerätesprache (de/en), sonst Englisch. `?lang=en` erzwingt eine Sprache (zum Testen). */
 export function detectLocale(): Locale {

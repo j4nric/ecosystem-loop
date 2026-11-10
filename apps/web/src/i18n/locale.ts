@@ -1,4 +1,5 @@
-import type { Locale } from '@core/api';
+/** Sprachen der App; Spieltexte in den Daten (YAML) tragen dieselben Schlüssel. */
+export type Locale = 'de' | 'en';
 
 /**
  * Sprache wählen (rein, ohne DOM): `forced` (`?lang=`) gewinnt, sonst die erste Gerätesprache, die de oder en ist.

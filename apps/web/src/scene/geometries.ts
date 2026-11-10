@@ -1,43 +1,55 @@
-import { BoxGeometry, ConeGeometry, CylinderGeometry, IcosahedronGeometry, RingGeometry, SphereGeometry } from 'three';
-import { HEX_RADIUS } from './layout.ts';
+import {
+  BoxGeometry,
+  ConeGeometry,
+  CylinderGeometry,
+  IcosahedronGeometry,
+  OctahedronGeometry,
+  PlaneGeometry,
+  RingGeometry,
+  Shape,
+  ShapeGeometry,
+} from 'three';
 
-/** Geteilte Geometrien – einmal angelegt, von allen Kacheln benutzt. */
-const R = HEX_RADIUS;
+/** Pfeil in der Ebene: Schaft und Spitze, Länge 1 entlang −z (nach Norden), flach auf dem Boden. */
+function arrowGeometry(): ShapeGeometry {
+  const s = new Shape();
+  const w = 0.07;
+  const head = 0.22;
+  s.moveTo(-w, 0);
+  s.lineTo(w, 0);
+  s.lineTo(w, 1 - head);
+  s.lineTo(head, 1 - head);
+  s.lineTo(0, 1);
+  s.lineTo(-head, 1 - head);
+  s.lineTo(-w, 1 - head);
+  s.closePath();
+  const g = new ShapeGeometry(s);
+  g.rotateX(-Math.PI / 2);
+  return g;
+}
 
+/** Geteilte Geometrien – einmal angelegt, von allen Instanzen benutzt. Ursprung jeweils am Fuß. */
 export const GEO = {
-  top: new CylinderGeometry(R, R, 0.22, 6),
-  earth: new CylinderGeometry(R, R * 0.94, 0.75, 6),
-  stratum: new CylinderGeometry(R * 0.945, R * 0.9, 0.12, 6),
-  bottom: new ConeGeometry(R * 0.9, 1.5, 6, 1),
-  ring: new RingGeometry(R * 0.9, R * 1.04, 6, 1),
-  peak: new ConeGeometry(0.7, 1.6, 5, 1),
-  snowCap: new ConeGeometry(0.33, 0.55, 5, 1),
-  waterHex: new CylinderGeometry(R * 0.86, R * 0.86, 0.06, 6),
-  coastWater: new CylinderGeometry(R * 0.97, R * 0.97, 0.08, 3, 1, false, -Math.PI / 3, Math.PI),
-  crown: new ConeGeometry(0.2, 0.62, 6, 1),
-  trunk: new CylinderGeometry(0.035, 0.05, 0.24, 5),
-  rock: new IcosahedronGeometry(1, 0),
-  // Figuren der Arten (je Gruppe eine Geometrie ⇒ ein Draw Call je Gruppe)
-  fish: new ConeGeometry(0.045, 0.17, 4, 1),
-  insect: new IcosahedronGeometry(0.06, 0),
-  amphibian: new IcosahedronGeometry(0.07, 0),
-  reptile: new BoxGeometry(0.19, 0.05, 0.075),
-  bird: new ConeGeometry(0.11, 0.05, 3, 1),
-  mammal: new BoxGeometry(0.17, 0.09, 0.08),
-  human: new CylinderGeometry(0.03, 0.048, 0.19, 6),
-  head: new SphereGeometry(0.045, 6, 4),
-  // Hervorhebung „neues Leben“
-  beam: new CylinderGeometry(0.55, 0.75, 2.4, 6, 1, true),
+  /** Plättchen und Erdreich: Oberkante bei y = 0, Höhe über scale.y */
+  block: new BoxGeometry(0.97, 1, 0.97).translate(0, -0.5, 0),
+  tuft: new ConeGeometry(0.055, 1, 4, 1).translate(0, 0.5, 0),
+  shrub: new IcosahedronGeometry(1, 0),
+  crown: new ConeGeometry(0.3, 1, 6, 1).translate(0, 0.5, 0),
+  trunk: new CylinderGeometry(0.035, 0.05, 0.18, 5).translate(0, 0.09, 0),
+  boulder: new IcosahedronGeometry(1, 0),
+  underside: new ConeGeometry(1, 1, 7, 1),
+  // Tiere: Körper und Kopf (je ein Instanced Mesh)
+  animalBody: new BoxGeometry(0.16, 0.09, 0.085).translate(0, 0.085, 0),
+  animalHead: new BoxGeometry(0.06, 0.065, 0.06).translate(0.095, 0.13, 0),
+  wolfBody: new BoxGeometry(0.2, 0.075, 0.07).translate(0, 0.09, 0),
+  wolfHead: new ConeGeometry(0.045, 0.12, 4, 1).rotateZ(-Math.PI / 2).translate(0.15, 0.12, 0),
+  // Hervorhebungen
+  square: new PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2),
+  frame: new RingGeometry(0.6, 0.68, 4, 1).rotateZ(Math.PI / 4).rotateX(-Math.PI / 2),
+  frameThin: new RingGeometry(0.54, 0.62, 4, 1).rotateZ(Math.PI / 4).rotateX(-Math.PI / 2),
+  ring: new RingGeometry(0.3, 0.4, 24, 1).rotateX(-Math.PI / 2),
+  arrow: arrowGeometry(),
+  marker: new OctahedronGeometry(0.09, 0).scale(1, 1.6, 1),
+  flame: new ConeGeometry(0.11, 0.42, 5, 1).translate(0, 0.21, 0),
+  streak: new BoxGeometry(0.015, 0.35, 0.015),
 };
-
-// Ring liegt flach und hat Spitzen in Richtung ±z wie die Kacheln
-GEO.ring.rotateX(-Math.PI / 2);
-GEO.ring.rotateY(Math.PI / 2);
-GEO.bottom.rotateX(Math.PI);
-// Fisch liegt waagrecht mit der Spitze nach +x, Vogel als flaches Dreieck mit Spitze nach +x
-GEO.fish.rotateZ(-Math.PI / 2);
-GEO.bird.rotateZ(-Math.PI / 2);
-GEO.bird.rotateX(Math.PI / 2);
-GEO.beam.translate(0, 1.2, 0);
-// Amphibie: gedrungener, flacher Körper (Kopf als eigene Instanz vorn oben)
-GEO.amphibian.scale(1, 0.55, 0.9);

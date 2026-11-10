@@ -1,71 +1,46 @@
-import type { PointerEvent as ReactPointerEvent } from 'react';
-import type { CardView } from '@core/api';
-import { t } from '../i18n/index.ts';
-import { isWorldCard } from '../logic/ideal.ts';
-
-export interface CardPointerHandlers {
-  onPointerDown: (card: CardView, e: ReactPointerEvent<HTMLElement>) => void;
-  onPointerMove: (e: ReactPointerEvent<HTMLElement>) => void;
-  onPointerUp: (e: ReactPointerEvent<HTMLElement>) => void;
-  onPointerCancel: (e: ReactPointerEvent<HTMLElement>) => void;
-  /** true, wenn der folgende Klick zu einem Ziehen gehörte. */
-  consumeClick: () => boolean;
-}
+import type { HandCardView, HerdeData } from '@being-god/herde';
+import { locale, t } from '../i18n/index.ts';
+import { textOf } from '../logic/format.ts';
 
 interface Props {
-  cards: CardView[];
-  activeUid: number | null;
-  draggingUid: number | null;
-  onCardTap: (card: CardView) => void;
-  pointer: CardPointerHandlers;
+  data: HerdeData;
+  cards: HandCardView[];
+  selected: number | null;
+  disabled: boolean;
+  onTap: (index: number) => void;
 }
 
 /**
- * Kartenleiste am unteren Rand: Name, Kosten, Kurztext (`short`). Antippen oder auf die Insel ziehen; langer Druck
- * zeigt den vollen Text. Der volle Text steht auch im Screenreader-Label. Weltkarten (Wetter) tragen 🌍, einen
- * eigenen Rahmen und den Hinweis „wirkt überall“.
+ * Kartenleiste: Symbol, Name, Wildnis-Kosten. Antippen wählt die Karte (dann ein hervorgehobenes Feld);
+ * eine Karte ohne gültiges Ziel ist ausgegraut. Kein Ablegen.
  */
-export function Hand({ cards, activeUid, draggingUid, onCardTap, pointer }: Props) {
+export function Hand({ data, cards, selected, disabled, onTap }: Props) {
+  if (cards.length === 0) return <p className="hand hand--empty">{t.emptyHand}</p>;
   return (
-    <div className="hand" role="list">
+    <div className="hand" role="list" aria-label={t.hand}>
       {cards.map((card) => {
-        const active = card.uid === activeUid;
-        const dragging = card.uid === draggingUid;
-        const world = isWorldCard(card);
-        const label = world ? t.worldCardLabel(card.name) : t.dragCardLabel(card.name);
+        const def = data.cards.get(card.card);
+        const name = textOf(def?.name, locale, card.card);
+        const playable = card.global || card.targets.length > 0;
+        const active = selected === card.index;
         return (
           <button
-            key={card.uid}
-            data-uid={card.uid}
+            key={`${card.index}-${card.card}`}
             type="button"
             role="listitem"
-            className={`card card--${card.category}${world ? ' card--world' : ''}${card.playable ? '' : ' is-disabled'}${active ? ' is-active' : ''}${dragging ? ' is-dragging' : ''}`}
-            aria-disabled={!card.playable}
+            className={`card${card.global ? ' card--global' : ''}${active ? ' is-active' : ''}${playable ? '' : ' is-disabled'}`}
             aria-pressed={active}
-            aria-label={`${label}. ${t.cost} ${card.cost}. ${card.text}${card.playable ? '' : `. ${t.notPlayable}`}`}
-            onPointerDown={(e) => pointer.onPointerDown(card, e)}
-            onPointerMove={pointer.onPointerMove}
-            onPointerUp={pointer.onPointerUp}
-            onPointerCancel={pointer.onPointerCancel}
-            onClick={() => {
-              if (!pointer.consumeClick()) onCardTap(card);
-            }}
+            aria-label={`${name}. ${textOf(def?.text, locale)}. ${t.wildCost(card.wild)}${playable ? '' : `. ${t.noTargets}`}`}
+            disabled={disabled}
+            onClick={() => onTap(card.index)}
           >
-            <span className="card__cost" aria-hidden>
-              {card.cost === 0 ? t.free : `✦${card.cost}`}
+            <span className="card__icon" aria-hidden>
+              {def?.icon}
             </span>
-            <span className="card__name">{card.name}</span>
-            {world && (
-              <span className="card__globe" aria-hidden>
-                🌍
-              </span>
-            )}
-            <span className="card__text">{card.short ?? card.text}</span>
-            {world && (
-              <span className="card__reach" aria-hidden>
-                {t.worldShort}
-              </span>
-            )}
+            <span className="card__name">{name}</span>
+            <span className="card__cost" aria-hidden>
+              +{card.wild}
+            </span>
           </button>
         );
       })}
