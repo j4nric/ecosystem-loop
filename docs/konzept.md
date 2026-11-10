@@ -1,509 +1,108 @@
-# Being God (ain't easy) – Spielkonzept
+# Being God (ain't easy) – Konzept 1.0 „Die Herde“
 
-Stand: 10.11.2026 · Version 0.4.0 (löst das [Handover](handover.md) als Leitdokument ab)
+Stand: 10.11.2026 · Status: **Richtung bestätigt** (Prototyp gespielt), Details als Entwurf.
+Vorgänger: [Konzept 0.4](archiv/konzept-0.4.md) (Werte-Optimierung mit fünf Geografien, verworfen).
 
-> **Status:** Vom Inhaber am 10.11.2026 bestätigt (✅). Zahlen sind Startwerte fürs Balancing –
-> sie werden in der Simulation justiert, nicht am Schreibtisch. Umsetzung: [Entwicklungsplan](entwicklungsplan.md).
+Spielbarer Prototyp: `prototypes/herde/index.html` · https://claude.ai/artifact/SGjunM9r8zGF2VVKFyBXcZ
 
 ## 1. Vision
 
-Der Spieler ist ein Gott, der eine kleine Insel nicht direkt erschafft, sondern nur ihre Bedingungen
-formt: Regen, Dürre, Sturm, Samen. Das Leben entwickelt sich von selbst – vom Plankton bis zum Menschen.
-Je höher das Leben steigt, desto empfindlicher wird das Gleichgewicht. Ziel ist es, möglichst lange zu
-überleben und dabei möglichst hoch entwickeltes Leben zu tragen. Jeder Eingriff hilft an einer Stelle
-und schadet an einer anderen.
-
-- Plattform: iOS und Android (App) ✅
-- Stil: einfaches Low-Poly-Diorama, eine schwebende Insel ✅
-- Partie: Roguelite-Durchgang von 10–20 Minuten mit Highscore, Meta-Progression zwischen den Partien ✅
-- Sprache: Englisch (Hauptsprache) und Deutsch ✅
-
-## 2. Kernprinzipien
-
-Jede Mechanik muss mindestens eines davon tragen und darf keines verletzen:
-
-1. **Indirekte Kontrolle.** Der Gott setzt keine Tiere und Pflanzen, er formt Werte. Das Leben folgt.
-2. **Jeder Eingriff ist ein Tausch.** Was einer Zone oder Art hilft, kostet woanders: Odem, Werte
-   einer Nachbarzone, den Bestand einer anderen Art.
-3. **Gleichgewicht ist fragil, nicht statisch.** Jahreszeiten, Ereignisse und die Tiere selbst
-   verschieben die Werte ständig. Stillstand führt in den Verfall.
-4. **Fehler sind korrigierbar, aber teuer.** Die Natur heilt langsam von selbst; schnelle Korrekturen
-   kosten viel Odem.
-5. **Zerstörung kann Absicht sein.** Evolution braucht Selektionsdruck. Wer gezielt stört, kann
-   Sprünge erzwingen – und riskiert den Kollaps.
-6. **Jeder Wetterzug ist ein Tausch.** Wetter wirkt auf die ganze Insel, und die Geografien wollen
-   Verschiedenes: Wald und Küste brauchen Feuchte, das Flachland verträgt höchstens mittlere Feuchte, die Berge
-   wenig Schnee, der Fluss einen mittleren Wasserstand. Dieselbe Wetterkarte hilft deshalb einer Zone und schadet
-   einer anderen. Der Spieler wählt nicht das Ziel, sondern den Zeitpunkt.
-
-## 3. Ablauf einer Partie
-
-Eine **Runde ist eine Jahreszeit** ✅, vier Runden sind ein Jahr. Jede Runde hat vier Phasen:
-
-1. **Vorschau:** Die kommende Jahreszeit und ein angekündigtes Ereignis werden gezeigt ✅.
-2. **Eingriffe:** Der Spieler spielt Karten aus seiner Hand und bezahlt sie mit Odem.
-   ✅ Kartenzwang bleibt: mindestens eine Karte pro Runde. Naturgewalten kosten 0 Odem, man ist also nie blockiert –
-   aber sie treffen die ganze Insel und haben Nebenwirkungen.
-3. **Natur:** in fester Reihenfolge
-   1. Jahreszeit wirkt auf die Werte
-   2. Ereignis tritt ein
-   3. Zonen-Kopplungen (z. B. Gletscher speist Fluss)
-   4. Selbstheilung (Werte driften zum Ruhewert)
-   5. Formen werden neu bestimmt, Zonenstufen steigen oder fallen
-   6. Populationen: Fressen, Wachstum, Hunger, Wanderung
-   7. Evolution
-4. **Bilanz:** Harmonie wird neu berechnet, Odem fließt zu, Karten werden nachgezogen.
-
-Die Partie endet, wenn die **Harmonie auf 0 fällt (Kollaps)** ✅. Ereignisse werden mit jedem Jahr
-härter, sodass jede Partie irgendwann endet.
-
-## 4. Die Welt: fünf Geografien
-
-Die Insel hat **fünf Zonen mit fester Geografie** ✅: Berge, Wald, Flachland, Fluss, Küste.
-Erweiterbar auf mehr Zonen pro Geografie ✅ (z. B. zwei Waldzonen), zunächst eine je Geografie.
-
-```
-          Berge
-        /       \
-     Wald ─── Fluss
-        \     /    \
-      Flachland ── Küste
-```
-
-✅ Nachbarschaft: Berge–Wald, Berge–Fluss, Wald–Fluss, Wald–Flachland, Fluss–Flachland, Fluss–Küste,
-Flachland–Küste. Der Fluss ist die Lebensader: Er grenzt an alles außer sich selbst.
-
-### 4.1 Werte
-
-Jede Zone hat **drei gemeinsame Werte** ✅ und **einen Sonderwert ihrer Geografie** ✅, jeweils 0–5:
-
-| Wert       | Bedeutung                |
-| ---------- | ------------------------ |
-| Licht      | Sonne bis Schatten       |
-| Feuchte    | trocken bis nass         |
-| Vegetation | kahl bis dicht bewachsen |
-
-| Geografie | Sonderwert ✅ | Bedeutung                                                  |
-| --------- | ------------- | ---------------------------------------------------------- |
-| Berge     | Schnee        | Schneedecke und Gletscher, speist im Frühling den Fluss    |
-| Wald      | Totholz       | Zersetzung, Nährstoffe und Brandgefahr                     |
-| Flachland | Boden         | Nährstoffe; wird durch Überweidung und Ackerbau ausgelaugt |
-| Fluss     | Wasserstand   | vom ausgetrockneten Bett bis zum Hochwasser                |
-| Küste     | Salz          | Salzgehalt; Süßwasser vom Fluss senkt ihn                  |
-
-Jede Geografie hat einen **Ruhewert** je Wert (ihren natürlichen Zustand). ✅ Alle zwei Runden bewegt sich
-jeder Wert um 1 auf seinen Ruhewert zu – das ist die langsame Selbstheilung.
-
-### 4.2 Formen ✅ (Vorschlag zu Frage 10)
-
-Aus den Werten ergibt sich die **Form** einer Zone. Sie bestimmt, welche Arten dort leben können,
-und wird als 3D-Modell gezeigt. Jede Geografie hat eine **Idealform** (beste Lebensgrundlage, nur mit
-ausgewogenen Werten erreichbar) und eine **verödete Form** (zieht Harmonie ab).
-Bei mehreren passenden Formen gilt die erste in der Tabelle.
-
-**Berge** (Sonderwert Schnee)
-
-| Form               | Bedingung (Startwerte)                | Lebensraum für                 |
-| ------------------ | ------------------------------------- | ------------------------------ |
-| Gletscher          | Schnee 5                              | – (speist den Fluss)           |
-| Geröll · _verödet_ | Vegetation 0, Schnee ≤ 1              | –                              |
-| **Alm** · _ideal_  | Vegetation 2–3, Schnee 1–2, Licht ≥ 3 | Bienen, Kleinsäuger, Hirsche   |
-| Bergwald           | Vegetation ≥ 4                        | Vögel, Greifvögel, Wölfe       |
-| Fels               | sonst                                 | Echsen, Greifvögel (Nistplatz) |
-
-**Wald** (Sonderwert Totholz)
-
-| Form                                   | Bedingung                                | Lebensraum für                            |
-| -------------------------------------- | ---------------------------------------- | ----------------------------------------- |
-| Brandfläche · _verödet, vorübergehend_ | Vegetation ≤ 1, Totholz ≥ 3              | Käfer – und fruchtbar für den Neuaufwuchs |
-| Trockenwald                            | Feuchte ≤ 1, Vegetation ≥ 3              | Echsen; hohe Brandgefahr                  |
-| **Urwald** · _ideal_                   | Vegetation ≥ 4, Feuchte ≥ 4, Totholz 2–3 | Primaten, Vögel, alle Waldarten           |
-| Lichter Wald                           | Licht ≥ 3, Vegetation 2–3                | Hirsche, Vögel, Bienen                    |
-| Mischwald                              | sonst                                    | Käfer, Kleinsäuger, Wölfe                 |
-
-**Flachland** (Sonderwert Boden)
-
-| Form                      | Bedingung                                         | Lebensraum für                         |
-| ------------------------- | ------------------------------------------------- | -------------------------------------- |
-| Ödland · _verödet_        | Vegetation 0, Feuchte ≤ 1                         | –                                      |
-| Moor                      | Feuchte ≥ 4                                       | Frösche, Käfer                         |
-| **Blumenwiese** · _ideal_ | Vegetation 2–4, Boden ≥ 4, Licht ≥ 3, Feuchte ≤ 3 | Bienen, Kleinsäuger, Hirsche, Menschen |
-| Steppe                    | Feuchte ≤ 2                                       | Echsen, Kleinsäuger, Wölfe             |
-| Buschland                 | Vegetation 5                                      | Kleinsäuger, Vögel                     |
-| Wiese                     | sonst                                             | Käfer, Kleinsäuger, Hirsche, Menschen  |
-
-**Fluss** (Sonderwert Wasserstand)
-
-| Form                            | Bedingung                     | Lebensraum für                                     |
-| ------------------------------- | ----------------------------- | -------------------------------------------------- |
-| Trockenes Flussbett · _verödet_ | Wasserstand 0                 | –                                                  |
-| Hochwasser · _Störung_          | Wasserstand 5                 | – (überflutet Nachbarn: Feuchte +1, Vegetation −1) |
-| Bach                            | Wasserstand 1–2               | Plankton, Frösche                                  |
-| **Aue** · _ideal_               | Wasserstand 3, Vegetation ≥ 3 | Fische, Frösche, Vögel, Menschen                   |
-| Strom                           | sonst                         | Plankton, Fische                                   |
-
-**Küste** (Sonderwert Salz)
-
-| Form                   | Bedingung                             | Lebensraum für                       |
-| ---------------------- | ------------------------------------- | ------------------------------------ |
-| Salzwüste · _verödet_  | Salz 5, Feuchte ≤ 2                   | –                                    |
-| **Mangrove** · _ideal_ | Vegetation ≥ 3, Salz 2–3, Feuchte ≥ 4 | Fische (Kinderstube), Frösche, Vögel |
-| Riff                   | Licht ≥ 4, Salz ≥ 3                   | Plankton, Fische                     |
-| Watt                   | Feuchte ≥ 4, Vegetation ≤ 2           | Plankton, Vögel                      |
-| Strand                 | sonst                                 | Echsen                               |
-
-### 4.3 Kopplungen zwischen Zonen ✅
-
-Die Geografien hängen zusammen. Darum hat jeder Eingriff Nebenwirkungen:
-
-- **Schneeschmelze:** Im Frühling wandert Schnee der Berge als Wasserstand in den Fluss.
-- **Süßwasser:** Ein Fluss mit Wasserstand ≥ 3 senkt das Salz der Küste.
-- **Waldklima:** Ein Wald mit Vegetation ≥ 4 erhöht die Feuchte des Flachlands.
-- **Hochwasser** überflutet alle Nachbarn des Flusses.
-
-### 4.4 Zonenstufe ✅
-
-Jede Zone hat eine **Stufe von 1 bis 5**: ihre Reife als Lebensraum.
-
-- ✅ Sie steigt um 1, wenn die Zone 2 Runden am Stück in einer nicht verödeten Form war und genügend Arten trägt.
-- Stufe 4 und 5 sind **nur in der Idealform** erreichbar. Stufe 5 verlangt zusätzlich ≥ 4 Arten in der Zone.
-  Das ist die schwer erreichbare Obergrenze.
-- Sie fällt um 1 bei verödeter Form, nach einer Störung (Feuer, Hochwasser …) oder beim Wechsel in eine andere Form.
-- Die Zonenstufe begrenzt die Evolution: Eine Art der Entwicklungsstufe _n_ kann nur in einer Zone mit
-  Stufe ≥ _n − 3_ entstehen. Hohes Leben braucht reife Lebensräume. (Bis Version 0.2.1: _n − 2_; vom Inhaber
-  nach der Balancing-Messung vom 10.11.2026 geändert.)
-
-## 5. Das Leben
-
-### 5.1 Populationen ✅
-
-Jede Art hat pro Zone einen **Bestand von 0–9**.
-
-- **Fressen:** Pflanzenfresser zehren an der Vegetation, Räuber an ihrer Beute.
-- **Wachstum:** Reicht die Nahrung und passt die Form, wächst der Bestand um 1.
-- **Hunger:** Reicht sie nicht, schrumpft er um 1.
-- **Überpopulation** frisst die Nahrung leer: Überweidung senkt Vegetation und Boden, zu viele Räuber
-  rotten ihre Beute aus. Das ist die wichtigste Quelle für Fehler und Kettenreaktionen.
-- **Wanderung:** Ab Bestand ≥ 4 wandert 1 Tier in eine passende Nachbarzone.
-- **Aussterben:** Bestand 0 in allen Zonen ⇒ die Art ist ausgestorben (Harmonie −). Sie kann nur
-  zurückkehren, wenn ihr Vorfahr sie erneut hervorbringt.
-
-### 5.2 Evolution ✅
-
-Höhere Arten **entstehen aus niedrigeren** entlang eines Stammbaums. Eine Art entwickelt sich weiter, wenn in einer Zone
-
-- ihr Bestand hoch genug ist (✅ ≥ 4),
-- die Form für die neue Art passt,
-- die Zonenstufe reicht,
-- diese Bedingungen ✅ 3 Runden lang erfüllt sind.
-
-Dann wechseln 2 Tiere zur neuen Art.
-
-**Selektionsdruck** ✅: Ab Entwicklungsstufe 4 braucht ein Evolutionsschritt zusätzlich eine
-**Störung in der Zone oder einer Nachbarzone in den letzten 4 Runden**. Wer höheres Leben will,
-muss sein Gleichgewicht bewusst erschüttern – das ist das zentrale Risiko-Werkzeug.
-
-### 5.3 Stammbaum ✅ (Vorschlag)
-
-| Stufe | Art         | entsteht aus                      | frisst               | Gabe (Karte)                                                |
-| ----- | ----------- | --------------------------------- | -------------------- | ----------------------------------------------------------- |
-| 1     | Plankton    | – (Startleben im Wasser)          | Licht                | _Algenblüte_: Vegetation +1 in einer Wasserzone, Licht −1   |
-| 1     | Käfer       | – (Startleben an Land)            | Totholz              | _Zersetzung_: Totholz −1, Boden +1 in einer Nachbarzone     |
-| 2     | Fisch       | Plankton                          | Plankton             | _Laichzug_: 1 Fisch wandert flussaufwärts oder flussabwärts |
-| 2     | Biene       | Käfer                             | Vegetation (Blüten)  | _Bestäubung_: Vegetation +1                                 |
-| 3     | Frosch      | Fisch                             | Käfer, Bienen        | _Regenruf_: Feuchte +1                                      |
-| 4     | Echse       | Frosch                            | Käfer                | _Sonnenbad_: Licht +1, Feuchte −1                           |
-| 5     | Kleinsäuger | Echse                             | Vegetation           | _Graben_: Boden +1, Vegetation −1                           |
-| 5     | Vogel       | Echse                             | Käfer, Fische        | _Samenflug_: Vegetation +1 in beliebiger Zone               |
-| 6     | Hirsch      | Kleinsäuger                       | Vegetation           | _Äsen_: Vegetation −1 (gegen Verbuschung)                   |
-| 6     | Wolf        | Kleinsäuger (braucht Hirsche)     | Hirsch, Kleinsäuger  | _Jagd_: Bestand eines Pflanzenfressers −2                   |
-| 6     | Greifvogel  | Vogel                             | Kleinsäuger, Fische  | _Späherblick_: nächstes Ereignis abwenden oder verschieben  |
-| 6     | Primat      | Kleinsäuger (nur Urwald)          | Vegetation (Früchte) | _Fruchtregen_: Vegetation +1 in allen Nachbarzonen          |
-| 7     | **Mensch**  | Primat (Zone Stufe ≥ 5, am Fluss) | alles                | siehe 5.4                                                   |
-
-Damit entsteht eine Kette über alle Geografien: Wasser → Land → Wald → Flachland. Kein Lebensraum genügt allein.
-
-### 5.4 Der Mensch ✅
-
-Der Mensch ist die höchste Stufe, aber **kein Sieg**. Er bringt die stärksten Karten und verbraucht
-das Ökosystem:
-
-- **Karten:** _Feuer_ (gezielte Brandrodung, 0 Odem), _Ackerbau_ (Boden −1, Vegetation fest +2), _Siedlung_ (Mensch-Bestand +2).
-- **Kosten:** Jede Runde senkt jeder Mensch-Bestand die Harmonie ein wenig. Ackerbau laugt den Boden aus. Menschen
-  jagen alle Pflanzenfresser.
-- **Wertung:** Solange Menschen leben, zählt jede Runde doppelt.
-
-Die Endspiel-Frage lautet also: Wie lange hält meine Welt den Menschen aus?
-
-## 6. Der Gott: Odem und Karten
-
-### 6.1 Odem ✅
-
-**Odem** ist die knappe Ressource des Gottes. ✅ Er fließt jede Runde zu:
-
-```
-Odem pro Runde = 1 + ⌊Harmonie / 25⌋ + (1, wenn ≥ 6 Arten leben)   · Obergrenze: 10 angespart
-```
-
-Eine gesunde Welt gibt mehr Kraft. Eine kranke Welt macht den Gott schwach, genau wenn er Kraft
-am dringendsten bräuchte. Das ist der zentrale Tausch.
-
-### 6.2 Karten ✅
-
-Hand mit 4 Karten, nach jeder Runde wird auf 4 nachgezogen. Ist der Stapel leer, wird die Ablage gemischt.
-
-✅ **Reichweite (Variante C, Entscheidung des Inhabers):** Jede Karte hat eine Reichweite.
-
-- **Welt:** _Wetter_ wirkt ohne Zielwahl auf **alle Zonen** gleichzeitig, und jede Geografie reagiert anders
-  (Regen bringt den Bergen Schnee, dem Fluss Wasser und süßt die Küste aus). Schwellen (🔥, 🌊 …) gelten je Zone,
-  aber nur in den Geografien, in denen sie passen. Wetter fragt also nicht „wo?“, sondern „jetzt?“ (Prinzip 6).
-- **Zone:** _Gaben_, _Wunder_, _Gaben der Arten_ und _Menschenkarten_ bleiben gezielt. Der Spieler wählt die Zone
-  (und ggf. Art oder Nachbarzone). Örtliche Gaben wie _Schatten_ und _Quelle_ sind kein Wetter und bleiben gezielt.
-
-| Kategorie       | Reichweite | Odem | Charakter                                                           | Beispiele                                                                                                                 |
-| --------------- | ---------- | ---- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Wetter          | Welt       | 0–2  | Naturgewalten (0 Odem): grob, mit Schwellen; Wettergaben (1–2 Odem) | Naturgewalten: Gewitter, Dürre, Sturm, Frost · Wettergaben: Regen, Trockenwind, Sonne, Schneefall                         |
-| Gaben           | Zone       | 1–2  | präzise, ein Wert ±1                                                | Samen, Dünger, Schatten, Quelle, Ebbe, Laubfall                                                                           |
-| Wunder          | Zone       | 3–5  | Korrektur von Fehlern                                               | _Heilung_ (Zone zum Ruhewert), _Arche_ (Art vor dem Aussterben retten: Bestand +2), _Stille_ (nächstes Ereignis entfällt) |
-| Gaben der Arten | Zone       | 0–2  | kommen ins Deck, wenn eine Art erstmals entsteht                    | siehe Stammbaum                                                                                                           |
-| Menschenkarten  | Zone       | 0–2  | stark, mit Langzeitkosten                                           | Feuer, Ackerbau, Siedlung                                                                                                 |
-
-✅ **Wetterkarten** (Wirkung je Geografie; „Alle“ = in jeder Zone; Zahlen sind Platzhalter bis zum Balancing):
-
-| Karte       | Odem | Alle       | Berge     | Wald                      | Flachland               | Fluss          | Küste   |
-| ----------- | ---- | ---------- | --------- | ------------------------- | ----------------------- | -------------- | ------- |
-| Gewitter    | 0    | Feuchte +2 |           |                           |                         | Wasserstand +1 |         |
-| Dürre       | 0    | Feuchte −1 | Schnee −1 | Totholz +1                |                         | Wasserstand −1 | Salz +1 |
-| Sturm       | 0    |            | Schnee −1 | Vegetation −1, Totholz +1 |                         |                | Salz +1 |
-| Frost       | 0    |            | Schnee +1 |                           | Vegetation −1, Boden +1 | Wasserstand −1 |         |
-| Regen       | 1    |            | Schnee +1 | Feuchte +1                | Feuchte +1              | Wasserstand +1 | Salz −1 |
-| Trockenwind | 1    | Feuchte −1 | Schnee −1 |                           |                         |                |         |
-| Sonne       | 1    | Licht +1   | Schnee −1 |                           |                         |                | Salz +1 |
-| Schneefall  | 2    | Licht −1   | Schnee +1 | Feuchte +1                |                         |                |         |
-
-Schwellen der Wetterkarten (je Zone, nur in den genannten Geografien):
-
-| Karte    | Schwelle     | Wo                     | Wann                                  | Folge                                           |
-| -------- | ------------ | ---------------------- | ------------------------------------- | ----------------------------------------------- |
-| Gewitter | 🔥 Feuer     | Wald, Flachland        | vorher Feuchte ≤ 1 und Vegetation ≥ 1 | Vegetation auf 0, Totholz +3, Störung           |
-| Gewitter | 🌊 Flut      | Berge, Flachland       | vorher Feuchte ≥ 4                    | Vegetation −1, Nachbarzonen Feuchte +1, Störung |
-| Dürre    | 🥀 Welke     | überall                | nachher Feuchte = 0                   | Vegetation −1                                   |
-| Sturm    | 🌲 Baumsturz | Wald, Berge (Bergwald) | vorher Vegetation ≥ 5                 | Licht +2, Totholz +1, Störung                   |
-| Frost    | 🧊 Eisbruch  | Wald                   | vorher Feuchte ≥ 4                    | Vegetation −1, Totholz +1                       |
-
-Die Idee je Karte:
-
-- **Gewitter** nässt Wald und Küste (gut für Urwald und Mangrove) und macht das Flachland zum Moor; der Fluss steigt.
-- **Dürre** lässt Schnee schwinden und trocknet nasses Flachland; Wald und Küste leiden meist, den Fluss senkt sie – schädlich in der Aue, hilfreich im Hochwasser.
-- **Sturm** verweht den Schnee der Berge, bricht Bäume im Wald und trägt Salz an die Küste.
-- **Frost** lockert den Boden des Flachlands (Frostgare), lässt aber die Wiese erfrieren und bindet Flusswasser.
-- **Regen** hilft dem Wald und einem niedrigen Fluss, verschneit aber die Berge und nässt das Flachland.
-- **Trockenwind** (Föhn) taut Schnee und trocknet nasses Flachland, schadet Wald und Küste.
-- **Sonne** ist die Schneeschmelze der Berge, lässt aber die Küste versalzen.
-- **Schneefall** befeuchtet den Wald, verschneit aber die Berge und dämpft überall das Licht.
-
-Die Schwellen-Logik aus Prototyp 0.1 bleibt: Gewitter auf trockenem Land wird Feuer, Sturm auf dichtem Wald wird
-Baumsturz. Gefahren werden **sichtbar angezeigt** (🔥 auf jeder Zone, in der die Schwelle beim Ausspielen
-auslösen würde), nie als versteckte Prozentzahl.
-
-## 7. Harmonie ✅
-
-Die **Harmonie (0–100)** ist das Lebenszeichen der Welt. Sie startet bei ✅ 60.
-
-✅ Veränderung pro Runde:
-
-| Quelle                                | Wirkung        |
-| ------------------------------------- | -------------- |
-| Zone in Idealform                     | +2             |
-| Zone in verödeter Form                | −3             |
-| Arten am Leben                        | +0,25 pro Art  |
-| Art ausgestorben                      | −10 (einmalig) |
-| Hunger / Überpopulation in einer Zone | −1             |
-| Mensch-Bestand                        | −0,5 pro Tier  |
-
-Bei 0 kollabiert die Welt und die Partie endet. Die Harmonie wird als Lebensbalken ganz oben
-angezeigt. Die Insel reagiert sichtbar: Farben werden blasser, Nebel zieht auf.
-
-## 8. Fehler ausbügeln oder bewusst in Kauf nehmen ✅
-
-| Mittel           | Kosten                                               | Zweck                                                    |
-| ---------------- | ---------------------------------------------------- | -------------------------------------------------------- |
-| Selbstheilung    | gratis, aber langsam (±1 alle 2 Runden zum Ruhewert) | kleine Fehler verwachsen von selbst                      |
-| Gaben            | 1–2 Odem                                             | gezielt nachsteuern                                      |
-| Wunder           | 3–5 Odem                                             | große Fehler schnell reparieren                          |
-| Arche            | 4 Odem                                               | eine Art vor dem Aussterben retten                       |
-| Gezielte Störung | Harmonie-Einbruch, Zonenstufe −1                     | Selektionsdruck für Evolution, Brandfläche als Neuanfang |
-
-## 9. Ereignisse ✅
-
-Ereignisse werden **eine Runde vorher angekündigt**. Der Spieler kann sich vorbereiten, abwenden
-(_Stille_, _Späherblick_) oder sie für Selektionsdruck nutzen.
-
-✅ Pool (mit jedem Jahr wahrscheinlicher und stärker):
-
-| Ereignis             | Wirkung                                                |
-| -------------------- | ------------------------------------------------------ |
-| Hitzesommer          | alle Zonen Feuchte −1                                  |
-| Kälteeinbruch        | Berge Schnee +2, alle Zonen Vegetation −1              |
-| Blitzschlag          | Gewitter nur auf einer zufälligen Zone (Feuer möglich) |
-| Seuche               | dichteste Population −3 (wird nicht stärker)           |
-| Sturmflut            | Küste Salz +2, Flachland Feuchte +1                    |
-| Heuschrecken         | Flachland Vegetation −2                                |
-| Meteorit (ab Jahr 8) | eine Zone fällt auf Stufe 1, starker Selektionsdruck   |
-
-**Jahreszeiten** ✅ (wirken jede Runde):
-
-- Frühling: Vegetation +1 in Zonen mit Feuchte ≥ 2, Schneeschmelze
-- Sommer: Feuchte −1
-- Herbst: Totholz +1, Vegetation −1 im Wald
-- Winter: Schnee +1, Wachstum der Populationen pausiert
-
-## 10. Wertung und Meta-Progression
-
-**Punkte** ✅: Jede Runde bringt die Summe der Entwicklungsstufen aller lebenden Arten, verdoppelt
-solange Menschen leben. Langes Überleben und hohes Leben zählen also beide.
-
-**Schöpfungsbuch** ✅ (das frühere Notizbuch): Jede Art, die zum ersten Mal entsteht, wird dauerhaft eingetragen.
-
-- Ihre Bedingungen werden sichtbar.
-- Ihre Gabe kommt in den Pool für Startdecks (8–10 Karten).
-- Wunder werden über Meilensteine freigeschaltet, z. B. _Arche_ nach dem ersten Aussterben.
-
-Progression bedeutet früheren Zugang zu Werkzeugen, nicht mehr Macht.
-
-**Wiederspielwert:** variierende Startwelten (Seed, Startwerte), Ereignis-Reihenfolge, Startdeck-Wahl.
-
-## 11. Was aus Prototyp 0.1 bleibt
-
-| Bleibt                                                                         | Ändert sich                                                                      |
-| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| Datengetriebene Engine, Bedingungs- und Effektsprache, Seeds, Bots, Simulation | Expedition mit Ausstieg → Überleben bis zum Kollaps                              |
-| Karten mit festen Effekten und sichtbaren Schwellen                            | Kartenstapel läuft nicht mehr leer (Ablage wird gemischt)                        |
-| Kartenzwang (✅ mindestens 1 Karte, Naturgewalten gratis)                      | Odem als Kosten                                                                  |
-| Tierkarten kommen ins Deck                                                     | Tiere ziehen nicht ein, sondern entstehen durch Evolution; Bestände statt An/Aus |
-| Schöpfungsbuch (Notizbuch)                                                     | 5 feste Geografien mit Formen und Zonenstufe statt wechselnder Zonentypen        |
-
-## 12. Offene Punkte
-
-- [x] Vorschläge bestätigt: Formen, Stammbaum, Odem-Formel, Harmonie-Tabelle, Kartenzwang
-- [ ] Zahlenwerte per Simulation balancieren. Ziel: Ein guter Spieler erreicht Stufe 6 in Jahr 5–7, den Menschen nur selten.
-- [ ] Name für „Odem“ in der englischen Version (_Breath_? _Grace_? _Divinity_?)
-- [ ] Tutorial und Einstieg (erste Partie stark geführt?)
-- [ ] Monetarisierung und Online-Funktionen – bewusst später ✅
-
-## 13. Fahrplan
-
-Siehe [Entwicklungsplan](entwicklungsplan.md).
-
-## Anhang: Umgesetzte Auslegungen
-
-Wo das Konzept offen oder mehrdeutig ist, hat die Umsetzung eine Auslegung gewählt. Sie sind im Code und in den
-Daten mit `AUSLEGUNG:` markiert und hier gesammelt (Stand: Phase 5). Sie gelten, bis der Inhaber anders
-entscheidet; Zahlen bleiben Platzhalter bis Phase 6.
-
-**Kap. 3 – Ablauf**
-
-- Reihenfolge der Bilanz: erst Wertung, dann Harmonie – auch die Runde des Kollapses bringt noch Punkte.
-- Die Vorschau entsteht am Ende der Bilanz: Das Ereignis für die nächste Runde wird ausgelost und ist während
-  der Eingriffe sichtbar. Es tritt in der Natur-Phase direkt nach der Jahreszeit ein.
-- Ohne Schöpfungsbuch (Tests, Bots, Konsole) prüft die Engine beim Startdeck nur Größe, Kopien und bekannte
-  Karten, nicht den freigeschalteten Pool.
-
-**Kap. 4 – Welt**
-
-- Ein Wert, den eine Geografie nicht hat (z. B. Boden im Wald), erfüllt keine Wert-Bedingung.
-- Kopplungen, die Werte übertragen (Schneeschmelze): Es wandert höchstens, was die Quelle hat; was im Ziel über
-  die Skala hinausgeht, geht verloren – ein voller Fluss läuft dann über (Hochwasser).
-- Eine Störungsform (Hochwasser) stört ihre eigene Zone in jeder Runde, in der sie besteht. Die Nachbarn trifft
-  sie über die Kopplung „Hochwasser“, nicht als Störung.
-- Zonenstufe: Sie fällt pro Runde höchstens um 1, auch wenn mehrere Gründe zusammenkommen. Die Runde des
-  Abstiegs zählt nicht zur Serie; die 2 Runden für den Aufstieg beginnen danach neu.
-- „Urwald – alle Waldarten“ = jede Art, die in einer anderen Waldform lebt.
-
-**Kap. 5 – Leben**
-
-- Konkurrenz um dieselbe Nahrung wird der Reihe nach aufgelöst: Zone für Zone, darin niedrige Stufen zuerst.
-- Räuber jagen auch in Nachbarzonen (Revier), weil viele Räuber in anderen Formen leben als ihre Beute.
-- Satte Tiere verbrauchen ihre Nahrung nicht dauerhaft. Erst bei Knappheit fressen hungrige Tiere sie leer
-  (Überweidung: Vegetation und Boden −1, bzw. Totholz −1; zu viele Räuber: Beute −1).
-- Satt, aber außerhalb des Lebensraums: kein Wachstum; nur in verödeter Form schrumpft der Bestand.
-- Wanderung „in eine passende Nachbarzone“ = deren Form gehört zum Lebensraum und dort ist noch Platz; bei
-  Gleichstand gilt die Reihenfolge der Nachbarn in den Daten.
-- Passt die Form der Ursprungszone nicht zur neuen Art (Frosch → Echse, Primat → Mensch), entsteht sie in einer
-  passenden Nachbarzone („Landgang“), bei mehreren in der mit dem kleinsten Bestand.
-- Das Startleben gilt als „erstmals entstanden“: Seine Gaben kommen gleich zu Beginn ins Deck.
-- Stammbaum: Käfer fressen Totholz, wo es keins gibt (Flachland), Pflanzenreste (Vegetation). Der Mensch
-  „frisst alles“ = Hirsch, Kleinsäuger, Fisch, dann Vegetation. „Am Fluss“ = der Fluss selbst oder eine
-  Nachbarzone des Flusses. Menschen jagen alle Pflanzenfresser außer Bienen.
-- Karten: _Laichzug_ „flussauf- oder flussabwärts“ = in eine Nachbarzone mit Wasser (Fluss oder Küste).
-  _Jagd_ trifft Pflanzenfresser = Arten, die laut 5.3 Vegetation fressen (Käfer und Mensch zählen nicht).
-  _Feuer_ = gezielte Brandrodung wie die Feuer-Schwelle des Gewitters (Störung), nur wo etwas wächst.
-  _Ackerbau_ „Vegetation fest +2“ = Vegetation +2 ohne Schwelle, dazu Boden −1.
-
-**Kap. 6 – Odem und Karten**
-
-- Startodem = Zufluss bei Start-Harmonie: 1 + ⌊60 / 25⌋ = 3.
-
-**Kap. 6.2 – Weltkarten (Wetter, Variante C)**
-
-- Gleichzeitige Wirkung: Eine Wetterkarte wirkt in allen Zonen „zugleich“. Schwellen mit Prüfung _vorher_ sehen
-  den Zustand vor der Karte, Schwellen mit Prüfung _nachher_ den Zustand nach der Grundwirkung aller Zonen.
-  Wirkungen auf Nachbarzonen (z. B. Flut: Nachbarn Feuchte +1) werden je Zone summiert und einmal angewendet,
-  so dass die Reihenfolge der Zonen das Ergebnis nicht entscheidet.
-  Die Wirkung auf die eigene Zone wird zuerst angewendet und auf die Skala begrenzt, die gesammelten
-  Nachbarwirkungen danach (z. B. Feuchte 5, eigene +1 → 5, Nachbar −2 → 3, nicht 4).
-- Reihenfolge: Schwellen „vorher“ → Grundwirkung (erst die Wirkung auf alle Zonen, dann die der Geografie) →
-  Ziehen, Odem und Ereignis-Effekte genau einmal → Schwellen „nachher“ → Folgen der Schwellen (je Schwelle in allen
-  Zonen, in denen sie auslöst). Im Protokoll erscheinen die Zonen in Kartenreihenfolge.
-- Ereignis mit Weltkarte: _Blitzschlag_ spielt das Gewitter nur auf die ausgeloste Zielzone (mit der Wirkung
-  dieser Geografie). Ein Ereignis ohne Zielzone ließe die Karte auf allen Zonen wirken.
-- Schwellen gelten je Zone, sind aber auf die Geografien begrenzt, in denen sie thematisch passen (Feuer nur in
-  Wald und Flachland, Flut nur in Bergen und Flachland, Baumsturz nur in Wald und Bergwald, Eisbruch nur im Wald),
-  damit eine Weltkarte nicht in allen Zonen zugleich eine Katastrophe auslöst. Der Fluss (Ruhewert Feuchte 5)
-  löst die Flut nicht aus; das Gewitter hebt dort den Wasserstand.
-- Der frühere Sturm mit wählbarer Fallrichtung wird zum Weltsturm: Der Baumsturz trifft nur die eigene Zone
-  (Licht +2, Totholz +1), keine Nachbarzone mehr.
-- Alte Spielstände mit Zielen für Wetterkarten bleiben gültig; die Ziele werden ignoriert.
-
-**Kap. 7 und 8 – Harmonie und Störungen**
-
-- Der „Harmonie-Einbruch“ einer gezielten Störung (Kap. 8) ist ein eigener Beitrag je gestörter Zone und Runde
-  (Platzhalter −2), da Kap. 7 dafür keine Zahl nennt.
-
-**Kap. 9 – Ereignisse und Jahreszeiten**
-
-- Seuche, Sturmflut, Heuschrecken und Meteorit stören die getroffenen Zonen (zählt für Selektionsdruck,
-  Zonenstufe und Harmonie). Hitzesommer und Kälteeinbruch treffen alle Zonen mild und stören nicht.
-- Die Seuche trifft die Population, die beim Eintreten am dichtesten ist; angekündigt wird sie ohne Zone.
-- Meteorit, „starker Selektionsdruck“ = die Zone und alle Nachbarn gelten als gestört.
-- _Stille_ „nächstes Ereignis entfällt“: Ist gerade keins angekündigt, entfällt das nächste ausgeloste.
-  Verschieben (_Späherblick_) ohne angekündigtes Ereignis bleibt wirkungslos.
-- Herbst „Totholz +1, Vegetation −1 im Wald“: beides nur im Wald (Totholz gibt es nur dort).
-
-**App (Darstellung)**
-
-- Figuren richten sich nach der Arten-Gruppe aus `species.yaml` (`group`); Frösche sind Amphibien mit eigener Figur.
-
-**Balancing (Phase 6, Tuning-Runde 1 vom 10.11.2026)**
-
-- Evolution: Eine Art der Stufe _n_ entsteht in Zonen mit Stufe ≥ _n − 3_ (statt _n − 2_). Entscheidung des
-  Inhabers auf Grundlage der Messung `packages/sim/reports/2026-11-10-baseline.md` (Vorschlag 3).
-- Die Seuche wächst nicht mit der Ereignis-Stärke (`events.yaml`: `scales: false`), sie nimmt immer 3 Tiere.
+Du bist ein Gott, der nicht erschafft, sondern Bedingungen formt. Eine Herde zieht Jahr für Jahr über eine Insel und
+sucht sich ihren Weg selbst. Du formst die Landschaft, setzt Leben in Gang und lebst mit dem, was daraus wächst.
+
+> Du baust keine Welt für deine Herde. Du setzt Leben in Gang und lebst mit dem, was daraus wächst.
+
+## 2. Warum der Neuanfang
+
+Konzept 0.4 war an der Oberfläche zu komplex (5 Zonen × 4 Werte, die ständig schwanken) und in den Entscheidungen
+zu simpel (jeder Zug: die am wenigsten schlechte Karte). Die Neuausrichtung greift die Kernideen des ursprünglichen
+Handovers wieder auf: indirekte Steuerung, selbst gewählte Reibung, eine Welt mit Eigenleben.
+
+## 3. Kernprinzipien
+
+1. **Die Welt lebt weiter.** Landschaft verändert sich von selbst (Sukzession, Feuer, Räuber). Du spielst gegen die
+   Folgen deiner eigenen Entscheidungen von vor ein paar Jahren, nicht gegen Gegner.
+2. **Die Herde wählt ihren Weg selbst.** Du steuerst sie nie direkt. Du lockst sie: mit Gras, Wasser, Schutz – und
+   du schreckst sie ab: mit Fels, Feuer, Wölfen. Ihre Absicht ist immer sichtbar.
+3. **Wenig Zahlen, viel Raum.** Sichtbar sind nur Herde, Vorrat, Wölfe und Wildnis. Alles andere zeigt die Insel
+   selbst: was wo liegt und was nebeneinander liegt.
+4. **Jeder Eingriff ist ein Tausch.** Jede Karte hilft jetzt und rückt die große Prüfung näher (Wildnis). Wald gibt
+   Schutz und bringt Wölfe; Feuer vertreibt Wölfe und frisst den Schutz.
+5. **Rundenweise, ruhig, fürs Handy.** Ein Monat pro Schritt, eine Jahreszeit pro Entscheidungspunkt.
+   Eine Partie dauert 20–30 Minuten.
+
+## 4. Die Insel
+
+- Raster aus Feldern (Prototyp 7 × 9). Meer und Fels sind für die Herde unpassierbar.
+- **Landschaften und ihr Eigenleben** (Zahlen sind Platzhalter):
+
+| Landschaft  | Futter (max) | Besonderheit                                 | Wird von selbst …                           |
+| ----------- | ------------ | -------------------------------------------- | ------------------------------------------- |
+| Steppe      | 1            | karg                                         | bleibt Steppe                               |
+| Wiese       | 6            | Hauptfutter, wächst im Frühling am stärksten | Busch nach 12 Monaten ohne Beweidung        |
+| Busch       | 2            | Schutz im Winter                             | Wald nach 18 Monaten                        |
+| Wald        | 1            | Schutz, Lebensraum der Wölfe                 | Altwald nach 36 Monaten                     |
+| Altwald     | 0            | Schutz, kann im Sommer brennen               | Brandfläche (Feuer springt auf Gehölz)      |
+| Brandfläche | 0            | vertreibt Wölfe                              | fruchtbare Wiese (+2 Futter) nach 4 Monaten |
+| Wasser      | 0            | Tränke im Sommer                             | –                                           |
+| Fels        | –            | unpassierbar                                 | –                                           |
+
+- Die Herde selbst formt die Insel mit: Beweidete Wiese bleibt offen, gemiedene verbuscht.
+
+## 5. Die Herde
+
+- Zieht jeden Monat höchstens ein Feld weiter. Sie bewertet ihre Nachbarfelder nach Futter in Reichweite, im Sommer
+  nach Wasser, im Winter nach Schutz, und meidet Wölfe und gerade besuchte Felder. Die Wahl ist deterministisch und
+  wird als **Absicht** angezeigt („sucht Wasser ↘“).
+- **Fressen:** 1 Futter pro Tier und Monat aus dem eigenen und den 8 Nachbarfeldern. Überschuss wird **Vorrat**
+  (höchstens doppelte Herdengröße), Mangel zehrt ihn auf, danach sterben Tiere.
+- **Jahreszeiten:** Frühling Nachwuchs (je nach Vorrat), Sommer Durst ohne Wasser in der Nähe, Herbst Vorrat
+  anfressen, Winter kein Graswachstum und Kälte ohne Gehölz in der Nähe.
+
+## 6. Wölfe
+
+- Rudel (Stärke 1–3) leben im Gehölz. Hungrige Rudel ziehen durch zusammenhängendes Gehölz auf die Herde zu –
+  **Waldkorridore sind Wolfswege.**
+- Ist die Herde in Reichweite, reißen sie Tiere. Satte Rudel wachsen und gründen neue, hungrige verkümmern.
+- Ohne Rudel wandern bei genug Wald neue ein. Feuer und Fels vertreiben sie.
+
+## 7. Karten (Eingriffe des Gottes)
+
+Zu Beginn jeder Jahreszeit 2 Karten, höchstens 5 auf der Hand. Kein Ablegen. Jede Karte erhöht die Wildnis.
+
+| Karte          | Wirkung                           | Tausch                                       |
+| -------------- | --------------------------------- | -------------------------------------------- |
+| Wiese säen     | Steppe oder Brand → Wiese         | verbuscht, wenn die Herde nicht hinzieht     |
+| Bäume pflanzen | Steppe oder Wiese → Busch         | Schutz jetzt, Wald und Wölfe später          |
+| Quelle         | Steppe oder Wiese → Wasser        | kostet Weidefläche                           |
+| Fels           | sperrt ein Feld                   | lenkt die Herde, nimmt Fläche                |
+| Blitz          | Gehölz brennt, Feuer springt über | vertreibt Wölfe, frisst Schutz, später Wiese |
+| Regen          | ganze Insel: Gras +2              | lässt auch Busch und Wald schneller wachsen  |
+
+## 8. Wildnis und die große Prüfung
+
+- Die **Wildnis** wächst jeden Monat ein wenig und mit jeder gelegten Karte. Bei 100 beginnt die **Eiszeit**:
+  6 Monate Winter, kein Nachwuchs.
+- Übersteht die Herde die Eiszeit, ist das Zeitalter (die Partie) gewonnen. Wertung: Zahl der Überlebenden.
+- Wer viel eingreift, ist besser vorbereitet, ruft die Prüfung aber früher herbei.
+
+## 9. Offene Punkte (Vorschläge 💡, noch nicht entschieden)
+
+1. 💡 **Entwicklung der Herde:** Merkmale aus dem Erlebten (viele Winter im Wald → dichtes Fell; viele Wölfe →
+   Wachsamkeit; viel Wasser → Schwimmer). Wahl aus 2–3 Angeboten, wenn die Herde eine Größe erreicht.
+2. 💡 **Meta-Progression als Abstammung:** Merkmale und entdeckte Landschaften gehen ins Schöpfungsbuch; über viele
+   Zeitalter entwickelt sich die Herde bis zur ersten Menschengruppe.
+3. 💡 **Jahreskreis:** Je Jahreszeit ein Wetterfeld, dessen Karte jedes Jahr wiederkehrt (z. B. nasser Frühling).
+4. 💡 **Größere Insel mit Wegen und Gabelungen**, mehrere Szenarien (Inseltypen), Ereignisse (Dürrejahr, Seuche).
+5. **Partielänge:** Ziel 20–30 Minuten; der Prototyp liegt bei 10–15 (Wildnis-Tempo anpassen).
+
+## 10. Was bleibt vom bisherigen Projekt
+
+Infrastruktur und Arbeitsweise bleiben: Monorepo, CI, Deploy auf den vServer, App-Hülle (Vite, React, Three.js,
+Capacitor), deterministische Engine mit Zufall aus dem Seed, Regeln und Zahlen in YAML, Cockpit. Die Spielregeln
+von Konzept 0.4 (Geografien, Werte, Formen, Weltkarten) werden ersetzt; der Code bleibt bis zum Umbau im Repo.
 
 ## Änderungsverlauf
 
-- **0.4.0 (10.11.2026)** – Kartenreichweite nach Variante C (Inhaber-Entscheidung): Wetter wirkt ohne Zielwahl auf
-  alle Zonen, je Geografie unterschiedlich; Gaben, Wunder, Arten und Menschen bleiben gezielt (6.2). Die Kategorie
-  „Naturgewalt“ geht im _Wetter_ auf: Gewitter, Dürre, Sturm, Frost (0 Odem) und Regen, Trockenwind, Sonne,
-  Schneefall (1–2 Odem) sind Weltkarten mit einer Wirkungstabelle je Geografie. Neues Prinzip 6 „Jeder Wetterzug
-  ist ein Tausch“ (2). Schwellen gelten je Zone und sind auf passende Geografien begrenzt; Blitzschlag trifft nur
-  seine Zielzone (9). Neue Auslegungen im Anhang (Kap. 6.2). Dürre jetzt Feuchte −1 (statt −2) auf allen Zonen;
-  Sonne und Trockenwind senken den Schnee der Berge.
-
-- **0.3.0 (10.11.2026)** – Tuning-Runde 1 nach der Baseline-Messung (Bericht
-  `packages/sim/reports/2026-11-10-tuning-1.md`): Zonenstufe für Evolution _n − 3_ statt _n − 2_ (4.4,
-  Inhaber-Entscheidung); Zonenstufe steigt nach 2 statt 3 Runden (4.4); Vorfahr braucht Bestand ≥ 4 statt ≥ 5
-  (5.2); Artenbonus der Harmonie +0,25 statt +0,5 je Art (7); Seuche skaliert nicht mehr (9); breitere
-  Idealformen: Urwald Vegetation ≥ 4 (statt 5), Aue und Mangrove Vegetation ≥ 3 (statt ≥ 4) (4.2). Nur in den
-  Daten: 1 Beutetier ernährt 2 Räuber, _Stille_ kostet 4 Odem, Meilenstein „Wetterfest“ nach 20 Ereignissen.
-- **0.2.1 (10.11.2026)** – vom Inhaber bestätigter Stand vor dem Balancing.
+- **1.0 (10.11.2026):** Neuausrichtung „Die Herde“ nach Prototyp-Test. Loop-Hero-Grundidee (indirekte Steuerung,
+  selbst gewählte Reibung) mit lebender Welt und selbst wählender Herde. Konzept 0.4 archiviert.
