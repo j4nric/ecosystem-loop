@@ -11,6 +11,20 @@ Der Plan folgt zwei Regeln:
 
 Jede Phase endet mit prüfbaren Abnahmekriterien. Offene Fragen und Feedback laufen über das Cockpit.
 
+## Stand
+
+| Phase                         | Status       | PRs                                       |
+| ----------------------------- | ------------ | ----------------------------------------- |
+| 0 – Fundament                 | ✅ erledigt  | #1–#3, #7, #8                             |
+| 1 – Welt                      | ✅ erledigt  | #9 (mit Web-App-Gerüst)                   |
+| 2 – Leben                     | ✅ erledigt  | #11 (mit Engine in der Web-App)           |
+| 3 – Ereignisse, Meta          | ✅ erledigt  | #12                                       |
+| 4 – Web-App-Gerüst            | ✅ erledigt  | #9, #11 (vorgezogen, parallel zu 1 und 2) |
+| 5 – Bedienung und Spielgefühl | 🔧 in Arbeit | #13 (Teil 1)                              |
+| 6 – Balancing                 | offen        |                                           |
+| 7 – Grafik und Ton            | offen        |                                           |
+| 8 – Veröffentlichung          | offen        |                                           |
+
 ## Arbeitsweise
 
 - Jede Phase besteht aus mehreren kleinen PRs. Claude erstellt sie, wartet auf grüne CI und merged selbst.
@@ -23,10 +37,12 @@ Jede Phase endet mit prüfbaren Abnahmekriterien. Offene Fragen und Feedback lau
 
 ### Phase 0 – Fundament ✅
 
-PR #1–#3: Prototyp 0.1 (Expeditionsmodell), Konzept 0.2, Workspace-Struktur, CI mit Lint, Coverage,
+PR #1–#3, #7, #8: Prototyp 0.1 (Expeditionsmodell), Konzept 0.2, Workspace-Struktur, CI mit Lint, Coverage,
 Simulation und Audit.
 
-### Phase 1 – Welt: Geografien, Formen, Odem, Harmonie
+### Phase 1 – Welt: Geografien, Formen, Odem, Harmonie ✅
+
+Erledigt mit PR #9 (zusammen mit dem Web-App-Gerüst aus Phase 4).
 
 **Ziel:** Eine Partie ohne Tiere ist spielbar. Der Spieler muss mit Odem haushalten, um 5 Zonen gegen
 Jahreszeiten und Drift im Gleichgewicht zu halten.
@@ -51,7 +67,9 @@ Abnahme:
 - Eine Partie ist in der Konsole von Runde 1 bis zum Kollaps spielbar
 - Der Zufalls-Bot spielt Partien ohne Absturz
 
-### Phase 2 – Leben: Populationen, Evolution, Mensch
+### Phase 2 – Leben: Populationen, Evolution, Mensch ✅
+
+Erledigt mit PR #11 (zusammen mit der Anbindung der Engine an die Web-App).
 
 **Ziel:** Leben entsteht, frisst, wandert, stirbt aus und entwickelt sich bis zum Menschen.
 
@@ -69,7 +87,10 @@ Abnahme:
 - Fressketten, Hunger, Wanderung, Aussterben und Selektionsdruck sind durch Tests belegt
 - Eine Partie mit Leben ist in der Konsole spielbar
 
-### Phase 3 – Ereignisse und Meta-Progression
+### Phase 3 – Ereignisse und Meta-Progression ✅
+
+Erledigt mit PR #12. Die Startdeck-Auswahl ist in der Engine umgesetzt (`cardPool`, `validateDeck`), in der
+App noch ohne Oberfläche.
 
 **Ziel:** Jede Partie fühlt sich anders an. Es gibt einen Grund, die nächste zu spielen.
 
@@ -84,7 +105,10 @@ Abnahme:
 - Ereignisse, Ankündigung, Gegenkarten und Freischaltungen sind durch Tests belegt
 - Das Schöpfungsbuch bleibt zwischen Partien erhalten
 
-### Phase 4 – Web-App-Gerüst
+### Phase 4 – Web-App-Gerüst ✅
+
+Vorgezogen und parallel zu Phase 1 und 2 erledigt: Gerüst in PR #9, echte Engine in PR #11. Der Deploy-Workflow
+steht ([deploy.md](deploy.md)) und läuft, sobald die Zugangsdaten als GitHub-Secrets hinterlegt sind.
 
 **Ziel:** Das Spiel läuft als mobile Web-App im iPhone-Browser, mit einfacher 3D-Insel und Platzhaltermodellen,
 und wird auf dem eigenen vServer bereitgestellt. Native Builds (Capacitor, Stores) folgen später.
@@ -102,7 +126,10 @@ Abnahme:
 - Eine komplette Partie ist im iPhone-Browser spielbar
 - Flüssige Darstellung (Ziel 60 fps) auf einem aktuellen iPhone
 
-### Phase 5 – Bedienung und Spielgefühl
+### Phase 5 – Bedienung und Spielgefühl 🔧
+
+In Arbeit. Teil 1 (PR #13): Karten auf Zonen ziehen mit Vorschau, Figuren je Art, Animationen für Formwechsel
+und neue Arten, Harmonie-Stimmung, Einführung beim ersten Start, Hilfe, Deutsch und Englisch.
 
 Umfang:
 
