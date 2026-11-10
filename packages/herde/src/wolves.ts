@@ -76,7 +76,7 @@ export function packLife(data: HerdeData, s: HerdeState, emit: Emit): void {
     }
     if (p.hungry >= w.starveAfter) {
       p.size--;
-      p.hungry = Math.floor(w.starveAfter / 2);
+      p.hungry = w.starveReset;
       emit({ type: 'packStarved', pack: p.id, size: p.size });
       if (p.size <= 0) emit({ type: 'packGone', pack: p.id, x: p.x, y: p.y, cause: 'starved' });
     }

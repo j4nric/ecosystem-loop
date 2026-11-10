@@ -55,8 +55,12 @@ function problem(data: HerdeData, s: HerdeState): string | null {
   if (s.herd.trail.some((p) => !inside(p))) return 'Spur außerhalb der Insel';
 
   const ids = new Set<number>();
+  const spots = new Set<string>();
   for (const p of s.packs) {
     if (!inside(p)) return `Rudel ${p.id} außerhalb der Insel`;
+    if (!landAt(p).wood) return `Rudel ${p.id} nicht im Gehölz`;
+    if (spots.has(`${p.x},${p.y}`)) return `zwei Rudel auf Feld (${p.x},${p.y})`;
+    spots.add(`${p.x},${p.y}`);
     if (p.size > data.params.wolves.maxSize) return `Rudel ${p.id} stärker als ${data.params.wolves.maxSize}`;
     if (ids.has(p.id)) return `Rudel-Id ${p.id} doppelt`;
     if (p.id >= s.nextPackId) return `Rudel-Id ${p.id} ≥ nextPackId ${s.nextPackId}`;

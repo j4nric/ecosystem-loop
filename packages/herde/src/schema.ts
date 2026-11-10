@@ -131,6 +131,7 @@ export const Params = z.strictObject({
     maxSize: z.number().int().positive(),
     foundRadius: z.number().int().positive(),
     starveAfter: z.number().int().positive(),
+    starveReset: z.number().int().nonnegative(),
     spawnChance: Chance,
     spawnMinWood: Count,
   }),
