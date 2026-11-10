@@ -41,7 +41,12 @@ export type Targets = Record<string, string>;
 export type Action =
   | { type: 'play'; uid: number; targets: Targets }
   /** Eingriffe beenden: die Natur-Phase läuft, danach beginnt die nächste Runde. */
-  | { type: 'endTurn' };
+  | { type: 'endTurn' }
+  /**
+   * Handkarte ohne Wirkung ablegen (kostet keinen Odem, zählt nicht für den Kartenzwang).
+   * Erlaubt, solange `GameView.discardsLeft > 0` (Parameter: config.yaml → turn.discardsPerTurn).
+   */
+  | { type: 'discard'; uid: number };
 
 /** Ein legaler Kartenzug. */
 export interface Play {
@@ -55,11 +60,19 @@ export type FormKind = 'ideal' | 'normal' | 'degraded' | 'disturbance';
 /** Gruppe einer Art (species.yaml → group), nur für die Darstellung. */
 export type SpeciesGroup = 'water' | 'insect' | 'amphibian' | 'reptile' | 'bird' | 'mammal' | 'human';
 
+/** Lage eines Werts zum Zielbereich der Idealform. */
+export type TargetStatus = 'low' | 'ok' | 'high';
+
 export interface StatView {
   id: string;
   name: string;
   value: number;
   max: number;
+  /**
+   * Zielbereich, den die Idealform der Geografie für diesen Wert verlangt (inklusive Grenzen).
+   * Fehlt, wenn die Idealform diesen Wert nicht einschränkt.
+   */
+  target?: { min: number; max: number; status: TargetStatus };
 }
 
 export interface ZoneView {
@@ -69,6 +82,11 @@ export interface ZoneView {
   /** Licht, Feuchte, Vegetation und der Sonderwert der Geografie, in dieser Reihenfolge. */
   stats: StatView[];
   form: { id: string; name: string; kind: FormKind };
+  /**
+   * Idealform der Geografie und Abstand der aktuellen Werte zu ihr: Summe der Schritte, die jeder Wert
+   * außerhalb seines Zielbereichs liegt (0 = alle Werte im Zielbereich).
+   */
+  ideal?: { id: string; name: string; distance: number };
   /** Zonenstufe 1–5 und Fortschritt zur nächsten Stufe (0–1). */
   level: number;
   levelProgress: number;
@@ -92,6 +110,8 @@ export interface CardView {
   /** Kurztext für die Handkarte (höchstens ~40 Zeichen): nur die Hauptwirkung und Symbole der Schwellen. */
   short?: string;
   playable: boolean;
+  /** Darf jetzt abgelegt werden (`{ type: 'discard' }`)? */
+  discardable?: boolean;
   /**
    * Ziel-Slots in Reihenfolge, damit die Oberfläche die Auswahl führen kann.
    * of = bezogener früherer Slot (neighbor: dessen Nachbar, species: Art in dessen Zone).
@@ -116,6 +136,8 @@ export interface GameView {
   discardPile: number;
   playsThisTurn: number;
   minPlays: number;
+  /** Wie viele Karten in dieser Runde noch kostenlos abgelegt werden dürfen. */
+  discardsLeft?: number;
   canEndTurn: boolean;
   /**
    * Angekündigtes Ereignis (ab Phase 3). Es tritt in der Natur-Phase dieser Runde ein (inRounds 0),
@@ -141,8 +163,25 @@ export interface GameView {
 export interface Preview {
   cost: number;
   affordable: boolean;
-  /** Erwartete Wertänderungen je Zone durch die Karte selbst (ohne Natur-Phase). */
-  changes: { zone: string; stat: string; from: number; to: number; zoneName?: string; statName?: string }[];
+  /**
+   * Erwartete Wertänderungen je Zone durch die Karte selbst (ohne Natur-Phase).
+   * toward: Richtung bezogen auf den Zielbereich der Idealform (better = näher dran, worse = weiter weg,
+   * neutral = Wert ohne Zielbereich oder Abstand unverändert).
+   */
+  changes: {
+    zone: string;
+    stat: string;
+    from: number;
+    to: number;
+    zoneName?: string;
+    statName?: string;
+    toward?: 'better' | 'worse' | 'neutral';
+  }[];
+  /**
+   * Abstand jeder betroffenen Zone zu ihrer Idealform vorher und nachher (siehe ZoneView.ideal).
+   * Grundlage für die Hervorhebung „bringt näher ans Ideal“ (grün) bzw. „weiter weg“ (rot).
+   */
+  idealDistance?: { zone: string; before: number; after: number }[];
   /** Schwellen, die auslösen würden. */
   triggers: { zone: string; trigger: string; name: string; icon: string; zoneName?: string }[];
   /** Formwechsel, die sich aus den neuen Werten ergeben würden (Namen und Art der neuen Form lokalisiert). */
