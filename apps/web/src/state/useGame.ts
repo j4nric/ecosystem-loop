@@ -28,7 +28,10 @@ export function useGame(client: GameClient) {
     const timers = new Set<number>();
     const unsubscribe = client.subscribeNotices((notices) => {
       const fresh = notices.map((n) => ({ id: nextId.current++, ...noticeToast(n) }));
-      setToasts((list) => [...list, ...fresh].slice(-MAX_TOASTS));
+      // Ein großer Schritt (Rundenende) verdrängt ältere Meldungen; seine wichtigsten stehen vorn.
+      setToasts((list) =>
+        fresh.length >= MAX_TOASTS ? fresh.slice(0, MAX_TOASTS) : [...list, ...fresh].slice(-MAX_TOASTS),
+      );
       for (const toast of fresh) {
         const timer = window.setTimeout(() => {
           timers.delete(timer);

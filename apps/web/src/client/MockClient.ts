@@ -290,7 +290,13 @@ export class MockClient implements GameClient {
       if (to !== from)
         changes.push({ zone: zone.geo.id, zoneName: zone.geo.name[lc], stat, statName: name?.[lc] ?? stat, from, to });
     }
-    return { cost: entry.def.cost, affordable: entry.def.cost <= this.state.breath, changes, triggers: [], formChanges: [] };
+    return {
+      cost: entry.def.cost,
+      affordable: entry.def.cost <= this.state.breath,
+      changes,
+      triggers: [],
+      formChanges: [],
+    };
   }
 
   newGame(): void {
@@ -327,7 +333,7 @@ export class MockClient implements GameClient {
         const season = SEASONS[(s.round - 1) % SEASONS.length] ?? SEASONS[0]!;
         notices.push({ type: 'round', round: s.round, season: season.name[this.locale] });
         if (s.lastHarmonyDelta !== 0) notices.push({ type: 'harmony', delta: s.lastHarmonyDelta });
-        if (s.phase === 'over') notices.push({ type: 'collapsed' });
+        if (this.state.phase === 'over') notices.push({ type: 'collapsed' });
         break;
       }
     }

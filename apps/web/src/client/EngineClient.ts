@@ -172,7 +172,7 @@ export class EngineClient implements GameClient {
     return this.data.forms.get(formId)?.form.name[this.locale] ?? formId;
   }
 
-  /** Engine-Ereignisse → Meldungen für Toasts. Rundenbeginn zuerst, Kollaps zuletzt. */
+  /** Engine-Ereignisse → Meldungen für Toasts. Wichtiges zuerst: Kollaps, Rundenbeginn, Harmonie, dann Details. */
   private toNotices(events: GameEvent[]): Notice[] {
     const lc = this.locale;
     const head: Notice[] = [];
@@ -211,10 +211,10 @@ export class EngineClient implements GameClient {
           body.push({ type: 'level', zone: this.zoneName(e.zone), from: e.from, to: e.to });
           break;
         case 'harmonyChanged':
-          if (e.to !== e.from) body.push({ type: 'harmony', delta: e.to - e.from });
+          if (e.to !== e.from) head.push({ type: 'harmony', delta: e.to - e.from });
           break;
         case 'collapsed':
-          body.push({ type: 'collapsed' });
+          head.unshift({ type: 'collapsed' });
           break;
         case 'cardDrawn':
         case 'deckReshuffled':
@@ -227,6 +227,8 @@ export class EngineClient implements GameClient {
           break;
       }
     }
+    const rank: Partial<Record<Notice['type'], number>> = { collapsed: 0, round: 1, harmony: 2 };
+    head.sort((a, b) => (rank[a.type] ?? 9) - (rank[b.type] ?? 9));
     return [...head, ...body];
   }
 }

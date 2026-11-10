@@ -56,5 +56,6 @@ export const en: Strings = {
   roundsSurvived: 'Rounds',
   highestTier: 'Highest tier',
   newGame: 'New game',
+  newGameConfirm: 'Start a new game? The current game will be lost.',
   mockBadge: 'Preview data',
 };

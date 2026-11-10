@@ -16,4 +16,9 @@ npm run -w apps/web typecheck
 ```
 
 Die App spricht über `src/client/GameClient.ts`. Welche Implementierung läuft, entscheidet allein
-`src/client/index.ts` (derzeit `MockClient` mit Vorschau-Daten). `?lang=en` erzwingt Englisch.
+`src/client/index.ts`: standardmäßig `EngineClient` (echte Engine; die YAML-Daten aus `packages/core/data`
+werden zur Build-Zeit eingebunden und mit `buildGameData` geprüft). Der Spielstand liegt über `SaveStore`
+in `localStorage` und wird beim Start fortgesetzt.
+
+URL-Schalter: `?mock` (Vorschau-Daten ohne Engine), `?seed=abc` (fester Seed für neue Partien),
+`?nosave` (nichts speichern), `?lang=en` (Englisch).

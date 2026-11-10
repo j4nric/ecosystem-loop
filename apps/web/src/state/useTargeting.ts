@@ -15,16 +15,14 @@ const ZONE_KINDS = new Set(['zone', 'neighbor']);
  * Gültige Zonen kommen vom Client (`legalTargets`, in der Engine über `legalPlays`), nie aus App-Regeln.
  * Sind alle Slots belegt, ersetzt ein weiteres Antippen die Wahl des letzten Slots (Vorschauen vergleichen).
  */
-export function useTargeting(
-  client: GameClient,
-  view: GameView,
-  onComplete: (uid: number, targets: Targets) => void,
-) {
+export function useTargeting(client: GameClient, view: GameView, onComplete: (uid: number, targets: Targets) => void) {
   const [selection, setSelection] = useState<Selection | null>(null);
 
   // Karte immer aus der aktuellen View lesen; ist sie nicht mehr auf der Hand, endet die Auswahl.
-  const card: CardView | undefined = selection ? view.hand.find((c) => c.uid === selection.uid) : undefined;
-  const active = card && selection ? { card, targets: selection.targets } : null;
+  const active = useMemo(() => {
+    const card = selection ? view.hand.find((c) => c.uid === selection.uid) : undefined;
+    return card && selection ? { card, targets: selection.targets } : null;
+  }, [selection, view.hand]);
   const slot = active?.card.slots.find((s) => active.targets[s.id] === undefined);
   const complete = active !== null && slot === undefined;
   /** Slot, den ein Antippen gerade füllt: der nächste offene oder (wenn vollständig) der letzte. */
@@ -35,15 +33,12 @@ export function useTargeting(
     const chosen = { ...active.targets };
     delete chosen[editSlot.id];
     return new Set(client.legalTargets(active.card.uid, chosen));
-    // `view` als Abhängigkeit: neue Engine-Lage ⇒ neu berechnen.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, view, active?.card.uid, active?.targets, editSlot]);
+  }, [client, active, editSlot]);
 
   const preview = useMemo<PreviewView | null>(() => {
     if (!active || !complete) return null;
     return client.preview(active.card.uid, active.targets);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, view, active?.card.uid, active?.targets, complete]);
+  }, [client, active, complete]);
 
   const start = useCallback((c: CardView) => {
     if (!c.playable) return;

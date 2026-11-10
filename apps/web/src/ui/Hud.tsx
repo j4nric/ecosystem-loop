@@ -2,7 +2,7 @@ import type { GameView } from '@core/api';
 import { t } from '../i18n/index.ts';
 
 /** Kopfzeile: Harmonie-Balken, Odem, Runde/Jahr/Jahreszeit, Ereignis-Vorschau. */
-export function Hud({ view, isMock }: { view: GameView; isMock: boolean }) {
+export function Hud({ view, isMock, onNewGame }: { view: GameView; isMock: boolean; onNewGame: () => void }) {
   const h = view.harmony;
   const pct = Math.round((h.value / Math.max(1, h.max)) * 100);
   const tone = pct >= 60 ? 'good' : pct >= 30 ? 'mid' : 'low';
@@ -43,6 +43,9 @@ export function Hud({ view, isMock }: { view: GameView; isMock: boolean }) {
             {t.round(view.round)} · {t.year(view.year)}
           </span>
         </div>
+        <button type="button" className="icon-btn hud__menu" onClick={onNewGame} aria-label={t.newGame}>
+          ↻
+        </button>
       </div>
       {view.forecast && (
         <div className="forecast">

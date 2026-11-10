@@ -5,17 +5,19 @@ import { t } from '../i18n/index.ts';
 interface Props {
   card: CardView;
   preview: PreviewView | null;
-  /** Zone, die das Sheet zeigt – deren Wertänderungen stehen schon an den Balken. */
+  /** Zone, die das Sheet zeigt – bei ihren Wertänderungen entfällt der Zonenname. */
   shownZone: string | null;
   onPlay: () => void;
   onCancel: () => void;
 }
 
-/** Vorschau eines Kartenzugs vor dem Bestätigen: ausgelöste Schwellen, Formwechsel, Wertänderungen anderswo. */
+/** Vorschau eines Kartenzugs vor dem Bestätigen: ausgelöste Schwellen, Formwechsel, Wertänderungen. */
 export function PlayPreview({ card, preview, shownZone, onPlay, onCancel }: Props) {
-  const elsewhere = preview?.changes.filter((c) => c.zone !== shownZone) ?? [];
   const nothing =
-    preview !== null && preview.changes.length === 0 && preview.triggers.length === 0 && preview.formChanges.length === 0;
+    preview !== null &&
+    preview.changes.length === 0 &&
+    preview.triggers.length === 0 &&
+    preview.formChanges.length === 0;
   const affordable = preview?.affordable ?? card.playable;
   return (
     <div className="play-preview">
@@ -36,9 +38,10 @@ export function PlayPreview({ card, preview, shownZone, onPlay, onCancel }: Prop
               {t.previewForm(f.zoneName, f.from, f.to)}
             </li>
           ))}
-          {elsewhere.map((c) => (
+          {preview.changes.map((c) => (
             <li key={`c-${c.zone}-${c.stat}`}>
-              {c.zoneName} · {c.statName} {c.from} → <b>{c.to}</b>
+              {c.zone === shownZone ? '' : `${c.zoneName} · `}
+              {c.statName} {c.from} → <b>{c.to}</b>
             </li>
           ))}
           {nothing && <li className="muted">{t.previewNone}</li>}

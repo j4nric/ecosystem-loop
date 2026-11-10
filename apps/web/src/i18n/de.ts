@@ -54,6 +54,7 @@ export const de = {
   roundsSurvived: 'Runden',
   highestTier: 'Höchste Entwicklungsstufe',
   newGame: 'Neue Partie',
+  newGameConfirm: 'Neue Partie beginnen? Der aktuelle Spielstand geht verloren.',
   mockBadge: 'Vorschau-Daten',
 };
 
