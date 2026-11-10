@@ -1,10 +1,9 @@
 # Being God (ain't easy) – Spielkonzept
 
-Stand: 10.11.2026 · Version 0.2 (löst das [Handover](handover.md) als Leitdokument ab)
+Stand: 10.11.2026 · Version 0.2.1 (löst das [Handover](handover.md) als Leitdokument ab)
 
-> **Status:** Entscheidungen aus der Abstimmung sind als ✅ markiert. Alles mit 💡 ist ein
-> Vorschlag von Claude, der noch bestätigt werden muss. Zahlen sind Startwerte fürs Balancing –
-> sie werden in der Simulation justiert, nicht am Schreibtisch.
+> **Status:** Vom Inhaber am 10.11.2026 bestätigt (✅). Zahlen sind Startwerte fürs Balancing –
+> sie werden in der Simulation justiert, nicht am Schreibtisch. Umsetzung: [Entwicklungsplan](entwicklungsplan.md).
 
 ## 1. Vision
 
@@ -39,7 +38,7 @@ Eine **Runde ist eine Jahreszeit** ✅, vier Runden sind ein Jahr. Jede Runde ha
 
 1. **Vorschau:** Die kommende Jahreszeit und ein angekündigtes Ereignis werden gezeigt ✅.
 2. **Eingriffe:** Der Spieler spielt Karten aus seiner Hand und bezahlt sie mit Odem.
-   💡 Kartenzwang bleibt: mindestens eine Karte pro Runde. Naturgewalten kosten 0 Odem, man ist also nie blockiert –
+   ✅ Kartenzwang bleibt: mindestens eine Karte pro Runde. Naturgewalten kosten 0 Odem, man ist also nie blockiert –
    aber sie sind grob und haben Nebenwirkungen.
 3. **Natur:** in fester Reihenfolge
    1. Jahreszeit wirkt auf die Werte
@@ -67,7 +66,7 @@ Erweiterbar auf mehr Zonen pro Geografie ✅ (z. B. zwei Waldzonen), zunächst e
       Flachland ── Küste
 ```
 
-💡 Nachbarschaft: Berge–Wald, Berge–Fluss, Wald–Fluss, Wald–Flachland, Fluss–Flachland, Fluss–Küste,
+✅ Nachbarschaft: Berge–Wald, Berge–Fluss, Wald–Fluss, Wald–Flachland, Fluss–Flachland, Fluss–Küste,
 Flachland–Küste. Der Fluss ist die Lebensader: Er grenzt an alles außer sich selbst.
 
 ### 4.1 Werte
@@ -80,7 +79,7 @@ Jede Zone hat **drei gemeinsame Werte** ✅ und **einen Sonderwert ihrer Geograf
 | Feuchte    | trocken bis nass         |
 | Vegetation | kahl bis dicht bewachsen |
 
-| Geografie | Sonderwert 💡 | Bedeutung                                                  |
+| Geografie | Sonderwert ✅ | Bedeutung                                                  |
 | --------- | ------------- | ---------------------------------------------------------- |
 | Berge     | Schnee        | Schneedecke und Gletscher, speist im Frühling den Fluss    |
 | Wald      | Totholz       | Zersetzung, Nährstoffe und Brandgefahr                     |
@@ -88,10 +87,10 @@ Jede Zone hat **drei gemeinsame Werte** ✅ und **einen Sonderwert ihrer Geograf
 | Fluss     | Wasserstand   | vom ausgetrockneten Bett bis zum Hochwasser                |
 | Küste     | Salz          | Salzgehalt; Süßwasser vom Fluss senkt ihn                  |
 
-Jede Geografie hat einen **Ruhewert** je Wert (ihren natürlichen Zustand). 💡 Alle zwei Runden bewegt sich
+Jede Geografie hat einen **Ruhewert** je Wert (ihren natürlichen Zustand). ✅ Alle zwei Runden bewegt sich
 jeder Wert um 1 auf seinen Ruhewert zu – das ist die langsame Selbstheilung.
 
-### 4.2 Formen 💡 (Vorschlag zu Frage 10)
+### 4.2 Formen ✅ (Vorschlag zu Frage 10)
 
 Aus den Werten ergibt sich die **Form** einer Zone. Sie bestimmt, welche Arten dort leben können,
 und wird als 3D-Modell gezeigt. Jede Geografie hat eine **Idealform** (beste Lebensgrundlage, nur mit
@@ -149,7 +148,7 @@ Bei mehreren passenden Formen gilt die erste in der Tabelle.
 | Watt                   | Feuchte ≥ 4, Vegetation ≤ 2           | Plankton, Vögel                      |
 | Strand                 | sonst                                 | Echsen                               |
 
-### 4.3 Kopplungen zwischen Zonen 💡
+### 4.3 Kopplungen zwischen Zonen ✅
 
 Die Geografien hängen zusammen. Darum hat jeder Eingriff Nebenwirkungen:
 
@@ -162,7 +161,7 @@ Die Geografien hängen zusammen. Darum hat jeder Eingriff Nebenwirkungen:
 
 Jede Zone hat eine **Stufe von 1 bis 5**: ihre Reife als Lebensraum.
 
-- 💡 Sie steigt um 1, wenn die Zone 3 Runden am Stück in einer nicht verödeten Form war und genügend Arten trägt.
+- ✅ Sie steigt um 1, wenn die Zone 3 Runden am Stück in einer nicht verödeten Form war und genügend Arten trägt.
 - Stufe 4 und 5 sind **nur in der Idealform** erreichbar. Stufe 5 verlangt zusätzlich ≥ 4 Arten in der Zone.
   Das ist die schwer erreichbare Obergrenze.
 - Sie fällt um 1 bei verödeter Form, nach einer Störung (Feuer, Hochwasser …) oder beim Wechsel in eine andere Form.
@@ -188,18 +187,18 @@ Jede Art hat pro Zone einen **Bestand von 0–9**.
 
 Höhere Arten **entstehen aus niedrigeren** entlang eines Stammbaums. Eine Art entwickelt sich weiter, wenn in einer Zone
 
-- ihr Bestand hoch genug ist (💡 ≥ 5),
+- ihr Bestand hoch genug ist (✅ ≥ 5),
 - die Form für die neue Art passt,
 - die Zonenstufe reicht,
-- diese Bedingungen 💡 3 Runden lang erfüllt sind.
+- diese Bedingungen ✅ 3 Runden lang erfüllt sind.
 
 Dann wechseln 2 Tiere zur neuen Art.
 
-**Selektionsdruck** 💡: Ab Entwicklungsstufe 4 braucht ein Evolutionsschritt zusätzlich eine
+**Selektionsdruck** ✅: Ab Entwicklungsstufe 4 braucht ein Evolutionsschritt zusätzlich eine
 **Störung in der Zone oder einer Nachbarzone in den letzten 4 Runden**. Wer höheres Leben will,
 muss sein Gleichgewicht bewusst erschüttern – das ist das zentrale Risiko-Werkzeug.
 
-### 5.3 Stammbaum 💡 (Vorschlag)
+### 5.3 Stammbaum ✅ (Vorschlag)
 
 | Stufe | Art         | entsteht aus                      | frisst               | Gabe (Karte)                                                |
 | ----- | ----------- | --------------------------------- | -------------------- | ----------------------------------------------------------- |
@@ -235,7 +234,7 @@ Die Endspiel-Frage lautet also: Wie lange hält meine Welt den Menschen aus?
 
 ### 6.1 Odem ✅
 
-**Odem** ist die knappe Ressource des Gottes. 💡 Er fließt jede Runde zu:
+**Odem** ist die knappe Ressource des Gottes. ✅ Er fließt jede Runde zu:
 
 ```
 Odem pro Runde = 1 + ⌊Harmonie / 25⌋ + (1, wenn ≥ 6 Arten leben)   · Obergrenze: 10 angespart
@@ -244,7 +243,7 @@ Odem pro Runde = 1 + ⌊Harmonie / 25⌋ + (1, wenn ≥ 6 Arten leben)   · Ober
 Eine gesunde Welt gibt mehr Kraft. Eine kranke Welt macht den Gott schwach, genau wenn er Kraft
 am dringendsten bräuchte. Das ist der zentrale Tausch.
 
-### 6.2 Karten 💡
+### 6.2 Karten ✅
 
 Hand mit 4 Karten, nach jeder Runde wird auf 4 nachgezogen. Ist der Stapel leer, wird die Ablage gemischt.
 
@@ -261,9 +260,9 @@ Gefahren werden **sichtbar angezeigt** (🔥 auf der Zone), nie als versteckte P
 
 ## 7. Harmonie ✅
 
-Die **Harmonie (0–100)** ist das Lebenszeichen der Welt. Sie startet bei 💡 60.
+Die **Harmonie (0–100)** ist das Lebenszeichen der Welt. Sie startet bei ✅ 60.
 
-💡 Veränderung pro Runde:
+✅ Veränderung pro Runde:
 
 | Quelle                                | Wirkung        |
 | ------------------------------------- | -------------- |
@@ -292,7 +291,7 @@ angezeigt. Die Insel reagiert sichtbar: Farben werden blasser, Nebel zieht auf.
 Ereignisse werden **eine Runde vorher angekündigt**. Der Spieler kann sich vorbereiten, abwenden
 (_Stille_, _Späherblick_) oder sie für Selektionsdruck nutzen.
 
-💡 Pool (mit jedem Jahr wahrscheinlicher und stärker):
+✅ Pool (mit jedem Jahr wahrscheinlicher und stärker):
 
 | Ereignis             | Wirkung                                              |
 | -------------------- | ---------------------------------------------------- |
@@ -304,7 +303,7 @@ Ereignisse werden **eine Runde vorher angekündigt**. Der Spieler kann sich vorb
 | Heuschrecken         | Flachland Vegetation −2                              |
 | Meteorit (ab Jahr 8) | eine Zone fällt auf Stufe 1, starker Selektionsdruck |
 
-**Jahreszeiten** 💡 (wirken jede Runde):
+**Jahreszeiten** ✅ (wirken jede Runde):
 
 - Frühling: Vegetation +1 in Zonen mit Feuchte ≥ 2, Schneeschmelze
 - Sommer: Feuchte −1
@@ -313,7 +312,7 @@ Ereignisse werden **eine Runde vorher angekündigt**. Der Spieler kann sich vorb
 
 ## 10. Wertung und Meta-Progression
 
-**Punkte** 💡: Jede Runde bringt die Summe der Entwicklungsstufen aller lebenden Arten, verdoppelt
+**Punkte** ✅: Jede Runde bringt die Summe der Entwicklungsstufen aller lebenden Arten, verdoppelt
 solange Menschen leben. Langes Überleben und hohes Leben zählen also beide.
 
 **Schöpfungsbuch** ✅ (das frühere Notizbuch): Jede Art, die zum ersten Mal entsteht, wird dauerhaft eingetragen.
@@ -332,13 +331,13 @@ Progression bedeutet früheren Zugang zu Werkzeugen, nicht mehr Macht.
 | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | Datengetriebene Engine, Bedingungs- und Effektsprache, Seeds, Bots, Simulation | Expedition mit Ausstieg → Überleben bis zum Kollaps                              |
 | Karten mit festen Effekten und sichtbaren Schwellen                            | Kartenstapel läuft nicht mehr leer (Ablage wird gemischt)                        |
-| Kartenzwang (💡 mindestens 1 Karte, Naturgewalten gratis)                      | Odem als Kosten                                                                  |
+| Kartenzwang (✅ mindestens 1 Karte, Naturgewalten gratis)                      | Odem als Kosten                                                                  |
 | Tierkarten kommen ins Deck                                                     | Tiere ziehen nicht ein, sondern entstehen durch Evolution; Bestände statt An/Aus |
 | Schöpfungsbuch (Notizbuch)                                                     | 5 feste Geografien mit Formen und Zonenstufe statt wechselnder Zonentypen        |
 
 ## 12. Offene Punkte
 
-- [ ] Alle 💡-Vorschläge bestätigen oder ändern: Formen, Stammbaum, Odem-Formel, Harmonie-Tabelle, Kartenzwang
+- [x] Vorschläge bestätigt: Formen, Stammbaum, Odem-Formel, Harmonie-Tabelle, Kartenzwang
 - [ ] Zahlenwerte per Simulation balancieren. Ziel: Ein guter Spieler erreicht Stufe 6 in Jahr 5–7, den Menschen nur selten.
 - [ ] Name für „Odem“ in der englischen Version (_Breath_? _Grace_? _Divinity_?)
 - [ ] Tutorial und Einstieg (erste Partie stark geführt?)
@@ -346,11 +345,4 @@ Progression bedeutet früheren Zugang zu Werkzeugen, nicht mehr Macht.
 
 ## 13. Fahrplan
 
-| PR          | Inhalt                                                                                              |
-| ----------- | --------------------------------------------------------------------------------------------------- |
-| #2 (dieser) | Konzept 0.2, Projektstruktur (Workspaces), Umbenennung                                              |
-| #3          | Engine v2: Geografien, Formen, Zonenstufe, Jahreszeiten, Odem, Harmonie                             |
-| #4          | Populationen, Nahrungsketten, Evolution, Mensch, Ereignisse; Bots und Balancing                     |
-| #5          | App-Gerüst: Vite + React Three Fiber + Capacitor, Insel mit Platzhalter-Modellen, Engine angebunden |
-| #6          | Mobile-Bedienung (Karten auf Zonen ziehen), Harmonie-Anzeige, Speichern                             |
-| danach      | Art-Pass (Low-Poly-Modelle pro Form), Sound, Tutorial, Store-Vorbereitung                           |
+Siehe [Entwicklungsplan](entwicklungsplan.md).

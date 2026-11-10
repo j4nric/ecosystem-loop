@@ -34,7 +34,7 @@ npm run check       # Typecheck + Tests + Datenprüfung (läuft auch in CI)
 ```
 
 > Die Engine entspricht noch dem Prototyp 0.1 (Expeditions-Modell). Der Umbau auf das neue Konzept
-> folgt in den nächsten PRs, siehe Fahrplan in [docs/konzept.md](docs/konzept.md#13-fahrplan).
+> folgt in den nächsten PRs, siehe [Entwicklungsplan](docs/entwicklungsplan.md).
 
 ## Entwicklung
 
