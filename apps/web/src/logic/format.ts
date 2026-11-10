@@ -32,6 +32,14 @@ export function cardName(data: HerdeData, locale: Locale, id: string): string {
   return textOf(data.cards.get(id)?.name, locale, id);
 }
 
+export function traitName(data: HerdeData, locale: Locale, id: string): string {
+  return textOf(data.traits.get(id)?.name, locale, id);
+}
+
+export function stageName(data: HerdeData, locale: Locale, id: string): string {
+  return textOf(data.stages.get(id)?.name, locale, id);
+}
+
 export function seasonName(data: HerdeData, locale: Locale, id: string): string {
   return textOf(data.seasons.find((s) => s.id === id)?.name, locale, id);
 }

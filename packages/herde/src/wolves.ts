@@ -5,17 +5,23 @@
 import { nextFloat, pick } from './rng.ts';
 import type { HerdeData } from './schema.ts';
 import type { Emit, HerdeState, PackState, Pos } from './state.ts';
-import { around, cellAt, cheb, islandOf, landOf, samePos } from './world.ts';
+import { around, cellAt, cheb, islandOf, landOf, samePos, stageOf } from './world.ts';
 
 const isWood = (data: HerdeData, s: HerdeState, p: Pos) => landOf(data, cellAt(data, s, p.x, p.y)).wood;
 
-/** Rudel in Reichweite (Umkreis 1) reißen Tiere, je Rudel so viele wie seine Stärke. Liefert die Gerissenen. */
-export function hunt(s: HerdeState, deadSoFar: number, emit: Emit): number {
+/**
+ * Rudel in Reichweite (Umkreis 1) reißen Tiere, je Rudel so viele wie seine Stärke abzüglich `wolfGuard` der
+ * Stufe (Merkmal Wachsamkeit). Liefert die Gerissenen.
+ */
+export function hunt(data: HerdeData, s: HerdeState, deadSoFar: number, emit: Emit): number {
+  const guard = stageOf(data, s).wolfGuard;
   let killed = 0;
   for (const p of s.packs) {
     const alive = s.herd.size - deadSoFar - killed;
-    if (cheb(p, s.herd) <= 1 && alive > 0) {
-      const k = Math.min(p.size, alive);
+    // AUSLEGUNG: Wehrt die Herde ein Rudel ganz ab (Stärke ≤ wolfGuard), ist das kein Angriff: kein Ereignis,
+    // das Rudel bleibt hungrig wie ohne Beute.
+    if (cheb(p, s.herd) <= 1 && alive > 0 && p.size > guard) {
+      const k = Math.min(p.size - guard, alive);
       killed += k;
       p.fed += k;
       p.hungry = 0;

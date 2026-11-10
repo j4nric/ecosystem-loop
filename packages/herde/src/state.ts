@@ -4,7 +4,7 @@
  */
 
 /** Version des Zustandsformats; bei inkompatiblen Änderungen erhöhen (validateState lehnt alte Stände ab). */
-export const STATE_VERSION = 1;
+export const STATE_VERSION = 2;
 
 export interface Pos {
   x: number;
@@ -35,6 +35,12 @@ export interface HerdState {
   thirst: number;
   /** zuletzt besuchte Felder (älteste zuerst) */
   trail: Pos[];
+  /** Merkmale (traits.yaml) in der Reihenfolge der Wahl; bleiben über den Stufensprung */
+  traits: string[];
+  /** Zähler des Erlebten je Erfahrung (traits.yaml → experiences) */
+  experience: Record<string, number>;
+  /** angebotene Merkmale (leer = kein Angebot) */
+  offer: string[];
 }
 
 export interface PackState {
@@ -100,6 +106,12 @@ export type HerdeEvent =
   | { type: 'packImmigrated'; pack: number; x: number; y: number }
   | { type: 'seasonBegan'; season: string; month: number; year: number }
   | { type: 'iceAgeBegan'; months: number }
+  /** Zu Beginn einer Jahreszeit: neues oder erneuertes Angebot an Merkmalen */
+  | { type: 'traitOffered'; traits: string[] }
+  | { type: 'traitPicked'; trait: string }
+  /** Die Herde ist reif für die nächste Stufe (nach einer Wahl) */
+  | { type: 'matured'; stage: string; next: string }
+  | { type: 'herdEvolved'; from: string; to: string }
   | { type: 'iceAgeEnded'; survivors: number }
   | { type: 'gameWon'; survivors: number }
   | { type: 'gameLost'; month: number };

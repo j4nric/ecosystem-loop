@@ -88,7 +88,7 @@ export function playCard(data: HerdeData, s: HerdeState, hand: number, pos: Part
       const apply = (i: number) => {
         const c = s.cells[i]!;
         if (!card.on.includes(c.land)) return;
-        c.food = Math.min(maxFood(data, c), c.food + effect.amount);
+        c.food = Math.min(maxFood(data, s, c), c.food + effect.amount);
         cells++;
       };
       if (target) apply(target.y * islandOf(data, s).width + target.x);

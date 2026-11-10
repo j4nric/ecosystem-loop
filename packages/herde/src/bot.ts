@@ -1,9 +1,10 @@
 /**
  * Zufalls-Bot für den Absturz-Test (keine Messung, Logik vor Balancing). Spielt nur über die Fassade.
  * Sein Zufall ist ein eigener Seed-Strom, damit Läufe reproduzierbar bleiben und das Spiel nicht beeinflussen.
+ * Merkmale: nimmt bevorzugt eines, das zur Reife fehlt, sonst ein zufälliges; springt, sobald die Herde reif ist.
  */
 import type { HerdeEvent, HerdeState, Outcome } from './api.ts';
-import { legalPlays, newGame, step } from './game.ts';
+import { legalPlays, newGame, step, evolutionOf } from './game.ts';
 import { nextFloat, pick, seedFrom } from './rng.ts';
 import type { HerdeData } from './schema.ts';
 import { validateState } from './validate.ts';
@@ -25,6 +26,8 @@ export interface BotResult {
   survivors: number;
   plays: number;
   events: number;
+  /** durchlaufene Stufen (Start zuerst) */
+  stages: string[];
   state: HerdeState;
 }
 
@@ -35,6 +38,7 @@ export function playRandomGame(data: HerdeData, options: BotOptions): BotResult 
   let state = newGame(data, { seed: options.seed, island: options.island });
   let plays = 0;
   let events = 0;
+  const stages = [state.herd.stage];
   const apply = (r: { state: HerdeState; events: HerdeEvent[] }) => {
     state = r.state;
     events += r.events.length;
@@ -44,6 +48,15 @@ export function playRandomGame(data: HerdeData, options: BotOptions): BotResult 
     }
   };
   while (!state.over && state.month < maxMonths) {
+    const evo = evolutionOf(data, state);
+    if (evo.offer.length > 0) {
+      const wanted = evo.offer.filter((id) => evo.missing?.oneOf?.includes(id));
+      apply(step(data, state, { type: 'pickTrait', trait: pick(bot, wanted.length > 0 ? wanted : evo.offer) }));
+    }
+    if (evolutionOf(data, state).mature) {
+      apply(step(data, state, { type: 'evolve' }));
+      stages.push(state.herd.stage);
+    }
     while (nextFloat(bot) < playChance) {
       const moves = legalPlays(data, state);
       if (moves.length === 0) break;
@@ -52,5 +65,5 @@ export function playRandomGame(data: HerdeData, options: BotOptions): BotResult 
     }
     apply(step(data, state, { type: 'advance' }));
   }
-  return { outcome: state.over, months: state.month, survivors: state.herd.size, plays, events, state };
+  return { outcome: state.over, months: state.month, survivors: state.herd.size, plays, events, stages, state };
 }

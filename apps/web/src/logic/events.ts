@@ -5,7 +5,7 @@
 import type { HerdeData, HerdeEvent, Pos } from '@being-god/herde';
 import type { Strings } from '../i18n/de.ts';
 import type { Locale } from '../i18n/locale.ts';
-import { arrowOf, cardName, landName, seasonName } from './format.ts';
+import { arrowOf, cardName, landName, seasonName, stageName, traitName } from './format.ts';
 
 export type Tone = 'good' | 'bad' | 'info';
 
@@ -152,6 +152,19 @@ export function describeEvents(
         break; // iceAgeEnded erzählt es schon
       case 'gameLost':
         say(t.evLost, 'bad');
+        break;
+      // Entwicklung (H3a): nur Meldungen; Auswahl und Sprung bekommen eine eigene Oberfläche.
+      case 'traitOffered':
+        say(t.evTraitOffered(e.traits.map((id) => traitName(data, locale, id)).join(', ')), 'info', true, true);
+        break;
+      case 'traitPicked':
+        say(t.evTraitPicked(traitName(data, locale, e.trait)), 'good');
+        break;
+      case 'matured':
+        say(t.evMatured(stageName(data, locale, e.next)), 'good');
+        break;
+      case 'herdEvolved':
+        say(t.evEvolved(stageName(data, locale, e.to)), 'good');
         break;
     }
   }

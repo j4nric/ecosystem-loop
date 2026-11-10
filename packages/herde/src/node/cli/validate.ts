@@ -6,7 +6,7 @@ try {
   const d = loadData();
   console.log(
     `Spieldaten (herde) ok: ${d.landscapes.size} Landschaften, ${d.cards.size} Karten, ${d.seasons.length} Jahreszeiten, ` +
-      `${d.stages.size} Stufe(n), ${d.islands.size} Insel(n)`,
+      `${d.stages.size} Stufe(n), ${d.traits.size} Merkmal(e), ${d.islands.size} Insel(n)`,
   );
 } catch (e) {
   if (e instanceof DataError) {

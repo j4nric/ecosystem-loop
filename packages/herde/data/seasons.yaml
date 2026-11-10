@@ -1,23 +1,20 @@
 # Jahreskreis (Konzept 5). Ein Jahr hat (Zahl der Jahreszeiten × monthsPerSeason) Monate und beginnt mit der
 # ersten Jahreszeit. Zu Beginn jeder Jahreszeit werden Karten gezogen.
 #
-# water    die Herde braucht Wasser in der Nähe (Durst) und sucht es
-# shelter  die Herde braucht Schutz in der Nähe (Kälte) und sucht ihn
 # fire     brennbare Landschaften mit fireChance können von selbst brennen
-# Das Graswachstum je Jahreszeit steht bei den Landschaften (landscapes.yaml → grow).
+# Das Graswachstum je Jahreszeit steht bei den Landschaften (landscapes.yaml → grow), in welchen Jahreszeiten die
+# Herde Wasser bzw. Schutz braucht, bei den Stufen (stages.yaml → needs).
 monthsPerSeason: 3
 seasons:
   - id: spring
     name: { de: Frühling, en: Spring }
   - id: summer
     name: { de: Sommer, en: Summer }
-    water: true
     fire: true
   - id: autumn
     name: { de: Herbst, en: Autumn }
   - id: winter
     name: { de: Winter, en: Winter }
-    shelter: true
 months:
   - { de: März, en: March }
   - { de: April, en: April }

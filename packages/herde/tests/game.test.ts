@@ -19,7 +19,18 @@ describe('newGame', () => {
     const island = data.islands.get('start')!;
     expect(s).toMatchObject({ version: STATE_VERSION, island: 'start', month: 0, ice: 0, wild: 8, over: null });
     expect(s.cells.map((c) => c.land)).toEqual(island.cells);
-    expect(s.herd).toEqual({ stage: 'herd', x: 1, y: 5, size: 10, fat: 10, thirst: 0, trail: [] });
+    expect(s.herd).toEqual({
+      stage: 'herd',
+      x: 1,
+      y: 5,
+      size: 10,
+      fat: 10,
+      thirst: 0,
+      trail: [],
+      traits: [],
+      experience: Object.fromEntries([...data.experiences.keys()].map((id) => [id, 0])),
+      offer: [],
+    });
     expect(s.packs).toEqual([{ id: 1, x: 5, y: 2, size: 1, fed: 0, hungry: 0 }]);
     expect(s.nextPackId).toBe(2);
     expect(s.hand).toHaveLength(3);

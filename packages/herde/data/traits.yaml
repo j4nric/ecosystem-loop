@@ -1,0 +1,91 @@
+# Erfahrungen und Merkmale der Herde (Konzept 9.1). Zahlen sind Platzhalter (Logik vor Balancing).
+#
+# offerSize     so viele verfügbare Merkmale bietet die Engine zu Beginn einer Jahreszeit höchstens an (in der
+#               Reihenfolge dieser Datei); der Spieler wählt eines oder lässt das Angebot stehen
+#
+# experiences   Zähler des Erlebten, je Monat geprüft (nach Fressen, Durst, Kälte und Wölfen, nur wenn die Herde
+#               lebt). when.type:
+#                 sheltered  Schutz in der Nähe in einer Jahreszeit, in der die Stufe Schutz braucht (+1)
+#                 watered    Wasser in der Nähe in einer Jahreszeit, in der die Stufe Wasser braucht (+1)
+#                 hunted     Wölfe haben gerissen, die Herde lebt (+1)
+#                 fire       ein Waldbrand hat das Feld der Herde oder ein Nachbarfeld erfasst (+1)
+#                 ate        die Herde steht auf einer der Landschaften `lands` und hat gefressen (+1)
+#                 on         die Herde steht auf einer der Landschaften `lands` (+1)
+#                 moved      gegangene Felder (+ Zahl der Felder)
+#
+# traits        Merkmale: verfügbar, sobald die Erfahrung `from` den Wert `at` erreicht. effects ändern Zahlen der
+#               Stufe (stages.yaml): Wert × mul + add, in der Reihenfolge der Merkmale. Ganzzahlige Werte (move,
+#               reach, trail, thirstAfter, wolfGuard) werden gerundet. Merkmale bleiben über den Stufensprung.
+offerSize: 3
+experiences:
+  - id: sheltered
+    name: { de: Kalte Monate im Schutz, en: Cold months in shelter }
+    when: { type: sheltered }
+  - id: hunted
+    name: { de: Wolfsangriffe überlebt, en: Wolf attacks survived }
+    when: { type: hunted }
+  - id: watered
+    name: { de: Durstige Monate am Wasser, en: Thirsty months by water }
+    when: { type: watered }
+  - id: fire
+    name: { de: Brände überlebt, en: Fires survived }
+    when: { type: fire }
+  - id: forest
+    name: { de: Monate im Gehölz gefressen, en: Months feeding in the woods }
+    when: { type: ate, lands: [bush, forest, old] }
+  - id: open
+    name: { de: Monate auf offener Fläche, en: Months in open land }
+    when: { type: on, lands: [steppe, meadow, burnt] }
+  - id: walked
+    name: { de: Gegangene Felder, en: Fields walked }
+    when: { type: moved }
+traits:
+  - id: thick_fur
+    name: { de: Dichtes Fell, en: Thick fur }
+    text: { de: Halber Verlust durch Kälte., en: Half the losses to cold. }
+    icon: '🧥'
+    from: sheltered
+    at: 3
+    effects: [{ stat: coldLoss, mul: 0.5 }]
+  - id: vigilant
+    name: { de: Wachsamkeit, en: Vigilance }
+    text: { de: Jedes Rudel reißt ein Tier weniger., en: Each pack kills one animal less. }
+    icon: '👁'
+    from: hunted
+    at: 2
+    effects: [{ stat: wolfGuard, add: 1 }]
+  - id: frugal
+    name: { de: Genügsam, en: Frugal }
+    text: { de: Durst setzt einen Monat später ein., en: Thirst sets in a month later. }
+    icon: '💧'
+    from: watered
+    at: 4
+    effects: [{ stat: thirstAfter, add: 1 }]
+  - id: fire_wary
+    name: { de: Feuerscheu, en: Fire-wary }
+    text: { de: Halber Verlust durch Feuer., en: Half the losses to fire. }
+    icon: '🔥'
+    from: fire
+    at: 1
+    effects: [{ stat: fireLoss, mul: 0.5 }]
+  - id: forest_wise
+    name: { de: Waldkundig, en: Forest-wise }
+    text: { de: Größerer Vorrat., en: Larger reserves. }
+    icon: '🌲'
+    from: forest
+    at: 4
+    effects: [{ stat: fatCap, add: 1 }]
+  - id: far_sight
+    name: { de: Weitblick, en: Far sight }
+    text: { de: Halber Verlust durch Durst., en: Half the losses to thirst. }
+    icon: '🔭'
+    from: open
+    at: 6
+    effects: [{ stat: thirstLoss, mul: 0.5 }]
+  - id: endurance
+    name: { de: Ausdauer, en: Endurance }
+    text: { de: Halb so viele Hungertote., en: Half as many deaths from hunger. }
+    icon: '🦶'
+    from: walked
+    at: 12
+    effects: [{ stat: starveRate, mul: 0.5 }]
