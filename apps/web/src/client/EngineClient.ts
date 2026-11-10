@@ -1,4 +1,5 @@
 import {
+  describeEvent,
   legalPlays,
   newGame,
   preview,
@@ -249,6 +250,19 @@ export class EngineClient implements GameClient {
             card: this.data.cards.get(e.card)?.name[lc] ?? e.card,
           });
           break;
+        case 'eventForecast':
+        case 'eventOccurred':
+        case 'eventCancelled':
+        case 'eventDelayed': {
+          const text = describeEvent(this.data, e, lc);
+          if (text)
+            (e.type === 'eventOccurred' ? head : body).push({
+              type: 'text',
+              text,
+              tone: e.type === 'eventOccurred' ? 'bad' : 'info',
+            });
+          break;
+        }
         case 'populationChanged': // Details; zusammengefasst über Hunger, Wanderung, Entstehung
         case 'overpopulation':
         case 'scored':

@@ -12,6 +12,7 @@ export type Notice =
   | { type: 'level'; zone: string; from: number; to: number }
   | { type: 'harmony'; delta: number }
   | { type: 'collapsed' }
+  | { type: 'text'; text: string; tone: 'good' | 'bad' | 'info' }
   | { type: 'emerged'; species: string; zone: string; first: boolean }
   | { type: 'extinct'; species: string }
   | { type: 'migrated'; species: string; from: string; to: string }
