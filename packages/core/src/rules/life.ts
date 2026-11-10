@@ -26,6 +26,7 @@ export function feed(data: GameData, state: GameState, p: LifeParams): Feeding {
   // AUSLEGUNG: Konkurrenz um dieselbe Nahrung wird der Reihe nach aufgelöst (erst die Zone, darin niedrige
   // Stufen zuerst). Räuber jagen auch in Nachbarzonen (Revier), weil viele Räuber laut Konzept 4.2 in anderen
   // Formen leben als ihre Beute („Kein Lebensraum genügt allein“).
+  // Die Kapazitäten gelten nur für diese Runde: Satte Tiere senken Werte und Beute nicht (siehe unten).
   const left = new Map<string, number>();
   const capacity = (zone: ZoneState, food: string) =>
     data.species.has(food) ? populationOf(zone, food) * p.food.perPrey : (zone.stats[food] ?? 0) * p.food.perStat;
@@ -51,6 +52,8 @@ export function feed(data: GameData, state: GameState, p: LifeParams): Feeding {
         left.set(key, left.get(key)! - take);
         need -= take;
       }
+      // AUSLEGUNG: Satte Tiere verbrauchen ihre Nahrung nicht dauerhaft; Nahrung wird erst bei Knappheit
+      // leergefressen (Überweidung durch hungrige Tiere, siehe overuse). Balancing in Phase 6.
       if (need === 0) continue;
       hungry.set(zone.id, [...(hungry.get(zone.id) ?? []), sp.id]);
       // Überpopulation: Was hungrige Tiere fressen, ist leergefressen (sofern es dort überhaupt etwas gab).

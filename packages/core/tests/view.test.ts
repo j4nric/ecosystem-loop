@@ -162,13 +162,25 @@ describe('preview', () => {
     expect(s).toEqual(before);
     expect(p.cost).toBe(0);
     expect(p.affordable).toBe(true);
-    expect(p.triggers).toEqual([{ zone: 'forest', trigger: 'fire', name: 'Fire', icon: '🔥' }]);
+    expect(p.triggers).toEqual([{ zone: 'forest', trigger: 'fire', name: 'Fire', icon: '🔥', zoneName: 'Forest' }]);
     expect(p.changes).toEqual([
-      { zone: 'forest', stat: 'moisture', from: 1, to: 3 },
-      { zone: 'forest', stat: 'vegetation', from: 4, to: 0 },
-      { zone: 'forest', stat: 'deadwood', from: 1, to: 4 },
+      { zone: 'forest', stat: 'moisture', from: 1, to: 3, zoneName: 'Forest', statName: 'Moisture' },
+      { zone: 'forest', stat: 'vegetation', from: 4, to: 0, zoneName: 'Forest', statName: 'Vegetation' },
+      { zone: 'forest', stat: 'deadwood', from: 1, to: 4, zoneName: 'Forest', statName: 'Deadwood' },
     ]);
-    expect(p.formChanges).toEqual([{ zone: 'forest', from: 'mixed_forest', to: 'burnt_land' }]); // Form im Zustand: erst die Natur-Phase bestimmt sie neu
+    expect(p.populationChanges).toEqual([]);
+    expect(p.eventChanges).toEqual([]);
+    expect(p.formChanges).toEqual([
+      {
+        zone: 'forest',
+        from: 'mixed_forest',
+        to: 'burnt_land',
+        zoneName: 'Forest',
+        fromName: 'Mixed forest',
+        toName: 'Burnt land',
+        kind: 'degraded',
+      },
+    ]); // Form im Zustand: erst die Natur-Phase bestimmt sie neu
   });
 
   it('Vorschau auch für nicht bezahlbare Karten; Netto-Änderungen ohne Null-Wechsel', () => {
@@ -177,7 +189,7 @@ describe('preview', () => {
     const p = preview(data, s, { uid: uidOf(s, 'healing'), targets: { zone: 'coast' } });
     expect(p.affordable).toBe(false);
     expect(p.cost).toBe(4);
-    expect(p.changes).toEqual([{ zone: 'coast', stat: 'salt', from: 5, to: 3 }]);
+    expect(p.changes).toEqual([{ zone: 'coast', stat: 'salt', from: 5, to: 3, zoneName: 'Küste', statName: 'Salz' }]);
     expect(() => preview(data, s, { uid: 42, targets: {} })).toThrow(/nicht auf der Hand/);
   });
 });

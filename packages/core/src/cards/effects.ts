@@ -6,7 +6,9 @@ import type { Effect, GameData, Scope } from '../schema/index.ts';
 import type { GameEvent, GameState, ZoneState } from '../state.ts';
 import { lifeParams, populationOf, setPopulation } from '../population.ts';
 import { breathMax } from '../rules/breath.ts';
-import { clamp, geographyOf, getZone, RuleError } from '../world.ts';
+import { LevelsParams } from '../rules/levels.ts';
+import { paramsOf } from '../rules/module.ts';
+import { clamp, geographyOf, getZone, markDisturbance, RuleError } from '../world.ts';
 import { drawUpTo } from './deck.ts';
 
 export interface EffectContext {
@@ -120,8 +122,43 @@ export function applyEffect(ctx: EffectContext, e: Effect): void {
       setPopulation(data, state, z, species, populationOf(z, species) + moved, emit, cause);
       emit({ type: 'migrated', species, from: src.id, to: z.id, count: moved });
     }
+  } else if ('disturb' in e) {
+    for (const z of zonesFor(ctx, e.at, e.scope)) markDisturbance(state, z, cause, emit);
+  } else if ('setLevel' in e) {
+    const lv = paramsOf(data, { id: 'levels', params: LevelsParams });
+    for (const z of zonesFor(ctx, e.at, e.scope)) {
+      const to = clamp(e.setLevel, lv.min, lv.max);
+      z.levelProgress = 0;
+      if (to === z.level) continue;
+      emit({ type: 'levelChanged', zone: z.id, from: z.level, to, reason: 'effect' });
+      z.level = to;
+    }
+  } else if ('event' in e) {
+    applyEventEffect(state, e.event, e.rounds, emit, cause);
   } else {
     const never: never = e;
     throw new Error(`Unbekannter Effekt: ${JSON.stringify(never)}`);
   }
+}
+
+/** Gegenkarten (Konzept 9): angekündigtes Ereignis abwenden oder verschieben. */
+function applyEventEffect(
+  state: GameState,
+  kind: 'cancel' | 'delay',
+  rounds: number,
+  emit: (e: GameEvent) => void,
+  cause: string,
+): void {
+  const f = state.forecast;
+  if (kind === 'cancel') {
+    // AUSLEGUNG: „Nächstes Ereignis entfällt“ – ist gerade keins angekündigt, entfällt das nächste ausgeloste.
+    if (f) {
+      state.forecast = null;
+      emit({ type: 'eventCancelled', event: f.event, cause });
+    } else state.eventShield++;
+  } else if (f) {
+    f.round += rounds;
+    emit({ type: 'eventDelayed', event: f.event, round: f.round, cause });
+  }
+  // AUSLEGUNG: Verschieben ohne angekündigtes Ereignis bleibt wirkungslos.
 }

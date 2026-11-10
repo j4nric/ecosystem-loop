@@ -1,0 +1,93 @@
+# Ereignisse (Konzept 9). Sie werden eine Runde vorher angekündigt (Modul forecast) und treten in der
+# Natur-Phase nach der Jahreszeit ein (Modul event). Wahrscheinlichkeit und Stärke: config.yaml → rules.forecast.
+#
+# weight    – relatives Gewicht bei der Auslosung (Platzhalter)
+# fromYear  – frühestes Jahr
+# target    – Zielzone: pick random (beim Ankündigen ausgelost, wird angezeigt) | densest (dichteste Population
+#             beim Eintreten; Zone = "target", Art = "species"); when filtert die Zonen
+# rules     – Effekte je Zone wie bei Jahreszeiten (geographies, when; "self" = die Zone)
+# effects   – Effekte auf "target" oder scope: all
+# card      – Karte, die auf die Zielzone wirkt, mit ihren Schwellen
+# scales    – Stärke-Skalierung über die Jahre für adjust/population (Standard: an)
+# { disturb: true } macht eine Zone zur gestörten Zone (Zonenstufe, Harmonie, Selektionsdruck).
+
+events:
+  - id: heatwave
+    name: { de: Hitzesommer, en: Heatwave }
+    description: { de: 'Alle Zonen Feuchte −1', en: 'All zones moisture −1' }
+    icon: '☀️'
+    weight: 3
+    rules:
+      - effects: [{ adjust: moisture, by: -1 }]
+
+  - id: cold_snap
+    name: { de: Kälteeinbruch, en: Cold snap }
+    description: { de: 'Berge Schnee +2, alle Zonen Vegetation −1', en: 'Mountains snow +2, all zones vegetation −1' }
+    icon: '❄️'
+    weight: 3
+    rules:
+      - geographies: [mountains]
+        effects: [{ adjust: snow, by: 2 }]
+      - effects: [{ adjust: vegetation, by: -1 }]
+
+  - id: lightning
+    name: { de: Blitzschlag, en: Lightning strike }
+    description:
+      {
+        de: 'Gewitter auf einer zufälligen Zone (kann Feuer auslösen)',
+        en: 'Thunderstorm on a random zone (may start a fire)',
+      }
+    icon: '⚡'
+    weight: 3
+    target: { pick: random }
+    card: thunderstorm
+    scales: false # Karten werden nicht skaliert – die Anzeige soll keine Stärke vortäuschen
+
+  # AUSLEGUNG: Seuche, Sturmflut, Heuschrecken und Meteorit stören die getroffenen Zonen (zählt für Selektionsdruck,
+  # Zonenstufe und Harmonie); Hitzesommer und Kälteeinbruch treffen alle Zonen mild und stören nicht.
+  - id: plague
+    name: { de: Seuche, en: Plague }
+    description: { de: 'Die dichteste Population −3', en: 'The densest population −3' }
+    icon: '🦠'
+    weight: 2
+    target: { pick: densest }
+    effects:
+      - { population: species, by: -3, at: target }
+      - { disturb: true, at: target }
+
+  - id: storm_surge
+    name: { de: Sturmflut, en: Storm surge }
+    description: { de: 'Küste Salz +2, Flachland Feuchte +1', en: 'Coast salt +2, plains moisture +1' }
+    icon: '🌊'
+    weight: 2
+    rules:
+      - geographies: [coast]
+        effects: [{ adjust: salt, by: 2 }, { disturb: true }]
+      - geographies: [plains]
+        effects: [{ adjust: moisture, by: 1 }]
+
+  - id: locusts
+    name: { de: Heuschrecken, en: Locusts }
+    description: { de: 'Flachland Vegetation −2', en: 'Plains vegetation −2' }
+    icon: '🦗'
+    weight: 2
+    rules:
+      - geographies: [plains]
+        effects: [{ adjust: vegetation, by: -2 }, { disturb: true }]
+
+  # AUSLEGUNG: „starker Selektionsdruck“ = die Zone und alle Nachbarn gelten als gestört.
+  - id: meteor
+    name: { de: Meteorit, en: Meteor }
+    description:
+      {
+        de: 'Eine Zone fällt auf Stufe 1, starker Selektionsdruck',
+        en: 'A zone drops to level 1; strong selection pressure',
+      }
+    icon: '☄️'
+    weight: 1
+    fromYear: 8
+    scales: false
+    target: { pick: random }
+    effects:
+      - { setLevel: 1, at: target }
+      - { disturb: true, at: target, scope: area }

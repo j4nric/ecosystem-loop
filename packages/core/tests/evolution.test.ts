@@ -111,6 +111,8 @@ function build(setup: Setup, d = data): GameState {
   for (const [id, v] of Object.entries(setup.shape ?? {})) shape(s, id, v, d);
   setPops(s, setup.zone, setup.pops);
   zone(s, setup.zone).level = setup.level;
+  // Die Zonenstufe gilt für die Zielzone (Konzept 4.4); bei „Landgang“ braucht auch sie die Stufe.
+  zone(s, setup.settles).level = setup.level;
   if (setup.disturbed) zone(s, setup.zone).lastDisturbance = 1;
   return s;
 }
@@ -194,6 +196,23 @@ describe('Evolutionsbedingungen (Konzept 5.2, 4.4)', () => {
     zone(s, 'plains').level = 4;
     zone(s, 'plains').lastDisturbance = 4;
     expect(evolve(s, 3, 4).some((e) => e.type === 'speciesEmerged' && e.species === 'deer')).toBe(true);
+  });
+
+  it('Zonenstufe zählt an der Zielzone: Landgang nur in eine Nachbarzone mit ausreichender Stufe', () => {
+    // Frosch im Moor (Stufe 2), Echse kann nur im Trockenwald nebenan leben.
+    const s = build(TREE.lizard!);
+    zone(s, 'forest').level = 1;
+    expect(evolutionTarget(data, s, zone(s, 'plains'), data.species.get('lizard')!)).toBeNull();
+    expect(evolve(s, 3).some((e) => e.type === 'speciesEmerged')).toBe(false);
+    zone(s, 'forest').level = 2;
+    zone(s, 'plains').lastDisturbance = 4;
+    expect(evolutionTarget(data, s, zone(s, 'plains'), data.species.get('lizard')!)?.id).toBe('forest');
+    expect(evolve(s, 3, 4).some((e) => e.type === 'speciesEmerged' && e.species === 'lizard')).toBe(true);
+  });
+
+  it('Frosch (Stufe 3) entsteht schon in einer Zone der Stufe 1 (Stufe − 2)', () => {
+    const s = build({ ...TREE.frog!, level: 1 });
+    expect(evolutionTarget(data, s, zone(s, 'river'), data.species.get('frog')!)?.id).toBe('river');
   });
 
   it('Selektionsdruck ab Stufe 4: ohne Störung keine Evolution, mit Störung (auch nebenan) schon', () => {

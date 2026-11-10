@@ -7,15 +7,20 @@ turn:
   minPlays: 1 # Kartenzwang (greift nur, wenn eine bezahlbare Karte spielbar ist)
   maxPlays: null # null = beliebig viele
 
-deck: { minSize: 8, maxSize: 10 }
+deck: { minSize: 8, maxSize: 10, maxCopies: 2 } # Startdeck 8–10 Karten, höchstens 2 Kopien je Karte (Konzept 10)
+
+# Variierende Startwelten (Konzept 10): jeder Startwert streut aus dem Seed um ±spread. vary: Standard für newGame.
+startWorld: { vary: false, spread: 1 }
 
 # Natur-Phase und Bilanz in fester Reihenfolge (Konzept 3). Module: src/rules/.
-# Später: event (nach season), forecast.
 # AUSLEGUNG: score vor harmony – auch die Runde des Kollapses zählt noch.
-pipeline: [season, couplings, healing, forms, levels, life, evolution, score, harmony, breath]
+# AUSLEGUNG: forecast läuft am Ende der Bilanz und kündigt das Ereignis für die Natur-Phase der nächsten Runde an;
+# der Spieler sieht es während seiner Eingriffe („Vorschau“) und kann reagieren. event tritt nach season ein.
+pipeline: [season, event, couplings, healing, forms, levels, life, evolution, score, harmony, breath, forecast]
 
 rules:
   season: {}
+  event: {}
   couplings: {}
   healing:
     interval: 2 # alle 2 Runden …
@@ -39,6 +44,8 @@ rules:
     growth: 1 # satt und in passender Form: +1 (nicht im Winter)
     hunger: 1 # nicht satt: −1
     degradedLoss: 1 # außerhalb des Lebensraums in verödeter Form: −1
+    # AUSLEGUNG: Satte Tiere verbrauchen keine Nahrung; erst bei Knappheit wird sie leergefressen (Überweidung).
+    # Balancing in Phase 6.
     overuse: # Überweidung: hungrige Tiere fressen einen Wert leer (Effekte auf die Zone)
       vegetation: [{ adjust: vegetation, by: -1 }, { adjust: soil, by: -1 }]
       deadwood: [{ adjust: deadwood, by: -1 }]
@@ -64,6 +71,9 @@ rules:
     speciesBonus: 1 # + 1 …
     speciesBonusFrom: 6 # … wenn ≥ 6 Arten leben
     max: 10 # Obergrenze angespart
+  forecast: # Ereignisse (Konzept 9): mit jedem Jahr wahrscheinlicher und stärker (Platzhalter)
+    chance: { base: 0.3, perYear: 0.1, max: 0.9 } # Wahrscheinlichkeit je Runde, dass ein Ereignis angekündigt wird
+    strength: { base: 1, perYear: 0.25, max: 3 } # Faktor auf adjust/population-Effekte (gerundet, mind. 1)
 
 # Startdeck (8–10 Karten)
 starterDeck: [thunderstorm, drought, storm, frost, rain, sun, seeds, fertilizer, healing]
@@ -81,6 +91,14 @@ texts:
   effect.breath: { de: 'Odem {n}', en: 'Breath {n}' }
   effect.population: { de: 'Bestand {species} {n}', en: '{species} population {n}' }
   effect.move: { de: '{n} {species} wandert', en: '{n} {species} migrates' }
+  effect.disturb: { de: 'Störung', en: 'disturbance' }
+  effect.setLevel: { de: 'Zonenstufe auf {n}', en: 'zone level to {n}' }
+  effect.eventCancel: { de: 'nächstes Ereignis entfällt', en: 'the next event does not happen' }
+  effect.eventDelay: { de: 'nächstes Ereignis {n} Runde später', en: 'next event {n} round later' }
+  choice: { de: 'Wähle: {options}', en: 'Choose: {options}' }
+  choice.option: { de: '{label} ({effects})', en: '{label} ({effects})' }
+  forecast.strength: { de: '{text} (Stärke ×{n})', en: '{text} (strength ×{n})' }
+  forecast.zone: { de: '{text} – trifft {zone}', en: '{text} – hits {zone}' }
   scope.neighbors: { de: '{text} auf allen Nachbarzonen', en: '{text} on all neighbouring zones' }
   scope.area: { de: '{text} hier und auf allen Nachbarzonen', en: '{text} here and on all neighbouring zones' }
   scope.all: { de: '{text} auf allen Zonen', en: '{text} on all zones' }
@@ -107,7 +125,32 @@ texts:
   slot.zone: { de: 'Zone', en: 'Zone' }
   slot.neighbor: { de: 'Nachbarzone', en: 'Neighbouring zone' }
   slot.species: { de: 'Art', en: 'Species' }
+  slot.choice: { de: 'Wahl', en: 'Choice' }
   kind.ideal: { de: 'ideal', en: 'ideal' }
   kind.normal: { de: 'normal', en: 'normal' }
   kind.degraded: { de: 'verödet', en: 'degraded' }
   kind.disturbance: { de: 'Störung', en: 'disturbance' }
+
+  # Meldungen zu Spielereignissen (describeEvent)
+  log.roundStarted: { de: 'Runde {round}: {season}', en: 'Round {round}: {season}' }
+  log.deckReshuffled: { de: 'Ablage gemischt ({n} Karten)', en: 'Discard pile reshuffled ({n} cards)' }
+  log.cardPlayed: { de: '{card} gespielt', en: '{card} played' }
+  log.triggered: { de: '{icon} {name} in {zone}', en: '{icon} {name} in {zone}' }
+  log.formChanged: { de: '{zone} wird {form}', en: '{zone} becomes {form}' }
+  log.levelRose: { de: '{zone} steigt auf Stufe {n}', en: '{zone} rises to level {n}' }
+  log.levelFell: { de: '{zone} fällt auf Stufe {n}', en: '{zone} falls to level {n}' }
+  log.speciesEmerged: { de: '{species} entsteht in {zone}', en: '{species} emerges in {zone}' }
+  log.speciesEmergedFirst: { de: 'Neue Art: {species} in {zone}', en: 'New species: {species} in {zone}' }
+  log.speciesExtinct: { de: '{species} ist ausgestorben', en: '{species} has died out' }
+  log.giftAdded: { de: 'Neue Karte im Deck: {card}', en: 'New card in the deck: {card}' }
+  log.hunger: { de: 'Hunger: {species} in {zone}', en: 'Hunger: {species} in {zone}' }
+  log.overpopulation:
+    { de: 'Überpopulation in {zone}: {food} leergefressen', en: 'Overpopulation in {zone}: {food} eaten bare' }
+  log.migrated: { de: '{n} {species} wandert von {from} nach {to}', en: '{n} {species} migrates from {from} to {to}' }
+  log.collapsed: { de: 'Die Welt kollabiert (Runde {round})', en: 'The world collapses (round {round})' }
+  log.eventForecast: { de: 'Angekündigt: {icon} {event}', en: 'Forecast: {icon} {event}' }
+  log.eventForecastZone: { de: 'Angekündigt: {icon} {event} in {zone}', en: 'Forecast: {icon} {event} in {zone}' }
+  log.eventOccurred: { de: '{icon} {event}', en: '{icon} {event}' }
+  log.eventOccurredZone: { de: '{icon} {event} in {zone}', en: '{icon} {event} in {zone}' }
+  log.eventCancelled: { de: '{event} bleibt aus', en: '{event} does not happen' }
+  log.eventDelayed: { de: '{event} verschoben auf Runde {round}', en: '{event} delayed to round {round}' }

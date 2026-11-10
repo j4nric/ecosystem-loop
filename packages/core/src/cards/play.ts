@@ -15,6 +15,7 @@ export function getCard(data: GameData, id: string): Card {
 
 /** Gültige Zonen (bzw. Arten) für einen Slot, abhängig von bereits gewählten Slots. */
 export function slotOptions(data: GameData, state: GameState, slot: Slot, bound: Targets): string[] {
+  if (slot.kind === 'choice') return slot.options.map((o) => o.id);
   if (slot.kind === 'species') {
     const zid = bound[slot.in];
     if (zid === undefined) return [];
@@ -90,10 +91,14 @@ export function resolveCard(
   card: Card,
   bound: Targets,
   emit: (e: GameEvent) => void,
+  cause = `card:${card.id}`,
 ): void {
-  const ctx: EffectContext = { data, state, emit, bind: bound, cause: `card:${card.id}` };
+  const ctx: EffectContext = { data, state, emit, bind: bound, cause };
   const before = firingTriggers(data, state, card, bound, 'before');
   for (const e of card.effects) applyEffect(ctx, e);
+  for (const slot of card.slots)
+    if (slot.kind === 'choice')
+      for (const e of slot.options.find((o) => o.id === bound[slot.id])?.effects ?? []) applyEffect(ctx, e);
   const after = firingTriggers(data, state, card, bound, 'after');
   for (const t of [...before, ...after]) {
     const zone = getZone(state, bound[t.at]!);

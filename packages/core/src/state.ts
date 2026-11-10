@@ -42,7 +42,7 @@ export interface SpeciesRecord {
 }
 
 /** Version des Zustandsformats; Spielstände anderer Versionen sind nicht ladbar. */
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 
 export interface GameState {
   version: typeof STATE_VERSION;
@@ -66,6 +66,24 @@ export interface GameState {
   species: Record<string, SpeciesRecord>;
   /** Punkte (Konzept 10). */
   score: number;
+  /** Jedes Aussterben dieser Partie (eine Art kann mehrmals aussterben). Grundlage für Harmonie und Meilensteine. */
+  extinctions: { species: string; round: number }[];
+  /** Angekündigtes Ereignis (Konzept 9); tritt in der Natur-Phase der Runde `round` ein. */
+  forecast: ForecastState | null;
+  /** So viele der nächsten ausgelosten Ereignisse entfallen (Stille ohne angekündigtes Ereignis). */
+  eventShield: number;
+  /** Eingetretene Ereignisse dieser Partie. */
+  eventsOccurred: number;
+}
+
+export interface ForecastState {
+  event: string;
+  /** Runde, in deren Natur-Phase das Ereignis eintritt. */
+  round: number;
+  /** Stärke-Faktor (Skalierung über die Jahre). */
+  strength: number;
+  /** Beim Ankündigen ausgeloste Zielzone (pick: random), sonst null. */
+  zone: string | null;
 }
 
 /** Ereignisse eines Schritts. Texte entstehen erst in der Oberfläche. */
@@ -107,6 +125,15 @@ export type GameEvent =
   /** Die Gabe einer Art kam als Karte in den Nachziehstapel. */
   | { type: 'giftAdded'; species: string; card: string; uid: number }
   /** Punkte der Runde (Konzept 10). */
-  | { type: 'scored'; points: number; total: number; doubled: boolean };
+  | { type: 'scored'; points: number; total: number; doubled: boolean }
+  /** Ein Ereignis wurde für die Natur-Phase der Runde `round` angekündigt (Konzept 9). */
+  | { type: 'eventForecast'; event: string; round: number; zone: string | null; strength: number }
+  /** Das angekündigte Ereignis ist eingetreten. zone = Zielzone (falls das Ereignis eine hat). */
+  | { type: 'eventOccurred'; event: string; zone: string | null; strength: number }
+  /** Ein Ereignis entfällt. cause: card:<id> (Gegenkarte) oder shield (vorab gespielte Stille). */
+  | { type: 'eventCancelled'; event: string; cause: string }
+  /** Ein Ereignis wurde verschoben und tritt jetzt in Runde `round` ein. */
+  | { type: 'eventDelayed'; event: string; round: number; cause: string };
 
-export type LevelReason = 'rise' | 'disturbance' | 'degraded' | 'formChanged';
+/** effect = durch einen Effekt gesetzt (z. B. Meteorit). */
+export type LevelReason = 'rise' | 'disturbance' | 'degraded' | 'formChanged' | 'effect';

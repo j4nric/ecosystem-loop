@@ -4,3 +4,4 @@ dist
 package-lock.json
 docs/handover.md
 docs/cockpit/index.html
+.claude/worktrees
