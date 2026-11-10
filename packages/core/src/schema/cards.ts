@@ -18,6 +18,13 @@ export const Slot = z.discriminatedUnion('kind', [
     species: z.array(Id).optional(),
     label: Text.optional(),
   }),
+  /** Wahl zwischen Varianten der Karte; die Effekte der gewählten Option wirken nach den Grundeffekten. */
+  z.strictObject({
+    id: Id,
+    kind: z.literal('choice'),
+    options: z.array(z.strictObject({ id: Id, label: Text, effects: z.array(Effect).min(1) })).min(2),
+    label: Text.optional(),
+  }),
 ]);
 export type Slot = z.infer<typeof Slot>;
 

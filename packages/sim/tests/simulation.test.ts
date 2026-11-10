@@ -44,7 +44,9 @@ describe('Absturz-Test', () => {
   });
 
   it('greedy bevorzugt Züge Richtung Idealform', () => {
-    const s = newGame(data, { seed: 1, deck: ['seeds', 'seeds', 'seeds', 'seeds', 'rain', 'rain', 'rain', 'rain'] });
+    const s = newGame(data, { seed: 1 });
+    s.hand = [1, 2, 3, 4].map((uid) => ({ uid: 900 + uid, card: uid <= 2 ? 'seeds' : 'rain' }));
+    s.forecast = null;
     s.zones.find((z) => z.id === 'forest')!.stats = { light: 2, moisture: 4, vegetation: 4, deadwood: 2 };
     const plays = legalPlays(data, s).filter((p) => p.card === 'seeds');
     const best = plays.reduce((a, b) => (scorePlay(data, s, b) > scorePlay(data, s, a) ? b : a));

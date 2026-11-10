@@ -26,9 +26,11 @@ export function harmonyParts(data: GameData, state: GameState): Part[] {
   }
   const species = livingSpecies(state);
   if (species > 0 && w.perSpecies !== 0) parts.push({ source: 'species', zone: null, amount: species * w.perSpecies });
-  for (const [id, rec] of Object.entries(state.species))
-    if (rec.extinct === state.round && w.extinction !== 0)
-      parts.push({ source: `extinction:${id}`, zone: null, amount: w.extinction });
+  // Aus dem Protokoll, nicht aus state.species: Eine Art, die in derselben Runde ausstirbt und neu entsteht,
+  // kostet trotzdem (Konzept 7: Art ausgestorben −10 einmalig).
+  for (const x of state.extinctions)
+    if (x.round === state.round && w.extinction !== 0)
+      parts.push({ source: `extinction:${x.species}`, zone: null, amount: w.extinction });
   const humans = [...data.species.values()]
     .filter((s) => s.human)
     .reduce((n, s) => n + totalPopulation(state, s.id), 0);

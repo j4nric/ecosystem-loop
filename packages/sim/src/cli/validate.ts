@@ -8,7 +8,7 @@ try {
   console.log(
     `Spieldaten ok: ${d.geographies.size} Geografien, ${forms} Formen, ${d.zones.length} Zonen, ` +
       `${d.seasons.length} Jahreszeiten, ${d.couplings.length} Kopplungen, ${d.cards.size} Karten, ${d.species.size} Arten, ` +
-      `${d.scenarios.size} Szenarien · Pipeline: ${d.config.pipeline.join(' → ')}`,
+      `${d.scenarios.size} Szenarien, ${d.events.size} Ereignisse, ${d.meta.milestones.length} Meilensteine · Pipeline: ${d.config.pipeline.join(' → ')}`,
   );
 } catch (e) {
   if (e instanceof DataError) {

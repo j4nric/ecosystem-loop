@@ -3,7 +3,7 @@
  * Plattformunabhängig: Das Lesen der Dateien übernimmt src/node/load.ts (Node) bzw. die App selbst.
  */
 import type { z } from 'zod';
-import { TEXT_KEYS } from './cards/text.ts';
+import { LOG_KEYS, TEXT_KEYS } from './cards/text.ts';
 import { lifeParams } from './population.ts';
 import { breathParams } from './rules/breath.ts';
 import { evolutionParams } from './rules/evolution.ts';
@@ -12,9 +12,11 @@ import {
   CardsFile,
   Config,
   CouplingsFile,
+  EventsFile,
   GeographiesFile,
   HarmonyFile,
   MapFile,
+  MetaFile,
   ScenariosFile,
   SeasonsFile,
   SpeciesFile,
@@ -36,6 +38,8 @@ export interface RawData {
   harmony: unknown;
   species: unknown;
   scenarios: unknown;
+  events: unknown;
+  meta: unknown;
 }
 
 /** Dateinamen in packages/core/data je Schlüssel von RawData. */
@@ -49,6 +53,8 @@ export const DATA_FILES: Readonly<Record<keyof RawData, string>> = {
   harmony: 'harmony.yaml',
   species: 'species.yaml',
   scenarios: 'scenarios.yaml',
+  events: 'events.yaml',
+  meta: 'meta.yaml',
 };
 
 export class DataError extends Error {
@@ -75,7 +81,21 @@ export function buildGameData(raw: RawData): GameData {
   const harmony = parse('harmony', HarmonyFile);
   const species = parse('species', SpeciesFile);
   const scenarios = parse('scenarios', ScenariosFile);
-  if (!config || !geo || !map || !seasons || !couplings || !cards || !harmony || !species || !scenarios)
+  const events = parse('events', EventsFile);
+  const meta = parse('meta', MetaFile);
+  if (
+    !config ||
+    !geo ||
+    !map ||
+    !seasons ||
+    !couplings ||
+    !cards ||
+    !harmony ||
+    !species ||
+    !scenarios ||
+    !events ||
+    !meta
+  )
     throw new DataError(problems);
 
   const geographies = indexById('Geografie', geo.geographies, problems);
@@ -111,6 +131,8 @@ export function buildGameData(raw: RawData): GameData {
     species: indexById('Art', species.species, problems),
     harmony,
     scenarios: indexById('Szenario', scenarios.scenarios, problems),
+    events: indexById('Ereignis', events.events, problems),
+    meta,
   };
   indexById('Jahreszeit', seasons.seasons, problems);
   indexById('Kopplung', couplings.couplings, problems);
@@ -247,7 +269,11 @@ function checkReferences(d: GameData, p: string[]): void {
     const where = `Karte ${card.id}`;
     if (!d.categories.has(card.category)) p.push(`${where}: unbekannte Kategorie ${card.category}`);
     const { zones: slots, species: speciesSlots } = checkSlots(d, card, where, p);
-    for (const s of card.slots) if (s.kind !== 'species') checkCond(where, s.when);
+    for (const s of card.slots) {
+      if ('when' in s) checkCond(where, s.when);
+      if (s.kind === 'choice')
+        for (const o of s.options) checkEffects(`${where} Option ${o.id}`, o.effects, slots, speciesSlots);
+    }
     checkEffects(where, card.effects, slots, speciesSlots);
     for (const t of card.triggers) {
       if (!slots.has(t.at)) p.push(`${where}: Schwelle ${t.id} at=${t.at} ist kein Zonen-Slot`);
@@ -258,6 +284,37 @@ function checkReferences(d: GameData, p: string[]): void {
 
   // Arten
   checkSpecies(d, p, checkCond);
+
+  // Ereignisse
+  for (const e of d.events.values()) {
+    const where = `Ereignis ${e.id}`;
+    const names = new Set(e.target ? ['target'] : []);
+    const speciesSlots = new Set(e.target?.pick === 'densest' ? ['species'] : []);
+    if (e.target) checkCond(where, e.target.when);
+    for (const r of e.rules) {
+      for (const g of r.geographies) if (!d.geographies.has(g)) p.push(`${where}: unbekannte Geografie ${g}`);
+      checkCond(where, r.when);
+      checkEffects(where, r.effects, new Set([...names, 'self']), speciesSlots);
+    }
+    checkEffects(where, e.effects, names, speciesSlots);
+    if (e.card !== undefined) {
+      const card = d.cards.get(e.card);
+      if (!card) p.push(`${where}: unbekannte Karte ${e.card}`);
+      else if (card.slots.length !== 1 || card.slots[0]!.kind !== 'zone')
+        p.push(`${where}: Karte ${e.card} braucht genau einen Zonen-Slot`);
+      if (e.target?.pick !== 'random') p.push(`${where}: Karte braucht target.pick: random`);
+    }
+  }
+
+  // Meta-Progression
+  const known = (where: string, c: string) => {
+    if (!d.cards.has(c)) p.push(`${where}: unbekannte Karte ${c}`);
+  };
+  for (const c of d.meta.basePool) known('meta.yaml basePool', c);
+  indexById('Meilenstein', d.meta.milestones, p);
+  for (const m of d.meta.milestones) for (const c of m.unlocks) known(`Meilenstein ${m.id}`, c);
+  for (const c of d.config.starterDeck)
+    if (d.cards.has(c) && !d.meta.basePool.includes(c)) p.push(`starterDeck: ${c} ist nicht im Grundpool (meta.yaml)`);
   const life = d.params.life !== undefined ? lifeParams(d) : null;
   if (life)
     for (const [stat, effects] of Object.entries(life.overuse)) {
@@ -301,11 +358,15 @@ function checkReferences(d: GameData, p: string[]): void {
   for (const id of d.config.pipeline) if (!RULES.has(id)) p.push(`config.yaml pipeline: unbekanntes Modul ${id}`);
   for (const id of Object.keys(d.config.rules))
     if (!RULES.has(id)) p.push(`config.yaml rules: unbekanntes Modul ${id}`);
-  for (const k of TEXT_KEYS) if (!d.config.texts[k]) p.push(`config.yaml texts: Baustein ${k} fehlt`);
+  for (const k of [...TEXT_KEYS, ...LOG_KEYS]) if (!d.config.texts[k]) p.push(`config.yaml texts: Baustein ${k} fehlt`);
   for (const c of d.config.starterDeck) if (!d.cards.has(c)) p.push(`starterDeck: unbekannte Karte ${c}`);
   const n = d.config.starterDeck.length;
   if (n < d.config.deck.minSize || n > d.config.deck.maxSize)
     p.push(`starterDeck: ${n} Karten, erlaubt ${d.config.deck.minSize}–${d.config.deck.maxSize}`);
+  for (const c of new Set(d.config.starterDeck)) {
+    const copies = d.config.starterDeck.filter((x) => x === c).length;
+    if (copies > d.config.deck.maxCopies) p.push(`starterDeck: ${c} ${copies}×, erlaubt ${d.config.deck.maxCopies}`);
+  }
 }
 
 /** Slots einer Karte: Reihenfolge, Verweise, Art-Filter. Liefert die Zonen- und Art-Slots. */
@@ -323,6 +384,12 @@ function checkSlots(d: GameData, card: Card, where: string, p: string[]) {
         p.push(`${where}: Slot ${s.id} eats=${s.eats} ist weder Wert noch Art`);
       for (const x of s.species ?? []) if (!d.species.has(x)) p.push(`${where}: unbekannte Art ${x}`);
       species.add(s.id);
+    } else if (s.kind === 'choice') {
+      const ids = new Set<string>();
+      for (const o of s.options) {
+        if (ids.has(o.id)) p.push(`${where}: Option doppelt ${o.id}`);
+        ids.add(o.id);
+      }
     } else zones.add(s.id);
   }
   return { zones, species };
