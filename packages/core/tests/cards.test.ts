@@ -299,7 +299,7 @@ describe('Gaben der Arten und Menschenkarten (Konzept 5.3, 5.4)', () => {
     expect(zone(state, 'coast').populations.fish).toBe(1);
     expect(events).toContainEqual({ type: 'migrated', species: 'fish', from: 'river', to: 'coast', count: 1 });
     expect(cardText(data, data.cards.get('spawning_run')!, 'de')).toBe(
-      '1 Fisch wandert nebenan. Nur wo Fisch lebt, neben Fluss oder Küste.',
+      '1 Fisch wandert nebenan. Nur wo Fisch lebt, mit Nachbarzone Fluss oder Küste.',
     );
   });
 

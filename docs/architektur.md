@@ -10,7 +10,8 @@ packages/core           @being-god/core – Regel-Engine (plattformunabhängig, 
   data/*.yaml           alle Inhalte, Zahlen und Textbausteine
   src/index.ts          öffentlicher Einstieg (exportiert api, schema, state, rng, conditions, data, game, meta …)
   src/api.ts            Vertrag für Oberflächen: GameSetup, Action, GameView, Preview, CreationBook (nur Typen)
-  src/game.ts           Fassade: newGame, step, view, legalPlays, slotOptions, preview, describeEvent
+  src/game.ts           Fassade: newGame, step, view, legalPlays, slotOptions, preview, describeEvent, validateState
+  src/validate.ts       validateState: passt ein gespeicherter Spielstand zu den Daten? (wirft nie)
   src/meta.ts           Meta-Progression: newBook, recordGame, parseBook, cardPool, validateDeck, dailySeed
   src/nature.ts         Natur-Phase und Bilanz: führt die Regel-Module in Pipeline-Reihenfolge aus
   src/turn.ts           Zug-Regeln: legalPlays, canEndTurn (Kartenzwang)
@@ -48,6 +49,7 @@ umgebaut werden, ohne dass App oder Konsole brechen. `step` ist rein: Der Eingan
 | `slotOptions`   | gültige Werte für den nächsten offenen Slot einer Handkarte                                      |
 | `preview`       | Wirkung eines Kartenzugs ohne Ausführung (Werte, Schwellen, Formen, Bestände, Ereignis)          |
 | `describeEvent` | lokalisierter Kurztext zu einem `GameEvent`                                                      |
+| `validateState` | prüft einen gespeicherten Zustand gegen die Daten (`{ ok }` bzw. `{ ok: false, reason }`)        |
 
 ### Meta (`src/meta.ts`)
 
@@ -162,14 +164,16 @@ können als Störung zählen (🔥 Feuer, Baumsturz …).
 
 ```
 src/client/   GameClient (Schnittstelle der Oberfläche, Notices), EngineClient (echte Engine),
-              MockClient (Vorschau-Daten ohne Regeln), SaveStore/BookStore (localStorage bzw. Speicher),
+              MockClient (Vorschau-Daten ohne Regeln), SaveStore/BookStore/DeckStore (localStorage bzw. Speicher),
               gameData.ts (YAML zur Build-Zeit eingebunden, mit buildGameData geprüft),
               index.ts (einzige Stelle, die die Implementierung wählt; URL-Schalter)
+src/logic/    reine, getestete Logik: Zielwahl-Zustandsautomat (targeting), Startdeck (deck)
 src/state/    useGame, Zielwahl (useTargeting), Ziehen (useCardDrag), Bewegung (motion), Einführung
 src/scene/    3D-Insel (React Three Fiber): Zonen, Figuren als Instanced-Meshes, Farben, Beschriftungen
-src/ui/       HUD, Hand, Vorschau, Zonen-Detail, Wahl-Chips, Meldungen, Spiel-Ende, Schöpfungsbuch, Hilfe, Einführung
-src/i18n/     Deutsch und Englisch (Satzbau der Meldungen)
-tests/        Vitest ohne DOM: EngineClient, SaveStore
+src/ui/       HUD, Hand, Kartendetail, Vorschau, Zonen-Detail, Wahl-Chips, Meldungen, Spiel-Ende, Schöpfungsbuch,
+              Startdeck-Auswahl, Hilfe, Einführung
+src/i18n/     Deutsch und Englisch (Satzbau der Meldungen); locale.ts wählt die Sprache (Standard Englisch)
+tests/        Vitest ohne DOM: EngineClient, SaveStore, Buch-Eintrag, Startdeck, Zielwahl, Sprache
 ```
 
 Die App spricht ausschließlich über `GameClient`; `EngineClient` übersetzt `GameEvent`s in lokalisierte

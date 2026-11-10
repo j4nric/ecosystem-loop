@@ -350,7 +350,7 @@ Siehe [Entwicklungsplan](entwicklungsplan.md).
 ## Anhang: Umgesetzte Auslegungen
 
 Wo das Konzept offen oder mehrdeutig ist, hat die Umsetzung eine Auslegung gewählt. Sie sind im Code und in den
-Daten mit `AUSLEGUNG:` markiert und hier gesammelt (Stand: Phase 5, Teil 1). Sie gelten, bis der Inhaber anders
+Daten mit `AUSLEGUNG:` markiert und hier gesammelt (Stand: Phase 5). Sie gelten, bis der Inhaber anders
 entscheidet; Zahlen bleiben Platzhalter bis Phase 6.
 
 **Kap. 3 – Ablauf**
@@ -413,4 +413,4 @@ entscheidet; Zahlen bleiben Platzhalter bis Phase 6.
 
 **App (Darstellung)**
 
-- Frösche zählen bei den Figuren optisch zu „Reptil“ (Amphibien und Reptilien).
+- Figuren richten sich nach der Arten-Gruppe aus `species.yaml` (`group`); Frösche sind Amphibien mit eigener Figur.

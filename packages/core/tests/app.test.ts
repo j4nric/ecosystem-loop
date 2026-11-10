@@ -118,14 +118,14 @@ describe('Kartentexte (de/en): Wirkung zuerst, Bedingung als kurzer Zusatz', () 
 
   it('Algenblüte: Bedingung als Geografien', () => {
     expect(text('algal_bloom')).toEqual([
-      'Vegetation +1, Licht −1. Nur auf Fluss oder Küste.',
+      'Vegetation +1, Licht −1. Nur für Fluss oder Küste.',
       'Vegetation +1, Light −1. Only on River or Coast.',
     ]);
   });
 
   it('Zersetzung: Nachbarzone mit eigener Bedingung', () => {
     expect(text('decomposition')).toEqual([
-      'Totholz −1, Boden +1 nebenan. Nur auf Wald, neben Flachland.',
+      'Totholz −1, Boden +1 nebenan. Nur für Wald, mit Nachbarzone Flachland.',
       'Deadwood −1, Soil +1 next door. Only on Forest, next to Plains.',
     ]);
   });
@@ -165,7 +165,7 @@ describe('Kartentexte (de/en): Wirkung zuerst, Bedingung als kurzer Zusatz', () 
       card.effects = [{ adjust: 'soil', by: 1, at: 'far' }];
     });
     expect(cardText(d, d.cards.get('decomposition')!, 'de')).toBe(
-      'Boden +1 (Zone). Nur wo Feuchte ≥ 2, neben einer Zone mit Vegetation ≤ 3, Zone auf Küste.',
+      'Boden +1 (Zone). Nur wo Feuchte ≥ 2, neben einer Zone mit Vegetation ≤ 3, Zone für Küste.',
     );
   });
 });
@@ -205,6 +205,20 @@ describe('CardView.short', () => {
   it('view() liefert short neben dem vollen Text', () => {
     const v = view(data, game({ hand: ['algal_bloom'] }), 'de').hand[0]!;
     expect(v.short).toBe('Vegetation +1, Licht −1');
-    expect(v.text).toBe('Vegetation +1, Licht −1. Nur auf Fluss oder Küste.');
+    expect(v.text).toBe('Vegetation +1, Licht −1. Nur für Fluss oder Küste.');
+  });
+});
+
+describe('validateState gegen exotische Eingaben', () => {
+  it('wirft nie, auch nicht bei werfenden Gettern', () => {
+    const evil = new Proxy(
+      {},
+      {
+        get() {
+          throw new Error('böse');
+        },
+      },
+    );
+    expect(validateState(data, evil).ok).toBe(false);
   });
 });

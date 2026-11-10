@@ -121,6 +121,15 @@ function problem(data: GameData, s: GameState): string | null {
  * Wirft nie; `reason` ist eine technische Meldung (Deutsch) für Log und Fehlerbericht.
  */
 export function validateState(data: GameData, state: unknown): StateCheck {
+  try {
+    return checkState(data, state);
+  } catch (e) {
+    // Exotische Eingaben (Proxys, werfende Getter) – nie durchschlagen lassen.
+    return { ok: false, reason: `Prüfung fehlgeschlagen: ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
+function checkState(data: GameData, state: unknown): StateCheck {
   if (typeof state !== 'object' || state === null || Array.isArray(state))
     return { ok: false, reason: 'kein Spielstand (kein Objekt)' };
   const version = (state as { version?: unknown }).version;

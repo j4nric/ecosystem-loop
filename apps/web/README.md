@@ -23,12 +23,14 @@ vServer, siehe [docs/deploy.md](../../docs/deploy.md). Icons und Manifest (Home-
 ## Aufbau
 
 ```
-src/client/   GameClient (Schnittstelle), EngineClient, MockClient, SaveStore/BookStore, gameData.ts, index.ts
+src/client/   GameClient (Schnittstelle), EngineClient, MockClient, SaveStore/BookStore/DeckStore, gameData.ts, index.ts
+src/logic/    targeting (Zielwahl), deck (Startdeck) – reine Funktionen
 src/state/    useGame, useTargeting (Zielwahl), useCardDrag (Ziehen), motion, tutorialStore
 src/scene/    IslandScene, ZoneTile, Instanced (Figuren), ZoneLabels, layout, palette, props, registry
-src/ui/       Hud, Hand, PlayPreview, ZoneSheet, ChoiceChips, DragOverlay, Toasts, GameOver, Book, Help, Tutorial
-src/i18n/     de.ts, en.ts – Satzbau der Meldungen und Oberflächentexte
-tests/        EngineClient, SaveStore
+src/ui/       Hud, Hand, CardDetail, PlayPreview, ZoneSheet, ChoiceChips, DragOverlay, Toasts, GameOver, Book,
+              DeckPicker, Help, Tutorial
+src/i18n/     de.ts, en.ts, locale.ts – Texte; Standard Englisch, Deutsch auf deutschen Geräten
+tests/        EngineClient, SaveStore, Buch-Eintrag, deck, targeting, locale
 ```
 
 Die App spricht über `src/client/GameClient.ts`. Welche Implementierung läuft, entscheidet allein

@@ -127,12 +127,12 @@ texts:
   trigger.always: { de: '{icon} {name}: {effects}', en: '{icon} {name}: {effects}' }
   trigger.disturbance: { de: '{text} (Störung)', en: '{text} (disturbance)' }
   at.neighbor: { de: '{text} nebenan', en: '{text} next door' }
-  # Bedingung eines Ziels: „Nur auf Fluss oder Küste“, „Nur wo Fisch lebt, neben Fluss“
+  # Bedingung eines Ziels: „Nur für Fluss oder Küste“, „Nur wo Fisch lebt, mit Nachbarzone Fluss“
   req: { de: 'Nur {req}', en: 'Only {req}' }
-  req.on: { de: 'auf {geos}', en: 'on {geos}' }
+  req.on: { de: 'für {geos}', en: 'on {geos}' }
   req.where: { de: 'wo {conds}', en: 'where {conds}' }
   req.lives: { de: 'wo {species} lebt', en: 'where {species} lives' }
-  req.nextTo: { de: 'neben {geos}', en: 'next to {geos}' }
+  req.nextTo: { de: 'mit Nachbarzone {geos}', en: 'next to {geos}' }
   req.nextToWhere: { de: 'neben einer Zone mit {conds}', en: 'next to a zone with {conds}' }
   req.slot: { de: '{slot} {req}', en: '{slot} {req}' }
   # Kurztext der Handkarte (CardView.short): Reichweite als ein Wort
