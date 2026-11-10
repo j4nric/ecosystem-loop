@@ -1,5 +1,6 @@
 import type { Action, CardView, DeckIssue, FormKind, GameView, Locale, Targets, ZoneView } from '@core/api';
 import type { DeckSetup } from '../logic/deck.ts';
+import { targetDistance, targetStatus, towardOf } from '../logic/ideal.ts';
 import type { BookView, GameClient, GameResult, Notice, PreviewView } from './GameClient.ts';
 
 /**
@@ -177,6 +178,36 @@ const START_VALUES: Record<string, number[]> = {
   coast: [4, 3, 1, 3],
 };
 
+type Range = { min: number; max: number } | null;
+
+/**
+ * Zielbereiche der Idealform je Geografie (Licht, Feuchte, Vegetation, Sonderwert) – Vorschau-Daten nach dem
+ * Konzept-Beispiel (Aue: Wasserstand genau 3; Urwald: Vegetation 5, Feuchte ≥ 4, Totholz 2–3).
+ */
+const IDEALS: Record<string, Range[]> = {
+  mountains: [{ min: 3, max: 5 }, null, { min: 1, max: 2 }, { min: 2, max: 3 }],
+  forest: [null, { min: 4, max: 5 }, { min: 5, max: 5 }, { min: 2, max: 3 }],
+  plains: [
+    { min: 3, max: 5 },
+    { min: 2, max: 3 },
+    { min: 3, max: 4 },
+    { min: 3, max: 5 },
+  ],
+  river: [null, { min: 3, max: 5 }, { min: 2, max: 4 }, { min: 3, max: 3 }],
+  coast: [
+    { min: 3, max: 5 },
+    { min: 2, max: 4 },
+    { min: 2, max: 4 },
+    { min: 2, max: 3 },
+  ],
+};
+
+/** Abstand der Werte zur Idealform: Summe der Schritte außerhalb der Zielbereiche. */
+function idealDistance(geo: string, v: number[]): number {
+  const ranges = IDEALS[geo] ?? [];
+  return ranges.reduce((sum, r, i) => sum + (r ? targetDistance(v[i] ?? 0, r) : 0), 0);
+}
+
 const START_LEVELS: Record<string, number> = { mountains: 2, forest: 2, plains: 1, river: 1, coast: 1 };
 
 const START_POPULATIONS: Record<string, { species: string; name: L; tier: number; count: number }[]> = {
@@ -196,16 +227,18 @@ const SEASONS: { id: string; name: L }[] = [
   { id: 'winter', name: { de: 'Winter', en: 'Winter' } },
 ];
 
+const statIds = (geo: GeoDef) => ['light', 'moisture', 'vegetation', geo.special.id];
+
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** Grobe Form-Art aus den Werten – nur damit sich in der Vorschau sichtbar etwas ändert. */
 function mockKind(geo: string, v: number[]): FormKind {
-  const [light = 0, moist = 0, veg = 0, special = 0] = v;
+  const [, moist = 0, veg = 0, special = 0] = v;
   if (geo === 'river' && special >= 5) return 'disturbance';
   if (geo === 'river' && special === 0) return 'degraded';
   if (veg === 0 && moist <= 1) return 'degraded';
   if (veg === 0 && geo !== 'coast') return 'degraded';
-  if (light >= 3 && veg >= 2 && moist >= 2 && special >= 1 && special <= 3) return 'ideal';
+  if (idealDistance(geo, v) === 0) return 'ideal';
   return 'normal';
 }
 
@@ -292,20 +325,52 @@ export class MockClient implements GameClient {
     if (!entry || !zone) return null;
     const lc = this.locale;
     const changes: PreviewView['changes'] = [];
+    const after = [...zone.values];
+    const ids = statIds(zone.geo);
     for (const [stat, delta] of Object.entries(entry.def.effect)) {
       const i = Number(stat);
       const from = zone.values[i] ?? 0;
       const to = clamp(from + delta, 0, 5);
+      after[i] = to;
       const name = i === 3 ? zone.geo.special.name : STAT_NAMES[i];
+      const toward = towardOf(from, to, IDEALS[zone.geo.id]?.[i] ?? undefined);
       if (to !== from)
-        changes.push({ zone: zone.geo.id, zoneName: zone.geo.name[lc], stat, statName: name?.[lc] ?? stat, from, to });
+        changes.push({
+          zone: zone.geo.id,
+          zoneName: zone.geo.name[lc],
+          stat: ids[i] ?? stat,
+          statName: name?.[lc] ?? stat,
+          from,
+          to,
+          toward,
+        });
     }
+    const kindAfter = mockKind(zone.geo.id, after);
+    const formChanges: PreviewView['formChanges'] =
+      kindAfter === zone.kind
+        ? []
+        : [
+            {
+              zone: zone.geo.id,
+              zoneName: zone.geo.name[lc],
+              from: zone.geo.forms[zone.kind].name[lc],
+              to: zone.geo.forms[kindAfter].name[lc],
+              kind: kindAfter,
+            },
+          ];
     return {
       cost: entry.def.cost,
       affordable: entry.def.cost <= this.state.breath,
       changes,
+      idealDistance: [
+        {
+          zone: zone.geo.id,
+          before: idealDistance(zone.geo.id, zone.values),
+          after: idealDistance(zone.geo.id, after),
+        },
+      ],
       triggers: [],
-      formChanges: [],
+      formChanges,
       populationChanges: [],
       eventChanges: [],
     };
@@ -363,37 +428,65 @@ export class MockClient implements GameClient {
     const s = this.state;
     if (s.phase === 'over') return;
     const notices: Notice[] = [];
-    switch (action.type) {
-      case 'play': {
-        const index = s.hand.findIndex((h) => h.uid === action.uid);
-        const entry = s.hand[index];
-        if (!entry || entry.def.cost > s.breath) return;
-        s.hand.splice(index, 1);
-        s.breath -= entry.def.cost;
-        s.discardPile += 1;
-        s.playsThisTurn += 1;
-        notices.push({ type: 'played', card: entry.def.name[this.locale] });
-        const zone = s.zones.find((z) => z.geo.id === action.targets['zone']);
-        if (zone) {
-          for (const [stat, delta] of Object.entries(entry.def.effect)) {
-            const i = Number(stat);
-            zone.values[i] = clamp((zone.values[i] ?? 0) + delta, 0, 5);
-          }
+    if (action.type === 'play') {
+      const index = s.hand.findIndex((h) => h.uid === action.uid);
+      const entry = s.hand[index];
+      if (!entry || entry.def.cost > s.breath) return;
+      s.hand.splice(index, 1);
+      s.breath -= entry.def.cost;
+      s.discardPile += 1;
+      s.playsThisTurn += 1;
+      notices.push({ type: 'played', card: entry.def.name[this.locale] });
+      const zone = s.zones.find((z) => z.geo.id === action.targets['zone']);
+      if (zone) {
+        const before = [...zone.values];
+        for (const [stat, delta] of Object.entries(entry.def.effect)) {
+          const i = Number(stat);
+          zone.values[i] = clamp((zone.values[i] ?? 0) + delta, 0, 5);
         }
-        break;
+        notices.push(...this.zoneNotices(zone, before, zone.kind, 'card'));
       }
-      case 'endTurn': {
-        if (s.playsThisTurn < MIN_PLAYS) return;
-        this.natureStep();
-        const season = SEASONS[(s.round - 1) % SEASONS.length] ?? SEASONS[0]!;
-        notices.push({ type: 'round', round: s.round, season: season.name[this.locale] });
-        if (s.lastHarmonyDelta !== 0) notices.push({ type: 'harmony', delta: s.lastHarmonyDelta });
-        if (this.state.phase === 'over') notices.push({ type: 'collapsed' });
-        break;
-      }
+    } else if (action.type === 'endTurn') {
+      if (s.playsThisTurn < MIN_PLAYS) return;
+      const before = s.zones.map((z) => ({ values: [...z.values], kind: z.kind }));
+      this.natureStep();
+      s.zones.forEach((z, i) =>
+        notices.push(...this.zoneNotices(z, before[i]?.values ?? z.values, before[i]?.kind ?? z.kind, 'nature')),
+      );
+      const season = SEASONS[(s.round - 1) % SEASONS.length] ?? SEASONS[0]!;
+      notices.push({ type: 'round', round: s.round, season: season.name[this.locale] });
+      if (s.lastHarmonyDelta !== 0) notices.push({ type: 'harmony', delta: s.lastHarmonyDelta });
+      if (this.state.phase === 'over') notices.push({ type: 'collapsed' });
+    } else {
+      return; // weitere Aktionen kennt die Vorschau nicht
     }
     this.emit();
     if (notices.length > 0) for (const listener of this.noticeListeners) listener(notices);
+  }
+
+  /** Meldungen zu Wertänderungen und Formwechsel einer Zone (wie der EngineClient sie aus Ereignissen bildet). */
+  private zoneNotices(zone: MockZone, before: number[], kindBefore: FormKind, cause: 'card' | 'nature'): Notice[] {
+    const lc = this.locale;
+    const ids = statIds(zone.geo);
+    const names = [...STAT_NAMES, zone.geo.special.name];
+    const changes = zone.values.flatMap((to, i) => {
+      const from = before[i] ?? to;
+      return from === to ? [] : [{ stat: ids[i] ?? String(i), statName: names[i]?.[lc] ?? '', from, to }];
+    });
+    const out: Notice[] = changes.length > 0 ? [{ type: 'statShift', zone: zone.geo.id, cause, changes }] : [];
+    const kind = mockKind(zone.geo.id, zone.values);
+    if (kind !== kindBefore) {
+      out.push({
+        type: 'form',
+        zoneId: zone.geo.id,
+        zone: zone.geo.name[lc],
+        from: zone.geo.forms[kindBefore].name[lc],
+        to: zone.geo.forms[kind].name[lc],
+        kind,
+      });
+      zone.kind = kind;
+    }
+    return out;
   }
 
   // --- Simulation ---------------------------------------------------------------------------------
@@ -493,7 +586,8 @@ export class MockClient implements GameClient {
     const season = SEASONS[(s.round - 1) % SEASONS.length] ?? SEASONS[0]!;
     const zones: ZoneView[] = s.zones.map((z) => {
       const statDefs = [...STAT_NAMES, z.geo.special.name];
-      const statIds = ['light', 'moisture', 'vegetation', z.geo.special.id];
+      const ids = statIds(z.geo);
+      const ranges = IDEALS[z.geo.id] ?? [];
       const form = z.geo.forms[z.kind];
       const warnings: ZoneView['warnings'] = [];
       if ((z.values[1] ?? 0) <= 1 && s.hand.some((h) => h.def.card === 'thunderstorm')) {
@@ -511,8 +605,23 @@ export class MockClient implements GameClient {
         id: z.geo.id,
         geography: z.geo.id,
         geographyName: z.geo.name[lc],
-        stats: statDefs.map((name, i) => ({ id: statIds[i] ?? '', name: name[lc], value: z.values[i] ?? 0, max: 5 })),
+        stats: statDefs.map((name, i) => {
+          const value = z.values[i] ?? 0;
+          const range = ranges[i];
+          return {
+            id: ids[i] ?? '',
+            name: name[lc],
+            value,
+            max: 5,
+            ...(range ? { target: { ...range, status: targetStatus(value, range) } } : {}),
+          };
+        }),
         form: { id: form.id, name: form.name[lc], kind: z.kind },
+        ideal: {
+          id: z.geo.forms.ideal.id,
+          name: z.geo.forms.ideal.name[lc],
+          distance: idealDistance(z.geo.id, z.values),
+        },
         level: z.level,
         levelProgress: z.levelProgress,
         neighbors: z.geo.neighbors,

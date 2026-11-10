@@ -156,6 +156,29 @@ export const en: Strings = {
     mammal: 'Mammals',
     human: 'Humans',
   },
+  idealGoal: (name) => `Goal: ${name}`,
+  idealReached: 'Ideal form reached',
+  idealSteps: (n) => (n === 1 ? '1 step to the ideal form' : `${n} steps to the ideal form`),
+  targetShort: (range) => `Goal ${range}`,
+  targetRange: (range) => `Target range ${range}`,
+  targetStatus: { low: 'too low', ok: 'on target', high: 'too high' },
+  toward: { better: 'closer to ideal', worse: 'further away', neutral: 'no change' },
+  towardShort: { better: 'closer', worse: 'further', neutral: 'same' },
+  previewIdeal: (zone, before, after) =>
+    after < before
+      ? `${zone}: closer to ideal (${before} → ${after} steps)`
+      : after > before
+        ? `${zone}: further from ideal (${before} → ${after} steps)`
+        : `${zone}: distance to ideal stays ${before}`,
+  fxMore: (n) => `+${n} more`,
+  fxDelta: (delta, stat) => `${delta > 0 ? '+' : '−'}${Math.abs(delta)} ${stat}`,
+  helpIdeal: 'Target ranges, not maximums',
+  helpIdealText:
+    'Values run from 0 to 5 – higher is not better. Every geography has an ideal form with target ranges (e.g. floodplain: water level exactly 3; primeval forest: vegetation 5, moisture ≥ 4, deadwood 2–3). In the zone sheet the target range is outlined on each bar, next to “too low” ▾, “on target” ✓ or “too high” ▴.',
+  helpIdealTools:
+    'Lowering cards like drought, storm or frost are tools when a value is above its target range. You must play at least one card every round – even an awkward one.',
+  helpIdealTint:
+    'While targeting, zones glow green (▲ closer to ideal), red (▼ further away) or yellow (no change). You see at once where a card helps.',
   helpFog: 'As harmony sinks, the island grows pale and mist rises.',
   showTutorial: 'Show introduction',
   tutorialSkip: 'Skip',
@@ -183,6 +206,11 @@ export const en: Strings = {
       icon: '⛰',
       title: 'Forms',
       text: 'A zone’s values determine its form: ideal forms bring harmony and habitat, degraded forms cost harmony. Tap a zone for details.',
+    },
+    {
+      icon: '🎯',
+      title: 'Don’t maximise – hit the target range',
+      text: 'Every zone has an ideal form with target ranges (e.g. floodplain: water level exactly 3). Too much is as bad as too little. You must play at least one card every round – even an awkward one. Lowering cards are tools when a value is above its target range. While targeting, green means “closer to ideal”, red “further away”.',
     },
     {
       icon: '⏭',

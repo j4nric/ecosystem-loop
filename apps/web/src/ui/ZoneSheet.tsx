@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { ZoneView } from '@core/api';
 import type { PreviewView } from '../client/index.ts';
 import { t } from '../i18n/index.ts';
+import { barCells, rangeLabel, towardOf } from '../logic/ideal.ts';
 
 interface Props {
   zone: ZoneView;
@@ -38,6 +39,7 @@ export function ZoneSheet({ zone, zones, onClose, changes, children, footer }: P
       </header>
 
       <div className="sheet__body">
+        {zone.ideal && <IdealGoal ideal={zone.ideal} />}
         {children}
 
         <div className="sheet__level" aria-label={`${t.level} ${zone.level}/5`}>
@@ -65,32 +67,9 @@ export function ZoneSheet({ zone, zones, onClose, changes, children, footer }: P
 
         <h3>{t.values}</h3>
         <ul className="stats">
-          {zone.stats.map((s) => {
-            const to = next.get(s.id);
-            const lo = Math.min(s.value, to ?? s.value);
-            const hi = Math.max(s.value, to ?? s.value);
-            const dir = to === undefined ? '' : to > s.value ? 'up' : 'down';
-            return (
-              <li key={s.id} className={`stat stat--${s.id}${dir ? ` stat--${dir}` : ''}`}>
-                <span className="stat__name">{s.name}</span>
-                <span className="stat__bar" aria-hidden>
-                  {Array.from({ length: s.max }, (_, i) => (
-                    <i key={i} className={i < lo ? 'on' : i < hi ? `delta delta--${dir}` : ''} />
-                  ))}
-                </span>
-                <span className="stat__value">
-                  {to === undefined ? (
-                    s.value
-                  ) : (
-                    <>
-                      <s>{s.value}</s>
-                      {to}
-                    </>
-                  )}
-                </span>
-              </li>
-            );
-          })}
+          {zone.stats.map((s) => (
+            <StatRow key={s.id} stat={s} to={next.get(s.id)} />
+          ))}
         </ul>
 
         <h3>{t.populations}</h3>
@@ -114,5 +93,87 @@ export function ZoneSheet({ zone, zones, onClose, changes, children, footer }: P
       </div>
       {footer && <div className="sheet__footer">{footer}</div>}
     </section>
+  );
+}
+
+type Stat = ZoneView['stats'][number];
+
+const STATUS_ICON = { low: '▾', ok: '✓', high: '▴' } as const;
+const TOWARD_ICON = { better: '✓', worse: '✗', neutral: '' } as const;
+
+/**
+ * Ein Wert als Balken (Zellen für 1…max): gefüllte Zellen = aktueller Wert, umrandete Spanne = Zielbereich der
+ * Idealform; dahinter Zielangabe und Lage („zu niedrig / passt / zu hoch“ mit Symbol). Mit Vorschau zeigt der
+ * Balken die Änderung gestrichelt und färbt sie nach der Richtung zum Zielbereich.
+ */
+export function StatRow({ stat: s, to }: { stat: Stat; to?: number | undefined }) {
+  const target = s.target;
+  const cells = barCells(s.value, s.max, target);
+  const lo = Math.min(s.value, to ?? s.value);
+  const hi = Math.max(s.value, to ?? s.value);
+  const dir = to === undefined || to === s.value ? '' : to > s.value ? 'up' : 'down';
+  const toward = to === undefined ? 'neutral' : towardOf(s.value, to, target);
+  const status = target?.status;
+  return (
+    <li
+      className={`stat stat--${s.id}${dir ? ` stat--${dir}` : ''}${target ? ' has-target' : ''}`}
+      aria-label={`${s.name} ${s.value}${to !== undefined ? ` → ${to}` : ''}${
+        target ? `. ${t.targetRange(rangeLabel(target, s.max))}, ${t.targetStatus[target.status]}` : ''
+      }`}
+    >
+      <span className="stat__name">{s.name}</span>
+      <span className="stat__bar" aria-hidden>
+        {cells.map((c, i) => {
+          const fill = i < lo ? 'on' : i < hi ? `delta delta--${dir} delta--${toward}` : '';
+          const span = c.target
+            ? ` t${i === 0 || !cells[i - 1]?.target ? ' t-start' : ''}${!cells[i + 1]?.target ? ' t-end' : ''}`
+            : '';
+          return <i key={i} className={`${fill}${span}`} />;
+        })}
+      </span>
+      <span className={`stat__value${toward !== 'neutral' ? ` is-${toward}` : ''}`} aria-hidden>
+        {to === undefined || to === s.value ? (
+          s.value
+        ) : (
+          <>
+            <s>{s.value}</s>
+            {to}
+            {TOWARD_ICON[toward] && <small>{TOWARD_ICON[toward]}</small>}
+          </>
+        )}
+      </span>
+      {target && status && (
+        <span className={`stat__target is-${status}`} aria-hidden>
+          <span>{t.targetShort(rangeLabel(target, s.max))}</span>
+          <b>
+            {STATUS_ICON[status]} {t.targetStatus[status]}
+          </b>
+        </span>
+      )}
+    </li>
+  );
+}
+
+/** Kopf des Sheets: Idealform der Geografie und Abstand als Punkte („2 Schritte bis zur Idealform“). */
+export function IdealGoal({ ideal }: { ideal: NonNullable<ZoneView['ideal']> }) {
+  const reached = ideal.distance <= 0;
+  const shown = Math.min(ideal.distance, 6);
+  return (
+    <div className={`ideal-goal${reached ? ' is-reached' : ''}`}>
+      <span className="ideal-goal__name">
+        <span aria-hidden>🎯</span> {t.idealGoal(ideal.name)}
+      </span>
+      <span className="ideal-goal__dist">
+        {!reached && (
+          <span className="ideal-goal__dots" aria-hidden>
+            {Array.from({ length: shown }, (_, i) => (
+              <i key={i} />
+            ))}
+            {ideal.distance > shown && <small>+{ideal.distance - shown}</small>}
+          </span>
+        )}
+        <span>{reached ? `✓ ${t.idealReached}` : t.idealSteps(ideal.distance)}</span>
+      </span>
+    </div>
   );
 }

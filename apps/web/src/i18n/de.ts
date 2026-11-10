@@ -137,6 +137,30 @@ export const de = {
   deckCopies: (name: string, count: number, max: number) => `${name} ist ${count}× im Deck – höchstens ${max}×.`,
   deckUnknown: (name: string) => `Unbekannte Karte: ${name}.`,
   deckLocked: (name: string) => `${name} ist noch nicht freigeschaltet.`,
+  // Idealform und Zielbereiche
+  idealGoal: (name: string) => `Ziel: ${name}`,
+  idealReached: 'Idealform erreicht',
+  idealSteps: (n: number) => (n === 1 ? '1 Schritt bis zur Idealform' : `${n} Schritte bis zur Idealform`),
+  targetShort: (range: string) => `Ziel ${range}`,
+  targetRange: (range: string) => `Zielbereich ${range}`,
+  targetStatus: { low: 'zu niedrig', ok: 'passt', high: 'zu hoch' },
+  toward: { better: 'näher ans Ideal', worse: 'weiter weg', neutral: 'gleich weit' },
+  towardShort: { better: 'näher', worse: 'weiter weg', neutral: 'gleich' },
+  previewIdeal: (zone: string, before: number, after: number) =>
+    after < before
+      ? `${zone}: näher ans Ideal (${before} → ${after} Schritte)`
+      : after > before
+        ? `${zone}: weiter weg vom Ideal (${before} → ${after} Schritte)`
+        : `${zone}: Abstand zum Ideal bleibt ${before}`,
+  fxMore: (n: number) => `+${n} weitere`,
+  fxDelta: (delta: number, stat: string) => `${delta > 0 ? '+' : '−'}${Math.abs(delta)} ${stat}`,
+  helpIdeal: 'Zielbereiche statt Maximum',
+  helpIdealText:
+    'Werte gehen von 0 bis 5 – höher ist nicht besser. Jede Geografie hat eine Idealform mit Zielbereichen (z. B. Aue: Wasserstand genau 3; Urwald: Vegetation 5, Feuchte ≥ 4, Totholz 2–3). Im Zonen-Sheet ist der Zielbereich auf jedem Balken umrandet; daneben steht „zu niedrig“ ▾, „passt“ ✓ oder „zu hoch“ ▴.',
+  helpIdealTools:
+    'Senkende Karten wie Dürre, Sturm oder Frost sind Werkzeuge, wenn ein Wert über dem Zielbereich liegt. Du musst jede Runde mindestens eine Karte spielen – auch eine unbequeme.',
+  helpIdealTint:
+    'Beim Zielen leuchten Zonen grün (▲ näher ans Ideal), rot (▼ weiter weg) oder gelb (gleich). So siehst du sofort, wo eine Karte hilft.',
   // Hilfe
   help: 'Hilfe',
   helpTitle: 'Kurz erklärt',
@@ -194,6 +218,11 @@ export const de = {
       icon: '⛰',
       title: 'Formen',
       text: 'Aus den Werten einer Zone ergibt sich ihre Form: Idealformen bringen Harmonie und Lebensraum, verödete Formen kosten Harmonie. Tippe eine Zone für Details.',
+    },
+    {
+      icon: '🎯',
+      title: 'Nicht maximieren – Zielbereich treffen',
+      text: 'Jede Zone hat eine Idealform mit Zielbereichen (z. B. Aue: Wasserstand genau 3). Zu viel ist so schlecht wie zu wenig. Du musst jede Runde mindestens eine Karte spielen – auch eine unbequeme. Senkende Karten sind Werkzeuge, wenn ein Wert über dem Zielbereich liegt. Beim Zielen zeigt Grün „näher ans Ideal“, Rot „weiter weg“.',
     },
     {
       icon: '⏭',

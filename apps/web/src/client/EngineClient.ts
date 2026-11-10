@@ -143,6 +143,7 @@ export class EngineClient implements GameClient {
       })),
       populationChanges: p.populationChanges ?? [],
       eventChanges: (p.eventChanges ?? []).map((e) => ({ name: e.name, change: e.change, round: e.round ?? null })),
+      ...(p.idealDistance ? { idealDistance: p.idealDistance.map((d) => ({ ...d })) } : {}),
     };
   }
 
@@ -269,7 +270,7 @@ export class EngineClient implements GameClient {
   /** Ist die Aktion laut Engine gültig? Wirft die Prüfung selbst, gilt der Zustand als unpassend. */
   private isLegal(action: Action): boolean {
     try {
-      if (action.type === 'endTurn') return this.view.canEndTurn;
+      if (action.type !== 'play') return action.type === 'endTurn' && this.view.canEndTurn;
       return legalPlays(this.data, this.state).some(
         (p) =>
           p.uid === action.uid &&
@@ -303,6 +304,7 @@ export class EngineClient implements GameClient {
     const overgrazed = new Map<string, Set<string>>();
     const hunted = new Map<string, Map<string, number>>();
     const shifted = new Map<string, { zone: string; card: string; changes: Map<string, number> }>();
+    const stats = new Map<string, Map<string, { from: number; to: number }>>();
     const add = (m: Map<string, number>, key: string, delta: number) => m.set(key, (m.get(key) ?? 0) + delta);
     for (const e of events) {
       switch (e.type) {
@@ -328,6 +330,7 @@ export class EngineClient implements GameClient {
         case 'formChanged':
           body.push({
             type: 'form',
+            zoneId: e.zone,
             zone: this.zoneName(e.zone),
             from: this.formName(e.from),
             to: this.formName(e.to),
@@ -408,12 +411,18 @@ export class EngineClient implements GameClient {
             });
           break;
         }
+        case 'statChanged': {
+          const zoneStats = stats.get(e.zone) ?? new Map<string, { from: number; to: number }>();
+          const prev = zoneStats.get(e.stat);
+          zoneStats.set(e.stat, { from: prev?.from ?? e.from, to: e.to });
+          stats.set(e.zone, zoneStats);
+          break;
+        }
         case 'gameOver': // Partie-Ende: Buch-Eintrag in dispatch, Meldung kommt über 'collapsed'
         case 'scored':
         case 'cardDrawn':
         case 'deckReshuffled':
         case 'disturbance': // kommt immer zusammen mit 'triggered' oder einem Formwechsel zur Störungsform
-        case 'statChanged':
         case 'breathChanged':
         case 'turnEnded':
         case 'seasonApplied':
@@ -443,6 +452,14 @@ export class EngineClient implements GameClient {
         zone: this.zoneName(zone),
         foods: [...foods].map((f) => this.statOrSpeciesName(f)),
       });
+    // Netto-Wertänderungen je Zone (für die aufsteigenden Zahlen); ein Schritt mit Rundenende zählt als Natur.
+    const cause = events.some((e) => e.type === 'turnEnded') ? 'nature' : 'card';
+    for (const [zone, m] of stats) {
+      const changes = [...m]
+        .filter(([, c]) => c.from !== c.to)
+        .map(([stat, c]) => ({ stat, statName: this.data.stats.get(stat)?.name[lc] ?? stat, from: c.from, to: c.to }));
+      if (changes.length > 0) body.push({ type: 'statShift', zone, cause, changes });
+    }
     const rank: Partial<Record<Notice['type'], number>> = {
       collapsed: 0,
       extinct: 1,
