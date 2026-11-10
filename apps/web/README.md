@@ -1,7 +1,7 @@
 # apps/web – Being God als mobile Web-App
 
 Ziel: spielbar im iPhone-Browser, als Web-App zum Home-Bildschirm hinzufügbar, Deploy auf eigenem vServer.
-Native Builds (Capacitor) folgen später.
+Dieselbe App läuft als native iOS-App in einer Capacitor-Hülle, siehe [ios/README.md](ios/README.md).
 
 Stack: Vite + React + TypeScript, Three.js über React Three Fiber (+ drei), Low-Poly-Insel.
 Die App spricht mit der Engine nur über `@being-god/core` (`api.ts`: `GameView`, `Action`).
@@ -19,6 +19,20 @@ npm run -w apps/web typecheck
 
 Deploy: Nach jedem Merge auf `main` baut `.github/workflows/deploy.yml` die App und kopiert `dist` auf den
 vServer, siehe [deploy/README.md](../../deploy/README.md). Icons und Manifest (Home-Bildschirm) liegen in `public/`.
+
+## iOS-App (Capacitor)
+
+`capacitor.config.ts` (App-ID-Platzhalter `de.beinggod.app`, Name „Being God“, `webDir: dist`) und das Xcode-Projekt
+in `ios/` (Swift Package Manager, kein CocoaPods). Auf dem Mac:
+
+```sh
+npm run -w apps/web ios:sync   # vite build && cap sync ios
+npm run -w apps/web ios:open   # Xcode öffnen, dann Team wählen und Run
+```
+
+Schritt-für-Schritt-Anleitung, Fehlerbilder und Unterschiede zur Web-Version: [ios/README.md](ios/README.md).
+Spielstand und Buch liegen auch in der App in `localStorage`; für dauerhafte Speicherung wäre später
+`@capacitor/preferences` sinnvoll (die Stores sind austauschbar).
 
 ## Aufbau
 
