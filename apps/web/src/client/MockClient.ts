@@ -1,4 +1,5 @@
-import type { Action, CardView, FormKind, GameView, Locale, Targets, ZoneView } from '@core/api';
+import type { Action, CardView, DeckIssue, FormKind, GameView, Locale, Targets, ZoneView } from '@core/api';
+import type { DeckSetup } from '../logic/deck.ts';
 import type { BookView, GameClient, GameResult, Notice, PreviewView } from './GameClient.ts';
 
 /**
@@ -236,6 +237,7 @@ interface MockState {
 const BREATH_MAX = 10;
 const HAND_SIZE = 4;
 const MIN_PLAYS = 1;
+const MOCK_DECK = { min: 8, max: 10, maxCopies: 2 };
 
 export class MockClient implements GameClient {
   readonly isMock = true;
@@ -327,6 +329,34 @@ export class MockClient implements GameClient {
   newGame(): void {
     this.state = this.initialState();
     this.emit();
+  }
+
+  /** Vorschau: Pool = die Vorschau-Karten, Standard = jede Karte einmal (aufgefüllt auf die Mindestgröße). */
+  deckSetup(): DeckSetup {
+    const lc = this.locale;
+    const pool = CARDS.map((c) => ({
+      id: c.card,
+      name: c.name[lc],
+      category: c.category,
+      cost: c.cost,
+      text: c.text[lc],
+      short: c.text[lc],
+    }));
+    const ids = CARDS.map((c) => c.card);
+    const standard = [...ids, ...ids].slice(0, Math.max(MOCK_DECK.min, Math.min(MOCK_DECK.max, ids.length)));
+    return { pool, standard, rules: { ...MOCK_DECK } };
+  }
+
+  /** Grobe Prüfung ohne Engine: nur Größe und Kopien. */
+  checkDeck(deck: readonly string[]): DeckIssue[] {
+    const { min, max, maxCopies } = MOCK_DECK;
+    const issues: DeckIssue[] = [];
+    if (deck.length < min || deck.length > max) issues.push({ code: 'size', count: deck.length, min, max });
+    for (const card of new Set(deck)) {
+      const count = deck.filter((c) => c === card).length;
+      if (count > maxCopies) issues.push({ code: 'copies', card, count, max: maxCopies });
+    }
+    return issues;
   }
 
   dispatch(action: Action): void {

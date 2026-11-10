@@ -1,4 +1,5 @@
-import type { Action, FormKind, GameView, Targets } from '@core/api';
+import type { Action, DeckIssue, FormKind, GameView, Targets } from '@core/api';
+import type { DeckSetup } from '../logic/deck.ts';
 
 /**
  * Meldung über etwas, das in einem Schritt passiert ist – mit bereits lokalisierten Namen aus den Daten.
@@ -92,8 +93,15 @@ export interface GameClient {
   getBook(): BookView;
   /** Eintrag der zuletzt beendeten Partie ins Buch; null, solange in dieser Sitzung keine Partie endete. */
   lastResult(): GameResult | null;
-  /** Neue Partie starten (setzt auch den gespeicherten Spielstand zurück). */
-  newGame(): void;
+  /**
+   * Neue Partie starten (setzt auch den gespeicherten Spielstand zurück). `deck`: Startdeck (Karten-Ids);
+   * fehlt es oder ist es laut Engine ungültig, gilt das Standarddeck.
+   */
+  newGame(deck?: readonly string[]): void;
+  /** Für die Startdeck-Auswahl: Kartenpool laut Schöpfungsbuch, Standarddeck und Deck-Regeln. */
+  deckSetup(): DeckSetup;
+  /** Probleme eines Startdecks laut Engine (`validateDeck` mit Buch); leer = gültig. */
+  checkDeck(deck: readonly string[]): DeckIssue[];
   /** true, solange Vorschau-Daten statt der echten Engine laufen. */
   readonly isMock: boolean;
 }

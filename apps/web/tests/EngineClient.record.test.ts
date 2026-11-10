@@ -1,5 +1,5 @@
 /** Kollaps über dispatch: Das Schöpfungsbuch wird genau einmal eingetragen – auch nach weiteren Aktionen und beim Fortsetzen. */
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { canEndTurn, legalPlays, newGame, step, type GameState } from '@being-god/core';
 import { loadGameData } from '@being-god/core/node';
 import { EngineClient } from '../src/client/EngineClient.ts';
@@ -50,4 +50,35 @@ it('trägt die Partie nach dem Kollaps genau einmal ins Schöpfungsbuch ein', ()
   expect(resumed.getView().phase).toBe('over');
   expect(resumed.getBook().games).toBe(1);
   expect(saves).toBe(1);
+});
+
+it('nimmt das Engine-Ereignis gameOver als Auslöser: letztes Ereignis des Kollaps-Schritts, keine eigene Meldung', () => {
+  const before = stateBeforeCollapse('x');
+  const { events } = step(data, before, { type: 'endTurn' });
+  expect(events.at(-1)).toMatchObject({ type: 'gameOver' });
+  expect(events.filter((e) => e.type === 'gameOver')).toHaveLength(1);
+
+  const store = new MemorySaveStore();
+  store.save({ version: 1, seed: 'x', savedAt: 0, state: before });
+  const books = new MemoryBookStore();
+  const client = new EngineClient({ data, locale: 'de', store, books, seed: 'x' });
+  const notices = vi.fn();
+  client.subscribeNotices(notices);
+  client.dispatch({ type: 'endTurn' });
+  expect(books.load()?.games).toBe(1);
+  // gameOver selbst erzeugt keine Meldung; der Kollaps steht vorn
+  expect(notices.mock.calls[0]?.[0]?.[0]).toEqual({ type: 'collapsed' });
+});
+
+it('trägt ohne gameOver-Ereignis nichts ein (gewöhnliche Runde)', () => {
+  const books = new MemoryBookStore();
+  const store = new MemorySaveStore();
+  const client = new EngineClient({ data, locale: 'de', store, books, seed: 'y' });
+  const s = store.load()!.state;
+  const play = legalPlays(data, s)[0]!;
+  client.dispatch({ type: 'play', uid: play.uid, targets: play.targets });
+  client.dispatch({ type: 'endTurn' });
+  expect(client.getView().phase).toBe('play');
+  expect(books.load()).toBeNull();
+  expect(client.lastResult()).toBeNull();
 });

@@ -1,5 +1,8 @@
 import {
   RuleError,
+  cardPool,
+  cardShort,
+  cardText,
   describeEvent,
   legalPlays,
   newBook,
@@ -8,13 +11,16 @@ import {
   recordGame,
   slotOptions,
   step,
+  validateDeck,
+  validateState,
   view,
   type CreationBook,
   type GameData,
   type GameEvent,
   type GameState,
 } from '@being-god/core';
-import type { Action, GameView, Locale, Targets } from '@core/api';
+import type { Action, DeckIssue, GameView, Locale, Targets } from '@core/api';
+import type { DeckSetup } from '../logic/deck.ts';
 import type { BookView, GameClient, GameResult, Notice, PreviewView } from './GameClient.ts';
 import { MemoryBookStore, type BookStore, type SaveStore } from './SaveStore.ts';
 
@@ -24,8 +30,10 @@ export interface EngineClientOptions {
   store: SaveStore;
   /** Ablage des Schöpfungsbuchs; Standard: flüchtig. */
   books?: BookStore;
-  /** Fester Seed für eine neue Partie (Tests, `?seed=`); sonst zufällig. */
+  /** Fester Seed für jede neue Partie (Tests, `?seed=`); sonst zufällig. */
   seed?: string;
+  /** Gemerktes Startdeck für eine frische Partie beim Start; ungültig ⇒ Standarddeck. */
+  deck?: readonly string[] | null;
 }
 
 /** Echte Engine im Browser: Zustand in der App, Regeln ausschließlich über die Fassade von `@being-god/core`. */
@@ -58,7 +66,7 @@ export class EngineClient implements GameClient {
       this.view = resumed.view;
     } else {
       this.seed = this.freshSeed();
-      this.state = newGame(this.data, { seed: this.seed, book: this.book });
+      this.state = this.startState(options.deck);
       this.view = view(this.data, this.state, this.locale);
       this.persist();
     }
@@ -87,13 +95,16 @@ export class EngineClient implements GameClient {
       // Ungültige Aktion (z. B. veraltete Ansicht): Zustand bleibt, die Oberfläche meldet „Zug nicht möglich“.
       // Wirft die Engine bei einem laut `legalPlays` gültigen Zug oder mit einem unerwarteten Fehler, passt der
       // Spielstand nicht zu den Daten – dann bietet die Oberfläche eine neue Partie an.
-      const incompatible = !(error instanceof RuleError) || !this.fitsData(this.state) || this.isLegal(action);
-      console.warn(incompatible ? 'Spielstand passt nicht zu den Spieldaten:' : 'Aktion abgelehnt:', error);
+      const check = validateState(this.data, this.state);
+      const incompatible = !(error instanceof RuleError) || !check.ok || this.isLegal(action);
+      if (!check.ok) console.warn('Spielstand passt nicht zu den Spieldaten:', check.reason, error);
+      else console.warn(incompatible ? 'Engine-Fehler bei gültigem Zug:' : 'Aktion abgelehnt:', error);
       this.emitNotices([{ type: incompatible ? 'incompatible' : 'rejected' }]);
       return;
     }
     this.state = result.state;
-    if (this.state.phase === 'over') this.record();
+    // Partie-Ende meldet die Engine mit `gameOver` (genau einmal, im Kollaps-Schritt) ⇒ ins Buch eintragen.
+    if (result.events.some((e) => e.type === 'gameOver')) this.record();
     this.persist();
     this.publish(this.toNotices(result.events));
   }
@@ -162,13 +173,37 @@ export class EngineClient implements GameClient {
     return this.result;
   }
 
-  newGame(): void {
+  newGame(deck?: readonly string[]): void {
     this.store.clear();
-    this.seed = this.freshSeed(true);
+    this.seed = this.freshSeed();
     this.result = null;
-    this.state = newGame(this.data, { seed: this.seed, book: this.book });
+    this.state = this.startState(deck);
     this.persist();
     this.publish([]);
+  }
+
+  deckSetup(): DeckSetup {
+    const lc = this.locale;
+    const { minSize: min, maxSize: max, maxCopies } = this.data.config.deck;
+    const pool = cardPool(this.data, this.book).flatMap((id) => {
+      const card = this.data.cards.get(id);
+      if (!card) return [];
+      return [
+        {
+          id,
+          name: card.name[lc],
+          category: card.category,
+          cost: card.cost,
+          text: cardText(this.data, card, lc),
+          short: cardShort(this.data, card, lc),
+        },
+      ];
+    });
+    return { pool, standard: [...this.data.config.starterDeck], rules: { min, max, maxCopies } };
+  }
+
+  checkDeck(deck: readonly string[]): DeckIssue[] {
+    return validateDeck(this.data, this.book, deck);
   }
 
   // --- intern -------------------------------------------------------------------------------------
@@ -187,12 +222,20 @@ export class EngineClient implements GameClient {
     };
   }
 
+  /** Startzustand mit dem gewünschten Deck; ist es (laut Engine) ungültig, mit dem Standarddeck. */
+  private startState(deck: readonly string[] | null | undefined): GameState {
+    const usable = deck && this.checkDeck(deck).length === 0 ? [...deck] : undefined;
+    if (deck && !usable) console.warn('Startdeck ungültig, Standarddeck wird benutzt:', this.checkDeck(deck));
+    return newGame(this.data, { seed: this.seed, book: this.book, deck: usable });
+  }
+
   private resume(): { seed: string; state: GameState; view: GameView } | null {
     const saved = this.store.load();
     if (!saved) return null;
     try {
       // Passt der Spielstand nicht mehr zu den Daten (neue Version), verwerfen statt abstürzen.
-      if (!this.fitsData(saved.state)) throw new Error('Spielstand benutzt unbekannte Daten-Ids.');
+      const check = validateState(this.data, saved.state);
+      if (!check.ok) throw new Error(check.reason);
       return { seed: saved.seed, state: saved.state, view: view(this.data, saved.state, this.locale) };
     } catch (error) {
       console.warn('Gespeicherter Spielstand passt nicht zu den Spieldaten und wird verworfen.', error);
@@ -201,8 +244,9 @@ export class EngineClient implements GameClient {
     }
   }
 
-  private freshSeed(ignoreFixed = false): string {
-    if (this.fixedSeed !== undefined && !ignoreFixed) return this.fixedSeed;
+  /** `?seed=` gilt für jede neue Partie (auch „Neue Partie“), sonst ein zufälliger Seed. */
+  private freshSeed(): string {
+    if (this.fixedSeed !== undefined) return this.fixedSeed;
     const buf = new Uint32Array(1);
     crypto.getRandomValues(buf);
     return buf[0]!.toString(36);
@@ -220,20 +264,6 @@ export class EngineClient implements GameClient {
 
   private emitNotices(notices: Notice[]): void {
     if (notices.length > 0) for (const listener of this.noticeListeners) listener(notices);
-  }
-
-  /** Grobe Prüfung, ob ein Zustand nur Karten, Geografien, Formen und Arten der geladenen Daten benutzt. */
-  private fitsData(state: GameState): boolean {
-    const d = this.data;
-    return (
-      [...state.hand, ...state.drawPile, ...state.discardPile].every((c) => d.cards.has(c.card)) &&
-      state.zones.every(
-        (z) =>
-          d.geographies.has(z.geography) &&
-          d.forms.has(z.form) &&
-          Object.keys(z.populations).every((s) => d.species.has(s)),
-      )
-    );
   }
 
   /** Ist die Aktion laut Engine gültig? Wirft die Prüfung selbst, gilt der Zustand als unpassend. */
@@ -378,6 +408,7 @@ export class EngineClient implements GameClient {
             });
           break;
         }
+        case 'gameOver': // Partie-Ende: Buch-Eintrag in dispatch, Meldung kommt über 'collapsed'
         case 'scored':
         case 'cardDrawn':
         case 'deckReshuffled':

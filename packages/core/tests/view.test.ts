@@ -250,7 +250,7 @@ describe('Bedingungen und Texte', () => {
     const d = dataWith((r) => {
       r.config.texts['effect.draw'] = { de: 'ziehe {x}', en: 'draw {x}' };
     });
-    expect(cardText(d, d.cards.get('inspiration')!, 'de')).toBe('ziehe {x}');
+    expect(cardText(d, d.cards.get('inspiration')!, 'de')).toBe('Ziehe {x}.');
     const broken = { ...data, config: { ...data.config, texts: {} } };
     expect(() => cardText(broken, data.cards.get('rain')!, 'de')).toThrow(/Textbaustein fehlt/);
   });

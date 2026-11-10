@@ -1,10 +1,23 @@
 /** Schemas des Lebens: Arten mit Stammbaum, Lebensraum, Nahrung und Gaben (Konzept 5). */
 import { z } from 'zod';
+import type { SpeciesGroup } from '../api.ts';
 import { Conditions, Id, Text } from './common.ts';
+
+export const SPECIES_GROUPS = [
+  'water',
+  'insect',
+  'amphibian',
+  'reptile',
+  'bird',
+  'mammal',
+  'human',
+] as const satisfies readonly SpeciesGroup[];
 
 export const SpeciesDef = z.strictObject({
   id: Id,
   name: Text,
+  /** Gruppe für die Darstellung (Symbol/Farbe in der Oberfläche); keine Regelwirkung. */
+  group: z.enum(SPECIES_GROUPS),
   /** Entwicklungsstufe (Konzept 5.3); zählt auch für die Wertung. */
   tier: z.number().int().positive(),
   /** Vorfahr im Stammbaum; null = Startleben, entsteht nicht durch Evolution. */

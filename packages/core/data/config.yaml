@@ -83,7 +83,7 @@ texts:
   effect.adjust: { de: '{stat} {n}', en: '{stat} {n}' }
   effect.set: { de: '{stat} auf {n}', en: '{stat} to {n}' }
   effect.restoreAll: { de: 'alle Werte zurück zum Ruhewert', en: 'all values back to rest' }
-  effect.restoreAllSteps: { de: 'alle Werte {n} Schritt zum Ruhewert', en: 'all values {n} step towards rest' }
+  effect.restoreAllSteps: { de: 'alle Werte {n} Schritt zur Ruhe', en: 'all values {n} step to rest' }
   effect.restoreStat: { de: '{stat} zurück zum Ruhewert', en: '{stat} back to rest' }
   effect.restoreStatSteps: { de: '{stat} {n} Schritt zum Ruhewert', en: '{stat} {n} step towards rest' }
   effect.transfer: { de: 'bis zu {n} {stat} fließen als {into} ab', en: 'up to {n} {stat} flow off as {into}' }
@@ -118,10 +118,27 @@ texts:
   cond.not: { de: 'nicht ({conds})', en: 'not ({conds})' }
   join.and: { de: ' und ', en: ' and ' }
   join.or: { de: ' oder ', en: ' or ' }
-  join.list: { de: '. ', en: '. ' }
-  trigger: { de: 'Wenn {conds}: {icon} {name} – {effects}', en: 'If {conds}: {icon} {name} – {effects}' }
+  # Kartentext: Sätze (Wirkungen, Wahl, Schwellen, Bedingung als Zusatz)
+  join.list: { de: ' ', en: ' ' }
+  join.effects: { de: ', ', en: ', ' }
+  join.req: { de: ', ', en: ', ' }
+  sentence: { de: '{text}.', en: '{text}.' }
+  trigger: { de: '{icon} {name} bei {conds}: {effects}', en: '{icon} {name} if {conds}: {effects}' }
+  trigger.always: { de: '{icon} {name}: {effects}', en: '{icon} {name}: {effects}' }
   trigger.disturbance: { de: '{text} (Störung)', en: '{text} (disturbance)' }
-  slot.when: { de: 'Nur {conds}: {text}', en: 'Only {conds}: {text}' }
+  at.neighbor: { de: '{text} nebenan', en: '{text} next door' }
+  # Bedingung eines Ziels: „Nur für Fluss oder Küste“, „Nur wo Fisch lebt, mit Nachbarzone Fluss“
+  req: { de: 'Nur {req}', en: 'Only {req}' }
+  req.on: { de: 'für {geos}', en: 'on {geos}' }
+  req.where: { de: 'wo {conds}', en: 'where {conds}' }
+  req.lives: { de: 'wo {species} lebt', en: 'where {species} lives' }
+  req.nextTo: { de: 'mit Nachbarzone {geos}', en: 'next to {geos}' }
+  req.nextToWhere: { de: 'neben einer Zone mit {conds}', en: 'next to a zone with {conds}' }
+  req.slot: { de: '{slot} {req}', en: '{slot} {req}' }
+  # Kurztext der Handkarte (CardView.short): Reichweite als ein Wort
+  short.scope.neighbors: { de: '{text} nebenan', en: '{text} next door' }
+  short.scope.area: { de: '{text} ringsum', en: '{text} all around' }
+  short.scope.all: { de: '{text} überall', en: '{text} everywhere' }
   slot.zone: { de: 'Zone', en: 'Zone' }
   slot.neighbor: { de: 'Nachbarzone', en: 'Neighbouring zone' }
   slot.species: { de: 'Art', en: 'Species' }

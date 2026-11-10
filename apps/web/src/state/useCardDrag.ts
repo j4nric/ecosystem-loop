@@ -1,12 +1,16 @@
-import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from 'react';
 import type { CardView } from '@core/api';
 import type { GameClient } from '../client/index.ts';
+import { canDrag, dropZone, LONG_PRESS_MS, movedBeyond } from '../logic/targeting.ts';
 import type { ZonePicker } from '../scene/registry.ts';
 import { haptic } from './motion.ts';
-import { isZoneSlot } from './useTargeting.ts';
-
-/** Ab dieser Strecke (px) wird aus einem Antippen ein Ziehen. */
-const DRAG_START_PX = 12;
 
 export interface DragState {
   card: CardView;
@@ -31,14 +35,17 @@ interface Options {
   onStart: () => void;
   /** Loslassen auf gültiger Zone. */
   onDrop: (card: CardView, zoneId: string) => void;
+  /** Langer Druck ohne Ziehen: vollen Kartentext zeigen. */
+  onLongPress: (card: CardView) => void;
 }
 
 /**
  * Karte aus der Hand auf eine Zone ziehen (Pointer-Events mit Pointer-Capture). Kleine Bewegungen bleiben
- * ein Antippen; erst ab `DRAG_START_PX` beginnt das Ziehen. Die Geisterkarte folgt dem Finger direkt über
- * ihr DOM-Element (kein React-Rendern pro Bewegung); nur ein Zonenwechsel unter dem Finger rendert neu.
+ * ein Antippen; erst ab `DRAG_START_PX` beginnt das Ziehen. Hält der Finger still (`LONG_PRESS_MS`), zeigt die
+ * App die Kartendetails. Die Geisterkarte folgt dem Finger direkt über ihr DOM-Element (kein React-Rendern pro
+ * Bewegung); nur ein Zonenwechsel unter dem Finger rendert neu.
  */
-export function useCardDrag({ client, pickerRef, onStart, onDrop }: Options) {
+export function useCardDrag({ client, pickerRef, onStart, onDrop, onLongPress }: Options) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const pending = useRef<Pending | null>(null);
   const ghost = useRef<HTMLDivElement | null>(null);
@@ -46,6 +53,21 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop }: Options) {
   const hover = useRef<string | null>(null);
   const suppressClick = useRef(false);
   const frame = useRef(0);
+  const pressTimer = useRef(0);
+
+  const clearPress = useCallback(() => {
+    window.clearTimeout(pressTimer.current);
+    pressTimer.current = 0;
+  }, []);
+
+  // Laufenden Frame und Haltetimer beim Unmount abbrechen.
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(frame.current);
+      window.clearTimeout(pressTimer.current);
+    },
+    [],
+  );
 
   const placeGhost = useCallback(() => {
     const el = ghost.current;
@@ -61,11 +83,10 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop }: Options) {
     [placeGhost],
   );
 
-  /** Zone unter dem Finger bestimmen – nur, wenn der Finger über der Szene liegt (nicht über Dock oder HUD). */
+  /** Zone unter dem Finger – nur, wenn der Finger über der Szene liegt (nicht über Dock oder HUD). */
   const zoneAt = useCallback(
     (x: number, y: number): string | null => {
-      const under = document.elementFromPoint(x, y);
-      if (!under || !(under instanceof HTMLCanvasElement || under.closest('.zone-labels'))) return null;
+      if (!(document.elementFromPoint(x, y) instanceof HTMLCanvasElement)) return null;
       return pickerRef.current?.(x, y) ?? null;
     },
     [pickerRef],
@@ -73,21 +94,33 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop }: Options) {
 
   const end = useCallback(() => {
     cancelAnimationFrame(frame.current);
+    clearPress();
     pending.current = null;
     hover.current = null;
     setDrag(null);
-  }, []);
+  }, [clearPress]);
 
-  const onPointerDown = useCallback((card: CardView, e: ReactPointerEvent<HTMLElement>) => {
-    if (!card.playable || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    suppressClick.current = false;
-    pending.current = { pointerId: e.pointerId, card, x: e.clientX, y: e.clientY, dragging: false };
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      // ältere Browser: ohne Capture weiter
-    }
-  }, []);
+  const onPointerDown = useCallback(
+    (card: CardView, e: ReactPointerEvent<HTMLElement>) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      suppressClick.current = false;
+      pending.current = { pointerId: e.pointerId, card, x: e.clientX, y: e.clientY, dragging: false };
+      clearPress();
+      pressTimer.current = window.setTimeout(() => {
+        if (pending.current?.card.uid !== card.uid || pending.current.dragging) return;
+        pending.current = null;
+        suppressClick.current = true; // das folgende click gehört zum langen Druck
+        haptic(10);
+        onLongPress(card);
+      }, LONG_PRESS_MS);
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // ältere Browser: ohne Capture weiter
+      }
+    },
+    [clearPress, onLongPress],
+  );
 
   const onPointerMove = useCallback(
     (e: ReactPointerEvent<HTMLElement>) => {
@@ -95,9 +128,9 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop }: Options) {
       if (!p || p.pointerId !== e.pointerId) return;
       pos.current = { x: e.clientX, y: e.clientY };
       if (!p.dragging) {
-        if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < DRAG_START_PX) return;
-        const first = p.card.slots[0];
-        if (!first || !isZoneSlot(first.kind)) return; // nur Karten mit Zonenziel lassen sich ziehen
+        if (!movedBeyond(p, pos.current)) return;
+        clearPress();
+        if (!canDrag(p.card)) return; // nur spielbare Karten mit Zonenziel lassen sich ziehen
         p.dragging = true;
         onStart();
         haptic(8);
@@ -113,28 +146,28 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop }: Options) {
         setDrag((d) => (d ? { ...d, zone } : d));
       });
     },
-    [client, onStart, placeGhost, zoneAt],
+    [client, clearPress, onStart, placeGhost, zoneAt],
   );
 
   const onPointerUp = useCallback(
     (e: ReactPointerEvent<HTMLElement>) => {
       const p = pending.current;
       if (!p || p.pointerId !== e.pointerId) return;
+      clearPress();
       if (!p.dragging) {
         pending.current = null;
         return; // war ein Antippen – das folgende click übernimmt
       }
       suppressClick.current = true;
-      const zone = zoneAt(e.clientX, e.clientY);
-      const valid = zone !== null && client.legalTargets(p.card.uid, {}).includes(zone);
+      const zone = dropZone(zoneAt(e.clientX, e.clientY), client.legalTargets(p.card.uid, {}));
       const card = p.card;
       end();
-      if (valid) {
+      if (zone !== null) {
         haptic(15);
         onDrop(card, zone);
       }
     },
-    [client, end, onDrop, zoneAt],
+    [client, clearPress, end, onDrop, zoneAt],
   );
 
   const onPointerCancel = useCallback(
@@ -146,7 +179,7 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop }: Options) {
     [end],
   );
 
-  /** Für onClick der Karte: true, wenn der Klick zu einem Ziehen gehörte und ignoriert werden soll. */
+  /** Für onClick der Karte: true, wenn der Klick zu einem Ziehen oder langen Druck gehörte und ignoriert wird. */
   const consumeClick = useCallback(() => {
     const was = suppressClick.current;
     suppressClick.current = false;

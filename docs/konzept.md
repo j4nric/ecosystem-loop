@@ -346,3 +346,71 @@ Progression bedeutet früheren Zugang zu Werkzeugen, nicht mehr Macht.
 ## 13. Fahrplan
 
 Siehe [Entwicklungsplan](entwicklungsplan.md).
+
+## Anhang: Umgesetzte Auslegungen
+
+Wo das Konzept offen oder mehrdeutig ist, hat die Umsetzung eine Auslegung gewählt. Sie sind im Code und in den
+Daten mit `AUSLEGUNG:` markiert und hier gesammelt (Stand: Phase 5). Sie gelten, bis der Inhaber anders
+entscheidet; Zahlen bleiben Platzhalter bis Phase 6.
+
+**Kap. 3 – Ablauf**
+
+- Reihenfolge der Bilanz: erst Wertung, dann Harmonie – auch die Runde des Kollapses bringt noch Punkte.
+- Die Vorschau entsteht am Ende der Bilanz: Das Ereignis für die nächste Runde wird ausgelost und ist während
+  der Eingriffe sichtbar. Es tritt in der Natur-Phase direkt nach der Jahreszeit ein.
+- Ohne Schöpfungsbuch (Tests, Bots, Konsole) prüft die Engine beim Startdeck nur Größe, Kopien und bekannte
+  Karten, nicht den freigeschalteten Pool.
+
+**Kap. 4 – Welt**
+
+- Ein Wert, den eine Geografie nicht hat (z. B. Boden im Wald), erfüllt keine Wert-Bedingung.
+- Kopplungen, die Werte übertragen (Schneeschmelze): Es wandert höchstens, was die Quelle hat; was im Ziel über
+  die Skala hinausgeht, geht verloren – ein voller Fluss läuft dann über (Hochwasser).
+- Eine Störungsform (Hochwasser) stört ihre eigene Zone in jeder Runde, in der sie besteht. Die Nachbarn trifft
+  sie über die Kopplung „Hochwasser“, nicht als Störung.
+- Zonenstufe: Sie fällt pro Runde höchstens um 1, auch wenn mehrere Gründe zusammenkommen. Die Runde des
+  Abstiegs zählt nicht zur Serie; die 3 Runden für den Aufstieg beginnen danach neu.
+- „Urwald – alle Waldarten“ = jede Art, die in einer anderen Waldform lebt.
+
+**Kap. 5 – Leben**
+
+- Konkurrenz um dieselbe Nahrung wird der Reihe nach aufgelöst: Zone für Zone, darin niedrige Stufen zuerst.
+- Räuber jagen auch in Nachbarzonen (Revier), weil viele Räuber in anderen Formen leben als ihre Beute.
+- Satte Tiere verbrauchen ihre Nahrung nicht dauerhaft. Erst bei Knappheit fressen hungrige Tiere sie leer
+  (Überweidung: Vegetation und Boden −1, bzw. Totholz −1; zu viele Räuber: Beute −1).
+- Satt, aber außerhalb des Lebensraums: kein Wachstum; nur in verödeter Form schrumpft der Bestand.
+- Wanderung „in eine passende Nachbarzone“ = deren Form gehört zum Lebensraum und dort ist noch Platz; bei
+  Gleichstand gilt die Reihenfolge der Nachbarn in den Daten.
+- Passt die Form der Ursprungszone nicht zur neuen Art (Frosch → Echse, Primat → Mensch), entsteht sie in einer
+  passenden Nachbarzone („Landgang“), bei mehreren in der mit dem kleinsten Bestand.
+- Das Startleben gilt als „erstmals entstanden“: Seine Gaben kommen gleich zu Beginn ins Deck.
+- Stammbaum: Käfer fressen Totholz, wo es keins gibt (Flachland), Pflanzenreste (Vegetation). Der Mensch
+  „frisst alles“ = Hirsch, Kleinsäuger, Fisch, dann Vegetation. „Am Fluss“ = der Fluss selbst oder eine
+  Nachbarzone des Flusses. Menschen jagen alle Pflanzenfresser außer Bienen.
+- Karten: _Laichzug_ „flussauf- oder flussabwärts“ = in eine Nachbarzone mit Wasser (Fluss oder Küste).
+  _Jagd_ trifft Pflanzenfresser = Arten, die laut 5.3 Vegetation fressen (Käfer und Mensch zählen nicht).
+  _Feuer_ = gezielte Brandrodung wie die Feuer-Schwelle des Gewitters (Störung), nur wo etwas wächst.
+  _Ackerbau_ „Vegetation fest +2“ = Vegetation +2 ohne Schwelle, dazu Boden −1.
+
+**Kap. 6 – Odem und Karten**
+
+- Startodem = Zufluss bei Start-Harmonie: 1 + ⌊60 / 25⌋ = 3.
+
+**Kap. 7 und 8 – Harmonie und Störungen**
+
+- Der „Harmonie-Einbruch“ einer gezielten Störung (Kap. 8) ist ein eigener Beitrag je gestörter Zone und Runde
+  (Platzhalter −2), da Kap. 7 dafür keine Zahl nennt.
+
+**Kap. 9 – Ereignisse und Jahreszeiten**
+
+- Seuche, Sturmflut, Heuschrecken und Meteorit stören die getroffenen Zonen (zählt für Selektionsdruck,
+  Zonenstufe und Harmonie). Hitzesommer und Kälteeinbruch treffen alle Zonen mild und stören nicht.
+- Die Seuche trifft die Population, die beim Eintreten am dichtesten ist; angekündigt wird sie ohne Zone.
+- Meteorit, „starker Selektionsdruck“ = die Zone und alle Nachbarn gelten als gestört.
+- _Stille_ „nächstes Ereignis entfällt“: Ist gerade keins angekündigt, entfällt das nächste ausgeloste.
+  Verschieben (_Späherblick_) ohne angekündigtes Ereignis bleibt wirkungslos.
+- Herbst „Totholz +1, Vegetation −1 im Wald“: beides nur im Wald (Totholz gibt es nur dort).
+
+**App (Darstellung)**
+
+- Figuren richten sich nach der Arten-Gruppe aus `species.yaml` (`group`); Frösche sind Amphibien mit eigener Figur.

@@ -2,7 +2,7 @@
 import type { CardView, GameView, Locale, ZoneView } from './api.ts';
 import { applyEffect } from './cards/effects.ts';
 import { firingTriggers, getCard } from './cards/play.ts';
-import { cardText, slotLabel } from './cards/text.ts';
+import { cardShort, cardText, slotLabel } from './cards/text.ts';
 import { forecastView } from './describe.ts';
 import { canEndTurn, legalPlays } from './turn.ts';
 import { runNature } from './nature.ts';
@@ -80,7 +80,13 @@ function zoneView(data: GameData, state: GameState, zone: ZoneState, locale: Loc
     tags: [...zone.tags],
     populations: [...data.species.values()]
       .filter((sp) => populationOf(zone, sp.id) > 0)
-      .map((sp) => ({ species: sp.id, name: sp.name[locale], tier: sp.tier, count: populationOf(zone, sp.id) })),
+      .map((sp) => ({
+        species: sp.id,
+        name: sp.name[locale],
+        tier: sp.tier,
+        count: populationOf(zone, sp.id),
+        group: sp.group,
+      })),
     warnings: warnings(data, state, zone, locale),
   };
 }
@@ -97,6 +103,7 @@ export function view(data: GameData, state: GameState, locale: Locale = 'de'): G
       category: card.category,
       cost: card.cost,
       text: cardText(data, card, locale),
+      short: cardShort(data, card, locale),
       playable: playable.has(inst.uid),
       slots: card.slots.map((s) => {
         const slot: CardView['slots'][number] = { id: s.id, kind: s.kind, label: slotLabel(data, s, locale) };

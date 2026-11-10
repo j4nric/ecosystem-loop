@@ -287,8 +287,8 @@ describe('Ansicht mit Leben', () => {
     s.species.deer = { since: 3, extinct: 5 };
     const v = view(data, s, 'en');
     expect(v.zones.find((z) => z.id === 'river')!.populations).toEqual([
-      { species: 'plankton', name: 'Plankton', tier: 1, count: 3 },
-      { species: 'fish', name: 'Fish', tier: 2, count: 2 },
+      { species: 'plankton', name: 'Plankton', tier: 1, count: 3, group: 'water' },
+      { species: 'fish', name: 'Fish', tier: 2, count: 2, group: 'water' },
     ]);
     expect(v.highestTier).toBe(6);
     expect(view(data, bare()).highestTier).toBe(0);

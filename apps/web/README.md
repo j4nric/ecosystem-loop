@@ -8,20 +8,47 @@ Die App spricht mit der Engine nur über `@being-god/core` (`api.ts`: `GameView`
 
 ## Starten
 
+Vom Repo-Wurzelverzeichnis aus:
+
 ```sh
-npm run -w apps/web dev        # Entwicklungsserver (auch im WLAN erreichbar, fürs iPhone)
-npm run -w apps/web build      # statischer Build nach apps/web/dist (relative Pfade)
+npm run dev                    # Entwicklungsserver (vite --host, auch im WLAN erreichbar, fürs iPhone)
+npm run build                  # Typecheck + statischer Build nach apps/web/dist (relative Pfade)
 npm run -w apps/web preview    # Build lokal ansehen
 npm run -w apps/web typecheck
 ```
 
+Deploy: Nach jedem Merge auf `main` baut `.github/workflows/deploy.yml` die App und kopiert `dist` auf den
+vServer, siehe [docs/deploy.md](../../docs/deploy.md). Icons und Manifest (Home-Bildschirm) liegen in `public/`.
+
+## Aufbau
+
+```
+src/client/   GameClient (Schnittstelle), EngineClient, MockClient, SaveStore/BookStore/DeckStore, gameData.ts, index.ts
+src/logic/    targeting (Zielwahl), deck (Startdeck) – reine Funktionen
+src/state/    useGame, useTargeting (Zielwahl), useCardDrag (Ziehen), motion, tutorialStore
+src/scene/    IslandScene, ZoneTile, Instanced (Figuren), ZoneLabels, layout, palette, props, registry
+src/ui/       Hud, Hand, CardDetail, PlayPreview, ZoneSheet, ChoiceChips, DragOverlay, Toasts, GameOver, Book,
+              DeckPicker, Help, Tutorial
+src/i18n/     de.ts, en.ts, locale.ts – Texte; Standard Englisch, Deutsch auf deutschen Geräten
+tests/        EngineClient, SaveStore, Buch-Eintrag, deck, targeting, locale
+```
+
 Die App spricht über `src/client/GameClient.ts`. Welche Implementierung läuft, entscheidet allein
 `src/client/index.ts`: standardmäßig `EngineClient` (echte Engine; die YAML-Daten aus `packages/core/data`
-werden zur Build-Zeit eingebunden und mit `buildGameData` geprüft). Der Spielstand liegt über `SaveStore`
-in `localStorage` und wird beim Start fortgesetzt.
+werden zur Build-Zeit eingebunden und mit `buildGameData` geprüft). `EngineClient` übersetzt die `GameEvent`s
+der Engine in `Notice`s mit lokalisierten Namen; den Satz bildet `src/i18n`. Der Spielstand liegt über
+`SaveStore` in `localStorage` (`being-god.save.v1`) und wird beim Start fortgesetzt; passt er nicht mehr zu den
+Spieldaten, bietet die App eine neue Partie an.
 
-URL-Schalter: `?mock` (Vorschau-Daten ohne Engine), `?seed=abc` (fester Seed für neue Partien),
-`?nosave` (nichts speichern), `?lang=en` (Englisch), `?tutorial` / `?notutorial` (Einführung erzwingen bzw. nie zeigen).
+URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
+
+| Schalter                    | Wirkung                                                         |
+| --------------------------- | --------------------------------------------------------------- |
+| `?mock`                     | `MockClient`: Vorschau-Daten ohne Engine und ohne Spielregeln   |
+| `?seed=abc`                 | fester Seed für neue Partien                                    |
+| `?nosave`                   | Spielstand und Schöpfungsbuch nur im Speicher, nichts speichern |
+| `?lang=en` / `?lang=de`     | Sprache erzwingen (sonst Gerätesprache, Fallback Deutsch)       |
+| `?tutorial` / `?notutorial` | Einführung erzwingen bzw. nie zeigen                            |
 
 ## Bedienung (Phase 5)
 

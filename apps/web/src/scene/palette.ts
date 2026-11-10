@@ -1,4 +1,4 @@
-import type { FormKind } from '@core/api';
+import type { FormKind, SpeciesGroup } from '@core/api';
 
 /** Farbstimmung im Stil des Referenzbilds: weiche, leicht entsättigte Low-Poly-Töne. */
 export const COLORS = {
@@ -31,44 +31,48 @@ export const SEASON_LIGHT: Record<string, { sun: string; sky: string }> = {
   winter: { sun: '#e0e9ff', sky: '#eef2ff' },
 };
 
-/** Darstellungsgruppen der Arten (nur Optik; die Regeln kennen keine Gruppen). */
-export type SpeciesGroup = 'water' | 'insect' | 'reptile' | 'bird' | 'mammal' | 'human';
-export const SPECIES_GROUPS: SpeciesGroup[] = ['water', 'insect', 'reptile', 'bird', 'mammal', 'human'];
+/** Darstellungsgruppen der Arten kommen aus der Engine (`populations[].group`, species.yaml → group). */
+export type { SpeciesGroup };
+export const SPECIES_GROUPS: SpeciesGroup[] = ['water', 'insect', 'amphibian', 'reptile', 'bird', 'mammal', 'human'];
 
 export const GROUP_COLORS: Record<SpeciesGroup, string> = {
   water: '#3f8fd0',
   insect: '#e7b43c',
-  reptile: '#5aa85a',
+  amphibian: '#4fae5a',
+  reptile: '#9ab53f',
   bird: '#f2f2f6',
   mammal: '#a8714a',
   human: '#e2876a',
 };
 
-/**
- * Gruppe und Farbe je bekannter Art. Unbekannte Arten fallen über ihre Stufe in eine Gruppe.
- * AUSLEGUNG: Frösche zählen optisch zu „Reptil“ (Amphibien und Reptilien).
- */
-const SPECIES_STYLE: Record<string, { group: SpeciesGroup; color: string }> = {
-  plankton: { group: 'water', color: '#a6e3ea' },
-  fish: { group: 'water', color: '#3f8fd0' },
-  beetle: { group: 'insect', color: '#5b4a78' },
-  bee: { group: 'insect', color: '#f2c230' },
-  frog: { group: 'reptile', color: '#4fae5a' },
-  lizard: { group: 'reptile', color: '#9ab53f' },
-  small_mammal: { group: 'mammal', color: '#c09062' },
-  bird: { group: 'bird', color: '#f4f4f8' },
-  deer: { group: 'mammal', color: '#a0603a' },
-  wolf: { group: 'mammal', color: '#8d8f9c' },
-  raptor: { group: 'bird', color: '#7d5b45' },
-  primate: { group: 'mammal', color: '#6b4a35' },
-  human: { group: 'human', color: '#e2876a' },
+/** Nur Optik: eigene Farbtöne einzelner Arten innerhalb ihrer Gruppe. Unbekannte Arten nehmen die Gruppenfarbe. */
+const SPECIES_COLORS: Record<string, string> = {
+  plankton: '#a6e3ea',
+  fish: '#3f8fd0',
+  beetle: '#5b4a78',
+  bee: '#f2c230',
+  frog: '#4fae5a',
+  lizard: '#9ab53f',
+  small_mammal: '#c09062',
+  bird: '#f4f4f8',
+  deer: '#a0603a',
+  wolf: '#8d8f9c',
+  raptor: '#7d5b45',
+  primate: '#6b4a35',
+  human: '#e2876a',
 };
 
-export function speciesStyle(species: string, tier: number): { group: SpeciesGroup; color: string } {
-  const known = SPECIES_STYLE[species];
-  if (known) return known;
-  const group: SpeciesGroup = tier <= 1 ? 'insect' : tier <= 4 ? 'reptile' : tier <= 6 ? 'mammal' : 'human';
-  return { group, color: GROUP_COLORS[group] };
+/**
+ * Gruppe und Farbe einer Art. Die Gruppe liefert die Engine; fehlt sie (ältere Daten, Vorschau-Client),
+ * ordnet die Stufe grob zu.
+ */
+export function speciesStyle(pop: { species: string; tier: number; group?: SpeciesGroup }): {
+  group: SpeciesGroup;
+  color: string;
+} {
+  const t = pop.tier;
+  const group: SpeciesGroup = pop.group ?? (t <= 1 ? 'insect' : t <= 4 ? 'reptile' : t <= 6 ? 'mammal' : 'human');
+  return { group, color: SPECIES_COLORS[pop.species] ?? GROUP_COLORS[group] };
 }
 
 const TOP: Record<string, Record<FormKind, string>> = {

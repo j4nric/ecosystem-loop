@@ -20,6 +20,7 @@ export const GEO = {
   // Figuren der Arten (je Gruppe eine Geometrie ⇒ ein Draw Call je Gruppe)
   fish: new ConeGeometry(0.045, 0.17, 4, 1),
   insect: new IcosahedronGeometry(0.06, 0),
+  amphibian: new IcosahedronGeometry(0.07, 0),
   reptile: new BoxGeometry(0.19, 0.05, 0.075),
   bird: new ConeGeometry(0.11, 0.05, 3, 1),
   mammal: new BoxGeometry(0.17, 0.09, 0.08),
@@ -38,3 +39,5 @@ GEO.fish.rotateZ(-Math.PI / 2);
 GEO.bird.rotateZ(-Math.PI / 2);
 GEO.bird.rotateX(Math.PI / 2);
 GEO.beam.translate(0, 1.2, 0);
+// Amphibie: gedrungener, flacher Körper (Kopf als eigene Instanz vorn oben)
+GEO.amphibian.scale(1, 0.55, 0.9);

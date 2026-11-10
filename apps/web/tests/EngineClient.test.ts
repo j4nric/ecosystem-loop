@@ -1,6 +1,6 @@
 /** EngineClient: Partie, Aktionen, Fortsetzen, Verwerfen, Ablehnung und Meldungen – ohne DOM. */
-import { beforeEach, describe, expect, it } from 'vitest';
-import { legalPlays, type GameEvent, type GameState } from '@being-god/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { legalPlays, validateState, type GameEvent, type GameState } from '@being-god/core';
 import { loadGameData } from '@being-god/core/node';
 import { EngineClient } from '../src/client/EngineClient.ts';
 import type { Notice } from '../src/client/GameClient.ts';
@@ -117,6 +117,33 @@ describe('EngineClient', () => {
     shifting.cards.delete(savedState(store).hand.find((c) => c.uid === play.uid)!.card);
     drifting.dispatch({ type: 'play', uid: play.uid, targets: play.targets });
     expect(local).toEqual([[{ type: 'incompatible' }]]);
+  });
+
+  it('prüft gespeicherte Stände mit validateState und meldet den Grund in der Konsole', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const store = new MemorySaveStore();
+    const broken = structuredClone(savedState(ctx.store));
+    broken.harmony = -5; // Wertebereich – die frühere Id-Prüfung der App sah das nicht
+    store.save({ version: 1, seed: 'kaputt', savedAt: 0, state: broken });
+    const check = validateState(data, broken);
+    expect(check.ok).toBe(false);
+    const client = new EngineClient({ data, locale: 'de', store, seed: 'frisch' });
+    expect(client.getView().harmony.value).toBeGreaterThan(0);
+    expect(store.load()?.seed).toBe('frisch');
+    const logged = warn.mock.calls.flat().map((x) => (x instanceof Error ? x.message : String(x)));
+    expect(logged.some((x) => !check.ok && x.includes(check.reason))).toBe(true);
+    warn.mockRestore();
+  });
+
+  it('nutzt einen festen Seed (?seed=) auch für „Neue Partie“', () => {
+    const store = new MemorySaveStore();
+    const client = new EngineClient({ data, locale: 'de', store, seed: 'fest' });
+    const first = client.getView();
+    const play = legalPlays(data, savedState(store))[0]!;
+    client.dispatch({ type: 'play', uid: play.uid, targets: play.targets });
+    client.newGame();
+    expect(store.load()?.seed).toBe('fest');
+    expect(client.getView()).toEqual(first);
   });
 
   it('neue Partie setzt den Stand zurück', () => {

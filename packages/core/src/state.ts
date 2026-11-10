@@ -108,6 +108,11 @@ export type GameEvent =
       parts: { source: string; zone: string | null; amount: number }[];
     }
   | { type: 'collapsed'; round: number }
+  /**
+   * Die Partie ist vorbei (letztes Ereignis eines Schritts, der zum Kollaps führt): letzte Runde und
+   * Endpunktzahl. Oberflächen rufen daraufhin genau einmal `recordGame` mit dem Zustand des Schritts auf.
+   */
+  | { type: 'gameOver'; round: number; score: number }
   /** Bestand einer Art in einer Zone hat sich geändert. cause: growth, hunger, degraded, overhunted, hunted,
    *  migration, evolution oder card:<id> bzw. trigger:<id>. */
   | { type: 'populationChanged'; zone: string; species: string; from: number; to: number; cause: string }

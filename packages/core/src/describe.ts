@@ -107,6 +107,7 @@ export function describeEvent(data: GameData, event: GameEvent, locale: Locale):
     case 'cardDrawn':
     case 'couplingApplied':
     case 'disturbance':
+    case 'gameOver': // Der Kollaps ist schon gemeldet; Endstand zeigt die Oberfläche selbst.
     case 'harmonyChanged':
     case 'populationChanged':
     case 'scored':
