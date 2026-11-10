@@ -8,6 +8,7 @@ import { lifeParams } from './population.ts';
 import { breathParams } from './rules/breath.ts';
 import { evolutionParams } from './rules/evolution.ts';
 import { RULES } from './rules/index.ts';
+import { idealTargetOf } from './targets.ts';
 import {
   CardsFile,
   Config,
@@ -133,7 +134,12 @@ export function buildGameData(raw: RawData): GameData {
     scenarios: indexById('Szenario', scenarios.scenarios, problems),
     events: indexById('Ereignis', events.events, problems),
     meta,
+    ideals: new Map(),
   };
+  for (const g of geo.geographies) {
+    const ideal = idealTargetOf(g, config.scale);
+    if (ideal) data.ideals.set(g.id, ideal);
+  }
   indexById('Jahreszeit', seasons.seasons, problems);
   indexById('Kopplung', couplings.couplings, problems);
   indexById('Zone', map.zones, problems);
@@ -215,6 +221,8 @@ function checkReferences(d: GameData, p: string[]): void {
       for (const c of f.when)
         if ('stat' in c && !own.has(c.stat)) p.push(`${where} Form ${f.id}: Wert ${c.stat} gibt es hier nicht`);
     }
+    const ideals = g.forms.filter((f) => f.kind === 'ideal').length;
+    if (ideals !== 1) p.push(`${where}: genau eine Idealform nötig (gefunden ${ideals})`);
     if (g.forms[g.forms.length - 1]!.when.length > 0)
       p.push(`${where}: letzte Form muss ohne Bedingungen sein („sonst“)`);
   }

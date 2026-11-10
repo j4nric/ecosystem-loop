@@ -11,3 +11,4 @@ export { cardShort, cardText, describeCondition, describeEffect } from './cards/
 export { formFor } from './rules/forms.ts';
 export { RULES, type RuleContext, type RuleModule } from './rules/index.ts';
 export * from './meta.ts';
+export * from './targets.ts';

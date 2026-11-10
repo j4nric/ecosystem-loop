@@ -41,12 +41,7 @@ export type Targets = Record<string, string>;
 export type Action =
   | { type: 'play'; uid: number; targets: Targets }
   /** Eingriffe beenden: die Natur-Phase läuft, danach beginnt die nächste Runde. */
-  | { type: 'endTurn' }
-  /**
-   * Handkarte ohne Wirkung ablegen (kostet keinen Odem, zählt nicht für den Kartenzwang).
-   * Erlaubt, solange `GameView.discardsLeft > 0` (Parameter: config.yaml → turn.discardsPerTurn).
-   */
-  | { type: 'discard'; uid: number };
+  | { type: 'endTurn' };
 
 /** Ein legaler Kartenzug. */
 export interface Play {
@@ -110,8 +105,6 @@ export interface CardView {
   /** Kurztext für die Handkarte (höchstens ~40 Zeichen): nur die Hauptwirkung und Symbole der Schwellen. */
   short?: string;
   playable: boolean;
-  /** Darf jetzt abgelegt werden (`{ type: 'discard' }`)? */
-  discardable?: boolean;
   /**
    * Ziel-Slots in Reihenfolge, damit die Oberfläche die Auswahl führen kann.
    * of = bezogener früherer Slot (neighbor: dessen Nachbar, species: Art in dessen Zone).
@@ -136,8 +129,6 @@ export interface GameView {
   discardPile: number;
   playsThisTurn: number;
   minPlays: number;
-  /** Wie viele Karten in dieser Runde noch kostenlos abgelegt werden dürfen. */
-  discardsLeft?: number;
   canEndTurn: boolean;
   /**
    * Angekündigtes Ereignis (ab Phase 3). Es tritt in der Natur-Phase dieser Runde ein (inRounds 0),

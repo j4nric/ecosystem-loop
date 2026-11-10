@@ -1,9 +1,10 @@
 /** Lesemodell für Oberflächen: GameView mit lokalisierten Texten aus den Daten. */
-import type { CardView, GameView, Locale, ZoneView } from './api.ts';
+import type { CardView, GameView, Locale, StatView, ZoneView } from './api.ts';
 import { applyEffect } from './cards/effects.ts';
 import { firingTriggers, getCard } from './cards/play.ts';
 import { cardShort, cardText, slotLabel } from './cards/text.ts';
 import { forecastView } from './describe.ts';
+import { idealDistance, targetStatus } from './targets.ts';
 import { canEndTurn, legalPlays } from './turn.ts';
 import { runNature } from './nature.ts';
 import { populationOf } from './population.ts';
@@ -63,17 +64,30 @@ export function nextBreathIncome(data: GameData, state: GameState): number {
 function zoneView(data: GameData, state: GameState, zone: ZoneState, locale: Locale): ZoneView {
   const geo = geographyOf(data, zone);
   const form = data.forms.get(zone.form)?.form;
+  const ideal = data.ideals.get(geo.id);
   return {
     id: zone.id,
     geography: geo.id,
     geographyName: geo.name[locale],
-    stats: statsOf(data, geo).map((id) => ({
-      id,
-      name: data.stats.get(id)!.name[locale],
-      value: zone.stats[id]!,
-      max: data.config.scale.max,
-    })),
+    stats: statsOf(data, geo).map((id) => {
+      const stat: StatView = {
+        id,
+        name: data.stats.get(id)!.name[locale],
+        value: zone.stats[id]!,
+        max: data.config.scale.max,
+      };
+      const range = ideal?.ranges[id];
+      if (range) stat.target = { ...range, status: targetStatus(range, stat.value) };
+      return stat;
+    }),
     form: { id: zone.form, name: form ? form.name[locale] : zone.form, kind: form?.kind ?? 'normal' },
+    ...(ideal && {
+      ideal: {
+        id: ideal.form,
+        name: data.forms.get(ideal.form)!.form.name[locale],
+        distance: idealDistance(ideal, zone.stats),
+      },
+    }),
     level: zone.level,
     levelProgress: levelProgress(data, zone),
     neighbors: [...zone.neighbors],
