@@ -1,5 +1,5 @@
 /** Ob die Einführung schon gesehen wurde – in localStorage; Fehler (privater Modus) werden geschluckt. */
-const KEY = 'being-god.tutorial.v1';
+const KEY = 'being-god.herde.tutorial.v1';
 
 export function hasSeenTutorial(): boolean {
   try {

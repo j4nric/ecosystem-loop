@@ -1,30 +1,24 @@
-import type { Locale } from '@core/api';
-import { EngineClient } from './EngineClient.ts';
-import type { GameClient } from './GameClient.ts';
+import type { Strings } from '../i18n/de.ts';
+import type { Locale } from '../i18n/locale.ts';
 import { loadGameData } from './gameData.ts';
-import { MockClient } from './MockClient.ts';
-import { LocalDeckStore, MemoryDeckStore, type DeckStore } from './DeckStore.ts';
-import { LocalBookStore, LocalSaveStore, MemoryBookStore, MemorySaveStore } from './SaveStore.ts';
+import { HerdeClient } from './HerdeClient.ts';
+import type { GameClient } from './GameClient.ts';
+import { LocalSaveStore, MemorySaveStore } from './SaveStore.ts';
 
-export type { BookView, GameClient, GameResult, Notice, PreviewView } from './GameClient.ts';
-export type { BookStore, SavedGame, SaveStore } from './SaveStore.ts';
-export type { DeckStore } from './DeckStore.ts';
+export type { Fx, GameClient, LogEntry, Notice, PlayPreview, StartupNotice, StepReport } from './GameClient.ts';
+export type { SavedGame, SaveStore } from './SaveStore.ts';
 
 /**
- * Die einzige Stelle, an der die Implementierung gewählt wird. Standard ist die echte Engine.
- * URL-Schalter zum Testen: `?mock` (Vorschau-Daten), `?seed=abc` (fester Seed für jede Partie), `?nosave` (nichts speichern).
+ * Die einzige Stelle, an der der Client entsteht. URL-Schalter zum Testen: `?seed=abc` (fester Seed für jede
+ * Partie), `?nosave` (nichts speichern).
  */
-export function createGameClient(locale: Locale): { client: GameClient; decks: DeckStore } {
+export function createGameClient(locale: Locale, strings: Strings): GameClient {
   const params = new URLSearchParams(window.location.search);
-  const decks = params.has('nosave') || params.has('mock') ? new MemoryDeckStore() : new LocalDeckStore();
-  if (params.has('mock')) return { client: new MockClient(locale), decks };
-  const client = new EngineClient({
+  return new HerdeClient({
     data: loadGameData(),
     locale,
+    strings,
     store: params.has('nosave') ? new MemorySaveStore() : new LocalSaveStore(),
-    books: params.has('nosave') ? new MemoryBookStore() : new LocalBookStore(),
     seed: params.get('seed') ?? undefined,
-    deck: decks.load(),
   });
-  return { client, decks };
 }

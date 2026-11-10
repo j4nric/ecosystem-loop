@@ -1,122 +1,102 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { Action } from '@core/api';
-import type { GameClient, Notice } from '../client/index.ts';
-import { t } from '../i18n/index.ts';
+import type { Action } from '@being-god/herde';
+import type { GameClient } from '../client/index.ts';
+import type { Tone } from '../logic/events.ts';
 
 export interface Toast {
   id: number;
   text: string;
-  tone: 'info' | 'good' | 'bad';
+  tone: Tone;
 }
 
-const TOAST_MS = 3200;
-const MAX_TOASTS = 4;
+const TOAST_MS = 3400;
+const MAX_TOASTS = 2;
+/** Pause zwischen zwei Monaten beim Abspielen (die Herde braucht etwa 0,7 s für ihren Zug). */
+export const MONTH_MS = 1000;
+export const MONTH_MS_REDUCED = 300;
 
 /**
- * Bindet einen GameClient an React: aktuelle GameView, dispatch und kurze Ereignis-Meldungen.
- * Die Meldungen kommen aus den Engine-Ereignissen des jeweiligen Schritts (`subscribeNotices`).
+ * Bindet den GameClient an React: aktuelle View, Protokoll, dispatch, kurze Meldungen und das animierte
+ * Ablaufen mehrerer Monate (`run`).
  */
-export function useGame(client: GameClient) {
-  const view = useSyncExternalStore(
-    useCallback((fn: () => void) => client.subscribe(fn), [client]),
-    () => client.getView(),
-  );
+export function useGame(client: GameClient, reducedMotion: boolean) {
+  const subscribe = useCallback((fn: () => void) => client.subscribe(fn), [client]);
+  const view = useSyncExternalStore(subscribe, () => client.getView());
+  const log = useSyncExternalStore(subscribe, () => client.getLog());
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [incompatible, setIncompatible] = useState(false);
+  const [running, setRunning] = useState(false);
   const nextId = useRef(1);
+  const timer = useRef<number | null>(null);
+  const runId = useRef(0);
 
   useEffect(() => {
     const timers = new Set<number>();
-    const unsubscribe = client.subscribeNotices((all) => {
-      if (all.some((n) => n.type === 'incompatible')) setIncompatible(true);
-      // Wertänderungen zeigt die Effekt-Schicht als aufsteigende Zahlen über der Zone, nicht als Meldung.
-      const notices = all.filter((n): n is ToastNotice => n.type !== 'incompatible' && n.type !== 'statShift');
-      if (notices.length === 0) return;
-      const fresh = notices.map((n) => ({ id: nextId.current++, ...noticeToast(n) }));
-      // Ein großer Schritt (Rundenende) verdrängt ältere Meldungen; seine wichtigsten stehen vorn.
-      setToasts((list) =>
-        fresh.length >= MAX_TOASTS ? fresh.slice(0, MAX_TOASTS) : [...list, ...fresh].slice(-MAX_TOASTS),
-      );
+    const unsubscribe = client.subscribeReports((report) => {
+      const fresh = report.notices
+        .filter((n) => n.toast)
+        .map((n) => ({ id: nextId.current++, text: n.text, tone: n.tone }));
+      if (fresh.length === 0) return;
+      // Wichtiges zuerst: Verluste vor guten Nachrichten vor Hinweisen.
+      const rank = { bad: 0, good: 1, info: 2 } as const;
+      fresh.sort((a, b) => rank[a.tone] - rank[b.tone]);
+      setToasts((list) => [...fresh.slice(0, MAX_TOASTS), ...list].slice(0, MAX_TOASTS));
       for (const toast of fresh) {
-        const timer = window.setTimeout(() => {
-          timers.delete(timer);
+        const id = window.setTimeout(() => {
+          timers.delete(id);
           setToasts((list) => list.filter((x) => x.id !== toast.id));
         }, TOAST_MS);
-        timers.add(timer);
+        timers.add(id);
       }
     });
     return () => {
       unsubscribe();
-      for (const timer of timers) window.clearTimeout(timer);
+      for (const id of timers) window.clearTimeout(id);
     };
   }, [client]);
 
+  const stop = useCallback(() => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = null;
+    runId.current++;
+    setRunning(false);
+  }, []);
+  useEffect(() => stop, [stop]);
+
   const dispatch = useCallback((action: Action) => client.dispatch(action), [client]);
-  const newGame = useCallback(
-    (deck?: readonly string[]) => {
-      setToasts([]);
-      setIncompatible(false);
-      client.newGame(deck);
+
+  /** Lässt `months` Monate nacheinander ablaufen; endet früher, wenn die Partie vorbei ist oder `stop` kommt. */
+  const run = useCallback(
+    (months: number) => {
+      if (timer.current !== null || months <= 0) return;
+      setRunning(true);
+      const id = ++runId.current;
+      let left = months;
+      const tick = () => {
+        const ok = client.dispatch({ type: 'advance' });
+        left--;
+        if (!ok || left <= 0 || client.getView().over) {
+          timer.current = null;
+          // Die letzte Bewegung noch ausklingen lassen, dann Knöpfe wieder freigeben.
+          window.setTimeout(
+            () => {
+              if (runId.current === id) setRunning(false);
+            },
+            reducedMotion ? 0 : 500,
+          );
+          return;
+        }
+        timer.current = window.setTimeout(tick, reducedMotion ? MONTH_MS_REDUCED : MONTH_MS);
+      };
+      timer.current = window.setTimeout(tick, 0);
     },
-    [client],
+    [client, reducedMotion],
   );
-  const dismissIncompatible = useCallback(() => setIncompatible(false), []);
 
-  return { view, dispatch, newGame, toasts, incompatible, dismissIncompatible };
-}
+  const newGame = useCallback(() => {
+    stop();
+    setToasts([]);
+    client.newGame();
+  }, [client, stop]);
 
-const deltas = (list: { species: string; delta: number }[]) =>
-  list.map((x) => t.popDelta(x.species, x.delta)).join(', ');
-
-type ToastNotice = Exclude<Notice, { type: 'incompatible' } | { type: 'statShift' }>;
-
-function noticeToast(n: ToastNotice): Omit<Toast, 'id'> {
-  switch (n.type) {
-    case 'overgrazed':
-      return { text: t.toastOvergrazed(n.zone, n.foods.join(', ')), tone: 'bad' };
-    case 'hunted':
-      return { text: t.toastHunted(n.zone, deltas(n.losses)), tone: 'bad' };
-    case 'populationShift':
-      return {
-        text: t.toastPopulationShift(n.card, n.zone, deltas(n.changes)),
-        tone: n.changes.every((c) => c.delta > 0) ? 'good' : 'info',
-      };
-    case 'rejected':
-      return { text: t.toastRejected, tone: 'bad' };
-    case 'round':
-      return { text: t.toastRound(n.round, n.season), tone: 'info' };
-    case 'played':
-      return { text: t.toastPlayed(n.card), tone: 'info' };
-    case 'trigger':
-      return { text: t.toastTrigger(n.icon, n.name, n.zone), tone: n.disturbance ? 'bad' : 'info' };
-    case 'form':
-      if (n.kind === 'disturbance') return { text: t.toastDisturbance(n.zone, n.to), tone: 'bad' };
-      return {
-        text: t.toastForm(n.zone, n.from, n.to),
-        tone: n.kind === 'ideal' ? 'good' : n.kind === 'normal' ? 'info' : 'bad',
-      };
-    case 'level':
-      return n.to > n.from
-        ? { text: t.toastLevel(n.zone, n.to), tone: 'good' }
-        : { text: t.toastLevelDown(n.zone, n.to), tone: 'bad' };
-    case 'harmony':
-      return { text: t.toastHarmony(n.delta), tone: n.delta > 0 ? 'good' : 'bad' };
-    case 'collapsed':
-      return { text: t.toastCollapsed, tone: 'bad' };
-    case 'text':
-      return { text: n.text, tone: n.tone };
-    case 'emerged':
-      return {
-        text: n.first ? t.toastEmergedFirst(n.species, n.zone) : t.toastEmerged(n.species, n.zone),
-        tone: 'good',
-      };
-    case 'extinct':
-      return { text: t.toastExtinct(n.species), tone: 'bad' };
-    case 'migrated':
-      return { text: t.toastMigrated(n.species, n.from, n.to), tone: 'info' };
-    case 'hunger':
-      return { text: t.toastHunger(n.species, n.zone), tone: 'bad' };
-    case 'gift':
-      return { text: t.toastGift(n.species, n.card), tone: 'good' };
-  }
+  return { view, log, toasts, running, dispatch, run, stop, newGame };
 }

@@ -1,56 +1,53 @@
-import { Suspense, useEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useEffect, useLayoutEffect, useMemo, useRef, type ComponentRef } from 'react';
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import {
-  BoxGeometry,
   CanvasTexture,
   Color,
-  Raycaster,
-  Vector2,
+  Matrix4,
   Vector3,
   type DirectionalLight,
-  type Fog,
   type Group,
   type HemisphereLight,
-  type Mesh,
+  type InstancedMesh,
   type MeshBasicMaterial,
-  type Object3D,
   type PerspectiveCamera,
 } from 'three';
-import type { ZoneView } from '@core/api';
-import type { Toward } from '../logic/ideal.ts';
-import { buildCreatures } from './creatures.ts';
+import type { HerdeData, HerdeView, IntentView, Pos } from '@being-god/herde';
+import type { StepReport } from '../client/GameClient.ts';
+import { Figures, type FigureGroup } from './Figures.tsx';
+import { FxLayer } from './FxLayer.tsx';
 import { GEO } from './geometries.ts';
-import { Instanced } from './Instanced.tsx';
-import { TOP_Y, zonePosition } from './layout.ts';
-import { COLORS, SEASON_LIGHT, speciesStyle } from './palette.ts';
-import { buildProps } from './props.ts';
-import { SceneRegistry, type ZonePicker } from './registry.ts';
-import { ZoneLabels } from './ZoneLabels.tsx';
-import { ZoneTile } from './ZoneTile.tsx';
+import { Instanced, type InstanceSpec } from './Instanced.tsx';
+import { BOTTOM, buildIsland, cellCenter, type Grid } from './islandModel.ts';
+import { COLORS, SEASON_LIGHT } from './palette.ts';
 
 interface Props {
-  zones: ZoneView[];
-  /** Runde – erkennt eine neue Partie (dann keine „neues Leben“-Effekte für die Startarten). */
-  round: number;
-  /** Harmonie als Anteil 0–1: niedrig ⇒ blasser, nebliger. */
-  harmony: number;
-  season: string;
-  selectedZone: string | null;
-  /** Während einer Zielwahl oder beim Ziehen: gültige Zonen; sonst null. */
-  validTargets: Set<string> | null;
-  /** Während der Zielwahl: Wirkung einer Zone als Ziel auf ihre Idealform (grün/rot/neutral). */
-  tints?: ReadonlyMap<string, Toward> | null;
+  data: HerdeData;
+  view: HerdeView;
+  /** Beim Zielen: gültige Felder (der Rest wird abgedunkelt); sonst null */
+  targets: Pos[] | null;
+  /** Vorschau einer globalen Karte: Felder, die Futter bekommen */
+  grown: Pos[] | null;
+  /** angetipptes bzw. gewähltes Feld */
+  selected: Pos | null;
+  /** Absicht nach dem Kartenzug (Vorschau), nur wenn sie sich ändert */
+  previewIntent: IntentView | null;
+  /** Monate laufen gerade ab: Absichtspfeil ausblenden */
+  running: boolean;
   reducedMotion: boolean;
-  /** Wird mit einer Funktion belegt, die die Zone unter einem Bildschirmpunkt findet (Ziehen). */
-  pickerRef: RefObject<ZonePicker | null>;
-  onZoneTap: (zoneId: string) => void;
+  subscribeReports: (listener: (r: StepReport) => void) => () => void;
+  onCellTap: (pos: Pos) => void;
   onBackgroundTap: () => void;
 }
 
-/** Schwebende Low-Poly-Insel mit den Zonen-Kacheln; Beschriftungen als DOM-Schicht darüber. */
+/** Schwebende Low-Poly-Insel: ein Plättchen je Feld, Bewuchs, Herde, Rudel, Absichtspfeil und Effekte. */
 export function IslandScene(props: Props) {
-  const [registry] = useState(() => new SceneRegistry());
+  const grid: Grid = useMemo(
+    () => ({ width: props.view.width, height: props.view.height }),
+    [props.view.width, props.view.height],
+  );
+  const season = props.view.ice.active ? 'ice' : props.view.season;
   return (
     <div className="scene">
       <Canvas
@@ -58,277 +55,374 @@ export function IslandScene(props: Props) {
         dpr={[1, 2]}
         flat
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-        camera={{ fov: 38, near: 0.5, far: 80, position: [0, 9, 14] }}
+        camera={{ fov: 36, near: 0.5, far: 80, position: [0, 11, 9] }}
         onPointerMissed={props.onBackgroundTap}
       >
-        <Atmosphere harmony={props.harmony} season={props.season} reducedMotion={props.reducedMotion} />
-        <Suspense fallback={null}>
-          <Island {...props} registry={registry} />
-        </Suspense>
-        <CameraRig />
-        <Picker registry={registry} pickerRef={props.pickerRef} />
-        <LabelProjector registry={registry} />
+        <Atmosphere season={season} reducedMotion={props.reducedMotion} />
+        <Island {...props} grid={grid} />
+        <CameraRig grid={grid} />
       </Canvas>
-      {/* Blasser Schleier bei niedriger Harmonie (eine Ebene, per CSS weich überblendet). */}
-      <div className="scene__mist" style={{ opacity: mistAmount(props.harmony) * 0.45 }} aria-hidden />
-      <ZoneLabels
-        zones={props.zones}
-        registry={registry}
-        selectedZone={props.selectedZone}
-        validTargets={props.validTargets}
-        tints={props.tints ?? null}
-      />
     </div>
   );
 }
 
 function Island({
-  zones,
-  round,
-  selectedZone,
-  validTargets,
-  tints,
+  data,
+  view,
+  targets,
+  grown,
+  selected,
+  previewIntent,
+  running,
   reducedMotion,
-  onZoneTap,
-  registry,
-}: Props & { registry: SceneRegistry }) {
+  subscribeReports,
+  onCellTap,
+  grid,
+}: Props & { grid: Grid }) {
   const float = useRef<Group>(null);
-  const birds = useRef<Group>(null);
   useFrame(({ clock }) => {
-    if (reducedMotion) return;
-    if (float.current) float.current.position.y = Math.sin(clock.elapsedTime * 0.7) * 0.08;
-    if (birds.current) birds.current.position.y = Math.sin(clock.elapsedTime * 1.6) * 0.05;
+    if (reducedMotion || !float.current) return;
+    float.current.position.y = Math.sin(clock.elapsedTime * 0.6) * 0.06;
   });
 
-  const positions = useMemo(() => new Map(zones.map((z, i) => [z.id, zonePosition(z.geography, i)] as const)), [zones]);
-  const props = useMemo(() => buildProps(zones, positions), [zones, positions]);
-  const creatures = useMemo(() => buildCreatures(zones, positions), [zones, positions]);
+  const stage = data.stages.get(view.herd.stage);
+  const snow = view.ice.active ? 0.6 : view.season === data.params.ice.season ? 0.3 : 0;
+  const model = useMemo(
+    () =>
+      buildIsland(grid, view.cells, {
+        eats: stage?.eats ?? [],
+        snow,
+        info: (land) => {
+          const l = data.landscapes.get(land);
+          return l ? { walk: l.walk, wood: l.wood } : undefined;
+        },
+      }),
+    [grid, view.cells, stage, snow, data],
+  );
+  const top = (x: number, y: number) => model.topY[y * grid.width + x] ?? 0;
+  const at = (pos: Pos, lift = 0): [number, number, number] => {
+    const [cx, cz] = cellCenter(grid, pos.x, pos.y);
+    return [cx, top(pos.x, pos.y) + lift, cz];
+  };
+
+  // Herde: bis zu 20 Figuren, größere Herden werden größer dargestellt; Rudel: eine Figur je Stärke.
+  const herdPos = at(view.herd);
+  const groups: FigureGroup[] =
+    view.herd.size > 0
+      ? [
+          {
+            id: 'herd',
+            position: herdPos,
+            count: Math.min(20, view.herd.size),
+            size: view.herd.size > 20 ? Math.min(1.5, 1 + (view.herd.size - 20) / 40) : 1,
+            spread: 0.085,
+            body: COLORS.herdBody,
+            head: COLORS.herdHead,
+          },
+        ]
+      : [];
+  const packs: FigureGroup[] = view.packs.map((pack) => ({
+    id: `pack-${pack.id}`,
+    position: at(pack),
+    count: pack.size,
+    size: 1.4,
+    spread: 0.15,
+    body: pack.hungry ? COLORS.wolfHungry : COLORS.wolfBody,
+    head: COLORS.wolfHead,
+  }));
+  // Gruppen nur neu anlegen, wenn sich etwas Sichtbares ändert (sonst würde jede View eine Animation prüfen).
+  const herdKey = JSON.stringify(groups);
+  const packKey = JSON.stringify(packs);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const herdGroups = useMemo(() => groups, [herdKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const packGroups = useMemo(() => packs, [packKey]);
+
+  // Rudel stehen oft zwischen hohen Bäumen: ein Zeichen darüber macht sie sichtbar (rot = hungrig).
+  const packMarkers = useMemo(
+    () =>
+      view.packs.map((pack) => ({
+        position: at(pack, 1.15),
+        scale: [1, 1, 1] as [number, number, number],
+        color: pack.hungry ? COLORS.hunt : COLORS.wolfBody,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [view.packs, model],
+  );
+
+  const tap = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation();
+    if (e.delta > 10 || e.instanceId === undefined) return;
+    const cell = view.cells[e.instanceId];
+    if (cell) onCellTap({ x: cell.x, y: cell.y });
+  };
+
+  const targetSet = useMemo(
+    () => (targets ? new Set(targets.map((p) => p.y * grid.width + p.x)) : null),
+    [targets, grid],
+  );
+  const targetSquares = useMemo(
+    () => (targets ?? []).map((p) => at(p, 0.012)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [targets, model],
+  );
+  const dimSquares = useMemo(
+    () => (targetSet ? view.cells.filter((c) => !targetSet.has(c.y * grid.width + c.x)).map((c) => at(c, 0.012)) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [targetSet, model],
+  );
+  const grownSquares = useMemo(
+    () => (grown ?? []).map((p) => at(p, 0.012)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [grown, model],
+  );
+
+  const intent = running ? null : view.intent;
 
   return (
     <>
       <group ref={float}>
-        {zones.map((zone) => (
-          <ZoneTile
-            key={zone.id}
-            zone={zone}
-            position={positions.get(zone.id) ?? [0, 0, 0]}
-            selected={zone.id === selectedZone}
-            targetable={validTargets?.has(zone.id) ?? false}
-            tint={validTargets?.has(zone.id) ? (tints?.get(zone.id) ?? null) : null}
-            dimmed={validTargets !== null && !validTargets.has(zone.id)}
+        <Instanced geometry={GEO.block} items={model.tops} onClick={tap} />
+        <Instanced geometry={GEO.block} items={model.earth} />
+        <Instanced geometry={GEO.tuft} items={model.tufts} />
+        <Instanced geometry={GEO.shrub} items={model.shrubs} />
+        <Instanced geometry={GEO.crown} items={model.crowns} />
+        <Instanced geometry={GEO.trunk} items={model.trunks} />
+        <Instanced geometry={GEO.boulder} items={model.boulders} />
+        <mesh
+          geometry={GEO.underside}
+          position={[0, BOTTOM - 1.1, 0]}
+          rotation={[Math.PI, Math.PI / 7, 0]}
+          scale={[grid.width * 0.68, 2.2, grid.height * 0.62]}
+        >
+          <meshLambertMaterial flatShading color={COLORS.underside} />
+        </mesh>
+
+        <Figures
+          groups={herdGroups}
+          bodyGeometry={GEO.animalBody}
+          headGeometry={GEO.animalHead}
+          reducedMotion={reducedMotion}
+        />
+        <Figures
+          groups={packGroups}
+          bodyGeometry={GEO.wolfBody}
+          headGeometry={GEO.wolfHead}
+          reducedMotion={reducedMotion}
+        />
+
+        <Squares positions={dimSquares} color={COLORS.dim} opacity={0.38} />
+        <Squares positions={targetSquares} color={COLORS.target} opacity={0.3} />
+        <Squares positions={targetSquares} color={COLORS.target} opacity={0.95} pulse={!reducedMotion} frame />
+        <Squares positions={grownSquares} color={COLORS.grown} opacity={0.45} pulse={!reducedMotion} />
+        {selected && <Frame position={at(selected, 0.02)} />}
+
+        {intent && (
+          <IntentArrow
+            from={herdPos}
+            to={at(intent)}
+            stays={intent.stays}
+            color={COLORS.arrow}
             reducedMotion={reducedMotion}
-            registry={registry}
-            onTap={onZoneTap}
           />
-        ))}
-        <RiverRibbon zones={zones} positions={positions} />
-        <Instanced geometry={GEO.crown} items={props.crowns} />
-        <Instanced geometry={GEO.trunk} items={props.trunks} />
-        <Instanced geometry={GEO.rock} items={props.rocks} />
-        <Instanced geometry={GEO.fish} items={creatures.water} />
-        <Instanced geometry={GEO.insect} items={creatures.insect} />
-        <Instanced geometry={GEO.amphibian} items={creatures.amphibian} />
-        <Instanced geometry={GEO.reptile} items={creatures.reptile} />
-        <Instanced geometry={GEO.mammal} items={creatures.mammal} />
-        <Instanced geometry={GEO.human} items={creatures.human} />
-        <Instanced geometry={GEO.head} items={creatures.heads} />
-        <group ref={birds}>
-          <Instanced geometry={GEO.bird} items={creatures.bird} />
-        </group>
-        <NewLifeBursts zones={zones} positions={positions} round={round} reducedMotion={reducedMotion} />
+        )}
+        {intent && previewIntent && (
+          <IntentArrow
+            from={herdPos}
+            to={at(previewIntent)}
+            stays={previewIntent.stays}
+            color={COLORS.arrowPreview}
+            reducedMotion={reducedMotion}
+            lift={0.08}
+          />
+        )}
+
+        <PackMarkers positions={packMarkers} />
+        <FxLayer grid={grid} topY={model.topY} subscribe={subscribeReports} reducedMotion={reducedMotion} />
+        {import.meta.env.DEV && <DevProbe grid={grid} topY={model.topY} />}
       </group>
-      <GroundShadow />
+      <GroundShadow width={grid.width} height={grid.height} />
     </>
   );
 }
 
-// --- Licht, Jahreszeit und Harmonie-Nebel ---------------------------------------------------------
-
-const scratchColor = new Color();
-const scratchColor2 = new Color();
-
-/** Nebelstärke 0–1: beginnt unter etwa 55 % Harmonie, voll bei 10 %. */
-export function mistAmount(harmony: number): number {
-  return Math.max(0, Math.min(1, (0.55 - harmony) / 0.45));
-}
-const ORIGIN = new Vector3();
-
-/**
- * Licht und Nebel: Die Jahreszeit tönt das Sonnenlicht leicht; sinkt die Harmonie unter etwa die Hälfte,
- * werden die Farben blasser (Himmelslicht gräulich, Sonne schwächer) und Nebel zieht auf (Konzept 7).
- * Alle Werte gleiten weich zum Ziel.
- */
-function Atmosphere({ harmony, season, reducedMotion }: { harmony: number; season: string; reducedMotion: boolean }) {
-  const sky = useRef<HemisphereLight>(null);
-  const sun = useRef<DirectionalLight>(null);
-  const fog = useRef<Fog>(null);
-  const mist = useRef(mistAmount(harmony));
-  const light = SEASON_LIGHT[season] ?? SEASON_LIGHT['spring']!;
-
-  useFrame(({ camera }, delta) => {
-    const k = reducedMotion ? 1 : 1 - Math.exp(-delta * 1.5);
-    mist.current += (mistAmount(harmony) - mist.current) * k;
-    const m = mist.current;
-    if (sky.current) {
-      scratchColor.set(light.sky).lerp(scratchColor2.set(COLORS.paleSky), m);
-      sky.current.color.lerp(scratchColor, k);
-      sky.current.intensity = 1.6 + 0.2 * m;
-    }
-    if (sun.current) {
-      sun.current.color.lerp(scratchColor.set(light.sun), k);
-      sun.current.intensity = 1.9 * (1 - 0.4 * m);
-    }
-    if (fog.current) {
-      const d = camera.position.distanceTo(ORIGIN);
-      fog.current.near = d - 6 + (1 - m) * 60;
-      fog.current.far = d + 8 + (1 - m) * 90;
-    }
-  });
-
-  return (
-    <>
-      <fog ref={fog} attach="fog" args={[COLORS.fog, 100, 200]} />
-      <hemisphereLight ref={sky} args={[light.sky, '#7d6a72', 1.6]} />
-      <directionalLight ref={sun} position={[5, 9, 6]} intensity={1.9} color={light.sun} />
-      <directionalLight position={[-6, 3, -4]} intensity={0.5} color="#c9d4ff" />
-    </>
-  );
+/** Kleine Rauten über den Rudeln (ein Draw Call). */
+function PackMarkers({ positions }: { positions: InstanceSpec[] }) {
+  return <Instanced geometry={GEO.marker} items={positions} />;
 }
 
-// --- Neues Leben ----------------------------------------------------------------------------------
-
-const BURST_SLOTS = 4;
-const BURST_SECONDS = 1.8;
-
-interface Burst {
-  position: [number, number, number];
-  color: string;
-  start: number | null;
-}
-
-/** Kurzer Lichtschein über einer Zone, wenn dort eine Art neu auftaucht (fester Pool, kein Neuanlegen). */
-function NewLifeBursts({
-  zones,
-  positions,
-  round,
-  reducedMotion,
-}: {
-  zones: ZoneView[];
-  positions: Map<string, [number, number, number]>;
-  round: number;
-  reducedMotion: boolean;
-}) {
-  const beams = useRef<(Mesh | null)[]>([]);
-  const rings = useRef<(Mesh | null)[]>([]);
-  const bursts = useRef<Burst[]>([]);
-  const previous = useRef<{ round: number; present: Map<string, Set<string>> } | null>(null);
-
+/** Nur im Entwicklungsmodus: Bildschirmpunkt eines Felds für automatische Tests (Playwright). */
+function DevProbe({ grid, topY }: { grid: Grid; topY: readonly number[] }) {
+  const camera = useThree((st) => st.camera);
+  const size = useThree((st) => st.size);
   useEffect(() => {
-    const present = new Map(
-      zones.map((z) => [z.id, new Set(z.populations.filter((p) => p.count > 0).map((p) => p.species))]),
-    );
-    const before = previous.current;
-    previous.current = { round, present };
-    if (!before || round < before.round) return; // erster Aufbau oder neue Partie
-    for (const zone of zones) {
-      const base = positions.get(zone.id);
-      if (!base) continue;
-      for (const pop of zone.populations) {
-        if (pop.count <= 0 || before.present.get(zone.id)?.has(pop.species)) continue;
-        bursts.current = [...bursts.current, { position: base, color: speciesStyle(pop).color, start: null }].slice(
-          -BURST_SLOTS,
-        );
-      }
-    }
-  }, [zones, positions, round]);
+    const w = window as unknown as { __herdeCell?: (x: number, y: number) => { x: number; y: number } };
+    w.__herdeCell = (x, y) => {
+      const [cx, cz] = cellCenter(grid, x, y);
+      const v = new Vector3(cx, topY[y * grid.width + x] ?? 0, cz).project(camera);
+      return { x: ((v.x + 1) / 2) * size.width, y: ((1 - v.y) / 2) * size.height };
+    };
+  }, [camera, size, grid, topY]);
+  return null;
+}
 
+// --- Hervorhebungen -------------------------------------------------------------------------------
+
+const scratch = new Matrix4();
+
+/** Flache, halbtransparente Quadrate auf Feldern (Ziele, Abdunkeln, Regen-Vorschau) in einem Draw Call. */
+function Squares({
+  positions,
+  color,
+  opacity,
+  pulse = false,
+  frame = false,
+}: {
+  positions: [number, number, number][];
+  color: string;
+  opacity: number;
+  pulse?: boolean;
+  /** Rahmen statt Fläche */
+  frame?: boolean;
+}) {
+  const ref = useRef<InstancedMesh>(null);
+  const capacity = Math.max(16, positions.length);
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    positions.forEach((pos, i) => mesh.setMatrixAt(i, scratch.makeTranslation(...pos)));
+    mesh.count = positions.length;
+    mesh.instanceMatrix.needsUpdate = true;
+  }, [positions, capacity]);
   useFrame(({ clock }) => {
-    const now = clock.elapsedTime;
-    bursts.current = bursts.current.filter((b) => b.start === null || now - b.start < BURST_SECONDS);
-    for (let i = 0; i < BURST_SLOTS; i++) {
-      const beam = beams.current[i];
-      const ring = rings.current[i];
-      if (!beam || !ring) continue;
-      const b = bursts.current[i];
-      beam.visible = ring.visible = b !== undefined;
-      if (!b) continue;
-      if (b.start === null) b.start = now;
-      const age = (now - b.start) / BURST_SECONDS;
-      const fade = Math.sin(Math.min(1, age) * Math.PI);
-      beam.position.set(b.position[0], TOP_Y, b.position[2]);
-      ring.position.set(b.position[0], TOP_Y + 0.04, b.position[2]);
-      const grow = reducedMotion ? 1 : 0.5 + age * 0.9;
-      ring.scale.setScalar(grow);
-      beam.scale.set(1, reducedMotion ? 1 : 0.4 + age * 0.8, 1);
-      (beam.material as MeshBasicMaterial).opacity = 0.32 * fade;
-      (ring.material as MeshBasicMaterial).opacity = 0.9 * fade;
-      (ring.material as MeshBasicMaterial).color.set(b.color).lerp(scratchColor.set(COLORS.burst), 0.4);
-    }
+    const mesh = ref.current;
+    if (!pulse || !mesh || mesh.count === 0) return;
+    (mesh.material as MeshBasicMaterial).opacity = opacity * (0.7 + 0.3 * Math.sin(clock.elapsedTime * 4));
   });
-
   return (
-    <>
-      {Array.from({ length: BURST_SLOTS }, (_, i) => (
-        <group key={i}>
-          <mesh
-            ref={(m) => {
-              beams.current[i] = m;
-            }}
-            geometry={GEO.beam}
-            visible={false}
-            renderOrder={2}
-          >
-            <meshBasicMaterial color={COLORS.burst} transparent depthWrite={false} fog={false} />
-          </mesh>
-          <mesh
-            ref={(m) => {
-              rings.current[i] = m;
-            }}
-            geometry={GEO.ring}
-            visible={false}
-            renderOrder={2}
-          >
-            <meshBasicMaterial color={COLORS.burst} transparent depthWrite={false} fog={false} />
-          </mesh>
-        </group>
-      ))}
-    </>
+    <instancedMesh
+      key={capacity}
+      ref={ref}
+      args={[frame ? GEO.frameThin : GEO.square, undefined, capacity]}
+      count={0}
+      frustumCulled={false}
+      renderOrder={2}
+      raycast={() => null}
+    >
+      <meshBasicMaterial color={color} transparent opacity={opacity} depthWrite={false} fog={false} />
+    </instancedMesh>
   );
 }
 
-// --- Fluss und Schatten ---------------------------------------------------------------------------
-
-const ribbonGeometry = new BoxGeometry(1, 0.05, 1);
-
-/** Der Fluss als Band von den Bergen über die Flusszone bis ins Meer an der Küste. */
-function RiverRibbon({ zones, positions }: { zones: ZoneView[]; positions: Map<string, [number, number, number]> }) {
-  const river = zones.find((z) => z.geography === 'river');
-  const from = positions.get(zones.find((z) => z.geography === 'mountains')?.id ?? '');
-  const to = positions.get(zones.find((z) => z.geography === 'coast')?.id ?? '');
-  if (!river || !from || !to) return null;
-  const water = river.stats[3]?.value ?? 2;
-  const dx = to[0] - from[0];
-  const dz = to[2] - from[2];
-  const full = Math.hypot(dx, dz);
-  // Start am Fuß der Berge, Ende knapp unter der Meeresfläche der Küste
-  const start = 0.75;
-  const end = full + 0.35;
-  const mid = (start + end) / 2 / full;
-  const width = water === 0 ? 0.35 : 0.22 + water * 0.09;
+function Frame({ position }: { position: [number, number, number] }) {
   return (
-    <mesh
-      geometry={ribbonGeometry}
-      position={[from[0] + dx * mid, TOP_Y, from[2] + dz * mid]}
-      rotation={[0, Math.atan2(dx, dz), 0]}
-      scale={[width, 1, end - start]}
-    >
-      <meshLambertMaterial flatShading color={water === 0 ? '#9c8264' : COLORS.water} />
+    <mesh geometry={GEO.frame} position={position} renderOrder={3} raycast={() => null}>
+      <meshBasicMaterial color={COLORS.select} transparent opacity={0.95} depthWrite={false} fog={false} />
     </mesh>
   );
 }
 
+const ARROW_Y = 0.32;
+
+/**
+ * Absichtspfeil von der Herde zum nächsten Feld (über den Bäumen, immer sichtbar); bleibt die Herde, ein Ring.
+ */
+function IntentArrow({
+  from,
+  to,
+  stays,
+  color,
+  reducedMotion,
+  lift = 0,
+}: {
+  from: [number, number, number];
+  to: [number, number, number];
+  stays: boolean;
+  color: string;
+  reducedMotion: boolean;
+  lift?: number;
+}) {
+  const ref = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    if (reducedMotion || !ref.current) return;
+    ref.current.position.y = Math.sin(clock.elapsedTime * 3) * 0.04;
+  });
+  const y = Math.max(from[1], to[1]) + ARROW_Y + lift;
+  const dx = to[0] - from[0];
+  const dz = to[2] - from[2];
+  const len = Math.hypot(dx, dz);
+  return (
+    <group ref={ref}>
+      {stays ? (
+        <mesh
+          geometry={GEO.ring}
+          position={[from[0], y - 0.2, from[2]]}
+          scale={1.5}
+          renderOrder={5}
+          raycast={() => null}
+        >
+          <meshBasicMaterial color={color} transparent opacity={0.9} depthTest={false} depthWrite={false} fog={false} />
+        </mesh>
+      ) : (
+        <mesh
+          geometry={GEO.arrow}
+          position={[from[0] + (dx / len) * 0.12, y, from[2] + (dz / len) * 0.12]}
+          rotation={[0, Math.atan2(-dx, -dz), 0]}
+          scale={[1.3, 1, len * 0.85]}
+          renderOrder={5}
+          raycast={() => null}
+        >
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0.92}
+            depthTest={false}
+            depthWrite={false}
+            fog={false}
+          />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+// --- Licht und Schatten ---------------------------------------------------------------------------
+
+/** Licht je Jahreszeit; die Farben gleiten weich zum Ziel (eine Farbe pro Frame, keine Neuberechnung). */
+function Atmosphere({ season, reducedMotion }: { season: string; reducedMotion: boolean }) {
+  const sky = useRef<HemisphereLight>(null);
+  const sun = useRef<DirectionalLight>(null);
+  const light = SEASON_LIGHT[season] ?? SEASON_LIGHT['spring']!;
+  const target = useMemo(() => ({ sky: light.sky, sun: light.sun }), [light]);
+  const settled = useRef(false);
+  useEffect(() => {
+    settled.current = false;
+  }, [target]);
+
+  useFrame((_, delta) => {
+    if (settled.current) return;
+    const k = reducedMotion ? 1 : 1 - Math.exp(-delta * 2);
+    sky.current?.color.lerp(skyColor.set(target.sky), k);
+    sun.current?.color.lerp(sunColor.set(target.sun), k);
+    const c = sky.current?.color;
+    if (k >= 1 || (c && Math.abs(c.r - skyColor.r) + Math.abs(c.g - skyColor.g) + Math.abs(c.b - skyColor.b) < 0.003))
+      settled.current = true;
+  });
+
+  return (
+    <>
+      <hemisphereLight ref={sky} args={[light.sky, '#7d6a72', 1.7]} />
+      <directionalLight ref={sun} position={[4, 9, 6]} intensity={1.9} color={light.sun} />
+      <directionalLight position={[-6, 3, -4]} intensity={0.45} color="#c9d4ff" />
+    </>
+  );
+}
+
+const skyColor = new Color();
+const sunColor = new Color();
+
 /** Weicher Schatten unter der schwebenden Insel – eine Textur statt Echtzeit-Schatten. */
-function GroundShadow() {
+function GroundShadow({ width, height }: { width: number; height: number }) {
   const texture = useMemo(() => {
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 128;
@@ -343,51 +437,11 @@ function GroundShadow() {
     return new CanvasTexture(canvas);
   }, []);
   return (
-    <mesh position={[0.3, -4.2, 0.3]} rotation={[-Math.PI / 2, 0, 0]}>
-      <planeGeometry args={[11, 9]} />
+    <mesh position={[0.3, -4.6, 0.3]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
+      <planeGeometry args={[width * 1.5, height * 1.3]} />
       <meshBasicMaterial map={texture} transparent depthWrite={false} fog={false} />
     </mesh>
   );
-}
-
-// --- Ziehen und Beschriftungen ---------------------------------------------------------------------
-
-const raycaster = new Raycaster();
-const pointer = new Vector2();
-
-/** Stellt eine Raycast-Funktion bereit: welche Zone liegt unter dem Finger? */
-function Picker({ registry, pickerRef }: { registry: SceneRegistry; pickerRef: RefObject<ZonePicker | null> }) {
-  const camera = useThree((s) => s.camera);
-  const gl = useThree((s) => s.gl);
-  useEffect(() => {
-    const pick: ZonePicker = (clientX, clientY) => {
-      const rect = gl.domElement.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return null;
-      pointer.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
-      raycaster.setFromCamera(pointer, camera);
-      const hits = raycaster.intersectObjects([...registry.tiles.values()], true);
-      for (const hit of hits) {
-        let o: Object3D | null = hit.object;
-        while (o) {
-          const id = (o.userData as { zoneId?: string }).zoneId;
-          if (id) return id;
-          o = o.parent;
-        }
-      }
-      return null;
-    };
-    pickerRef.current = pick;
-    return () => {
-      if (pickerRef.current === pick) pickerRef.current = null;
-    };
-  }, [camera, gl, registry, pickerRef]);
-  return null;
-}
-
-/** Schiebt die Beschriftungen jedes Frame an die projizierten Anker (siehe `SceneRegistry.projectLabels`). */
-function LabelProjector({ registry }: { registry: SceneRegistry }) {
-  useFrame(({ camera, size }) => registry.projectLabels(camera, size.width, size.height));
-  return null;
 }
 
 // --- Kamera ---------------------------------------------------------------------------------------
@@ -396,40 +450,44 @@ function LabelProjector({ registry }: { registry: SceneRegistry }) {
  * Kamera und begrenzte Steuerung: Abstand passt sich dem Seitenverhältnis an (Hochformat ⇒ weiter weg),
  * Drehen nur in einem Fenster, kein Verschieben.
  */
-const TARGET = new Vector3(0, -0.9, 0);
-
-function CameraRig() {
+function CameraRig({ grid }: { grid: Grid }) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const { camera, size } = useThree();
+  const target = useMemo(() => new Vector3(0, -0.2, 0.5), []);
 
   useEffect(() => {
     const cam = camera as PerspectiveCamera;
-    const halfWidth = 4.6; // halbe Inselbreite plus Rand
-    const hfov = 2 * Math.atan(Math.tan((cam.fov * Math.PI) / 360) * (size.width / size.height));
-    const distance = Math.min(26, Math.max(12, halfWidth / Math.tan(hfov / 2)));
-    const dir = cam.position.clone().sub(TARGET).normalize();
-    cam.position.copy(TARGET).addScaledVector(dir, distance);
+    const halfWidth = grid.width / 2 + 0.9;
+    const halfDepth = grid.height / 2 + 0.6;
+    const vfov = (cam.fov * Math.PI) / 180;
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * (size.width / size.height));
+    // Breite muss passen; die Tiefe erscheint durch die Neigung verkürzt (Faktor ≈ sin der Neigung).
+    const byWidth = halfWidth / Math.tan(hfov / 2);
+    const byDepth = (halfDepth * 0.82) / Math.tan(vfov / 2);
+    const distance = Math.min(34, Math.max(10, Math.max(byWidth, byDepth)));
+    const dir = new Vector3(0, 0.78, 0.62).normalize();
+    cam.position.copy(target).addScaledVector(dir, distance);
     cam.updateProjectionMatrix();
     const c = controls.current;
     if (c) {
-      c.minDistance = distance * 0.6;
-      c.maxDistance = distance * 1.25;
+      c.minDistance = distance * 0.65;
+      c.maxDistance = distance * 1.2;
       c.update();
     }
-  }, [camera, size.width, size.height]);
+  }, [camera, size.width, size.height, grid, target]);
 
   return (
     <OrbitControls
       ref={controls}
-      target={TARGET}
+      target={target}
       enablePan={false}
       enableDamping
       dampingFactor={0.1}
-      rotateSpeed={0.6}
-      minPolarAngle={0.55}
-      maxPolarAngle={1.15}
-      minAzimuthAngle={-0.9}
-      maxAzimuthAngle={0.9}
+      rotateSpeed={0.5}
+      minPolarAngle={0.35}
+      maxPolarAngle={1.0}
+      minAzimuthAngle={-0.6}
+      maxAzimuthAngle={0.6}
       makeDefault
     />
   );
