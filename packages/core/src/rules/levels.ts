@@ -13,7 +13,7 @@ export const LevelsParams = z.strictObject({
   /** Ab dieser Stufe nur in der Idealform erreichbar. */
   idealFrom: z.number().int().positive(),
   species: z.strictObject({
-    // AUSLEGUNG: Solange es keine Arten gibt (Phase 1), ist die Arten-Bedingung abgeschaltet.
+    /** Arten-Bedingung an (ab Phase 2); aus = Welt ohne Leben wie in Phase 1. */
     enabled: z.boolean(),
     /** „genügend Arten“ für jeden Aufstieg (Zahl nicht im Konzept, Platzhalter). */
     forRise: z.number().int().nonnegative(),

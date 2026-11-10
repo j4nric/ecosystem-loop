@@ -1,6 +1,7 @@
 # Karten sind Eingriffe des Gottes (Konzept 6.2). Kosten in Odem, Zahlen sind Platzhalter.
 #
 # slots     – was der Spieler wählt: zone | neighbor (of: früherer Slot). Optional "when": Bedingungen an die Zone.
+#             species (in: früherer Zonen-Slot) = eine Art, die dort lebt; optional eats/species als Filter.
 # effects   – werden der Reihe nach angewendet. Ziel "at" = Slot-Id, scope: self | neighbors | area | all.
 #             Effekte auf Werte, die eine Zone nicht hat, verpuffen.
 # triggers  – Schwellen: "when" wird VOR dem Grundeffekt geprüft (check: before), mit check: after danach.
@@ -11,6 +12,8 @@ categories:
   - { id: force, name: { de: Naturgewalt, en: Force of nature } }
   - { id: gift, name: { de: Gabe, en: Gift } }
   - { id: miracle, name: { de: Wunder, en: Miracle } }
+  - { id: species, name: { de: Gabe der Arten, en: Gift of the species } }
+  - { id: human, name: { de: Menschenkarte, en: Human card } }
 
 cards:
   # ---------- Naturgewalten (0 Odem, grob, mit Schwellen) ----------
@@ -196,3 +199,149 @@ cards:
     category: miracle
     cost: 5
     effects: [{ adjust: vegetation, by: 1, scope: all }]
+
+  # ---------- Gaben der Arten (kommen ins Deck, wenn die Art erstmals entsteht; Konzept 5.3) ----------
+  - id: algal_bloom
+    name: { de: Algenblüte, en: Algal bloom }
+    category: species
+    cost: 1
+    slots: [{ id: zone, kind: zone, when: [{ any: [{ hasStat: water }, { hasStat: salt }] }] }]
+    effects:
+      - { adjust: vegetation, by: 1, at: zone }
+      - { adjust: light, by: -1, at: zone }
+
+  - id: decomposition
+    name: { de: Zersetzung, en: Decomposition }
+    category: species
+    cost: 1
+    slots:
+      - { id: zone, kind: zone, when: [{ hasStat: deadwood }] }
+      - { id: target, kind: neighbor, of: zone, when: [{ hasStat: soil }] }
+    effects:
+      - { adjust: deadwood, by: -1, at: zone }
+      - { adjust: soil, by: 1, at: target }
+
+  # AUSLEGUNG: „flussaufwärts oder flussabwärts“ = in eine Nachbarzone mit Wasser (Fluss oder Küste).
+  - id: spawning_run
+    name: { de: Laichzug, en: Spawning run }
+    category: species
+    cost: 1
+    slots:
+      - { id: zone, kind: zone, when: [{ population: fish, gte: 1 }] }
+      - id: target
+        kind: neighbor
+        of: zone
+        when: [{ any: [{ hasStat: water }, { hasStat: salt }] }]
+        label: { de: Wohin, en: Where to }
+    effects:
+      - { move: fish, amount: 1, from: zone, at: target }
+
+  - id: pollination
+    name: { de: Bestäubung, en: Pollination }
+    category: species
+    cost: 1
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ adjust: vegetation, by: 1, at: zone }]
+
+  - id: rain_call
+    name: { de: Regenruf, en: Rain call }
+    category: species
+    cost: 1
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ adjust: moisture, by: 1, at: zone }]
+
+  - id: sunbathing
+    name: { de: Sonnenbad, en: Sunbathing }
+    category: species
+    cost: 1
+    slots: [{ id: zone, kind: zone }]
+    effects:
+      - { adjust: light, by: 1, at: zone }
+      - { adjust: moisture, by: -1, at: zone }
+
+  - id: burrowing
+    name: { de: Graben, en: Burrowing }
+    category: species
+    cost: 1
+    slots: [{ id: zone, kind: zone, when: [{ hasStat: soil }] }]
+    effects:
+      - { adjust: soil, by: 1, at: zone }
+      - { adjust: vegetation, by: -1, at: zone }
+
+  - id: seed_flight
+    name: { de: Samenflug, en: Seed flight }
+    category: species
+    cost: 1
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ adjust: vegetation, by: 1, at: zone }]
+
+  - id: browsing
+    name: { de: Äsen, en: Browsing }
+    category: species
+    cost: 0
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ adjust: vegetation, by: -1, at: zone }]
+
+  - id: hunt
+    name: { de: Jagd, en: Hunt }
+    category: species
+    cost: 1
+    slots:
+      - { id: zone, kind: zone }
+      # AUSLEGUNG: Pflanzenfresser = Arten, die laut 5.3 Vegetation fressen (Käfer und Mensch zählen nicht).
+      - id: prey
+        kind: species
+        in: zone
+        species: [bee, small_mammal, deer, primate]
+        label: { de: Pflanzenfresser, en: Herbivore }
+    effects: [{ population: prey, by: -2, at: zone }]
+
+  # AUSLEGUNG: Ereignisse kommen erst in Phase 3. Bis dahin zieht Späherblick nur eine Karte (Platzhalter).
+  - id: scout_eye
+    name: { de: Späherblick, en: Scout's eye }
+    category: species
+    cost: 2
+    effects: [{ draw: 1 }]
+
+  - id: fruit_rain
+    name: { de: Fruchtregen, en: Fruit rain }
+    category: species
+    cost: 2
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ adjust: vegetation, by: 1, at: zone, scope: neighbors }]
+
+  # ---------- Menschenkarten (0–2 Odem, stark, mit Langzeitkosten; Konzept 5.4) ----------
+  # AUSLEGUNG: Feuer = gezielte Brandrodung wie die Feuer-Schwelle des Gewitters (Störung), nur wo etwas wächst.
+  - id: fire
+    name: { de: Feuer, en: Fire }
+    category: human
+    cost: 0
+    slots: [{ id: zone, kind: zone, when: [{ stat: vegetation, gte: 1 }] }]
+    triggers:
+      - id: slash_and_burn
+        name: { de: Brandrodung, en: Slash and burn }
+        icon: '🔥'
+        at: zone
+        when: [{ stat: vegetation, gte: 1 }]
+        disturbance: true
+        effects:
+          - { set: vegetation, value: 0, at: zone }
+          - { adjust: deadwood, by: 3, at: zone }
+          - { adjust: soil, by: 1, at: zone }
+
+  # AUSLEGUNG: „Vegetation fest +2“ = Vegetation +2 (sicher, ohne Schwelle); Boden −1 laugt aus.
+  - id: farming
+    name: { de: Ackerbau, en: Farming }
+    category: human
+    cost: 1
+    slots: [{ id: zone, kind: zone, when: [{ hasStat: soil }] }]
+    effects:
+      - { adjust: soil, by: -1, at: zone }
+      - { adjust: vegetation, by: 2, at: zone }
+
+  - id: settlement
+    name: { de: Siedlung, en: Settlement }
+    category: human
+    cost: 2
+    slots: [{ id: zone, kind: zone, when: [{ population: human, gte: 1 }] }]
+    effects: [{ population: human, by: 2, at: zone }]

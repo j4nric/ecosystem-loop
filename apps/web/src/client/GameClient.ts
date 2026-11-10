@@ -11,7 +11,12 @@ export type Notice =
   | { type: 'form'; zone: string; from: string; to: string; kind: FormKind }
   | { type: 'level'; zone: string; from: number; to: number }
   | { type: 'harmony'; delta: number }
-  | { type: 'collapsed' };
+  | { type: 'collapsed' }
+  | { type: 'emerged'; species: string; zone: string; first: boolean }
+  | { type: 'extinct'; species: string }
+  | { type: 'migrated'; species: string; from: string; to: string }
+  | { type: 'hunger'; species: string; zone: string }
+  | { type: 'gift'; species: string; card: string };
 
 /** Vorschau eines Kartenzugs mit aufgelösten Namen (für das Zonen-Sheet vor dem Bestätigen). */
 export interface PreviewView {

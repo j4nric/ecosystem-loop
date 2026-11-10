@@ -133,8 +133,12 @@ describe('Kopplungen (Konzept 4.3)', () => {
 });
 
 describe('Zonenstufe (Konzept 4.4)', () => {
+  /** Ohne die Arten-Bedingung (eigener Test unten). */
+  const noSpecies = dataWith((r) => {
+    r.config.rules.levels.species.enabled = false;
+  });
   /** Natur-Schritte Formen + Stufen für n Runden ab Runde `from`. */
-  function rounds(s: GameState, n: number, from = 1, d = data) {
+  function rounds(s: GameState, n: number, from = 1, d = noSpecies) {
     const events = [];
     for (let i = 0; i < n; i++) {
       s.round = from + i;
@@ -230,10 +234,9 @@ describe('Zonenstufe (Konzept 4.4)', () => {
   });
 
   it('Arten-Bedingung (abschaltbar): ohne genug Arten kein Aufstieg, Stufe 5 braucht ≥ 4 Arten', () => {
-    const d = dataWith((r) => {
-      r.config.rules.levels.species.enabled = true;
-    });
-    const s = game({ d });
+    const d = data;
+    expect(d.params.levels).toMatchObject({ species: { enabled: true, forRise: 1, forTop: 4 } });
+    const s = game({ d, life: false });
     rounds(s, 6, 1, d);
     expect(zone(s, 'forest').level).toBe(1);
     zone(s, 'forest').populations = { a: 1 };

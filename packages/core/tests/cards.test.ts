@@ -1,15 +1,16 @@
 /** Konzept 6.2: Karten, Kosten, Schwellen (Grenzfälle), Ziele und Effekte. */
 import { describe, expect, it } from 'vitest';
 import { applyEffect } from '../src/cards/effects.ts';
-import { legalPlays } from '../src/game.ts';
+import { cardText } from '../src/cards/text.ts';
+import { legalPlays, view } from '../src/game.ts';
 import type { GameEvent } from '../src/state.ts';
-import { data, game, play, rest, setStats, zone } from './helpers.ts';
+import { data, dataWith, game, play, rest, setPops, setStats, zone } from './helpers.ts';
 
 const triggered = (events: GameEvent[]) => events.flatMap((e) => (e.type === 'triggered' ? [e.trigger] : []));
 
 describe('Kosten in Odem (Konzept 6.1/6.2)', () => {
-  it('Karten kosten laut Kategorie: Naturgewalten 0, Gaben 1–2, Wunder 3–5', () => {
-    const range = { force: [0, 0], gift: [1, 2], miracle: [3, 5] } as const;
+  it('Karten kosten laut Kategorie: Naturgewalten 0, Gaben 1–2, Wunder 3–5, Arten und Menschen 0–2', () => {
+    const range = { force: [0, 0], gift: [1, 2], miracle: [3, 5], species: [0, 2], human: [0, 2] } as const;
     for (const c of data.cards.values()) {
       const [lo, hi] = range[c.category as keyof typeof range];
       expect(c.cost, c.id).toBeGreaterThanOrEqual(lo);
@@ -246,5 +247,99 @@ describe('Effektsprache', () => {
 
   it('ungebundenes Ziel ist ein Fehler', () => {
     expect(() => applyEffect(ctx(), { adjust: 'light', by: 1, at: 'nope', scope: 'self' })).toThrow(/nicht gebunden/);
+  });
+});
+
+describe('Gaben der Arten und Menschenkarten (Konzept 5.3, 5.4)', () => {
+  const targetsOf = (s: ReturnType<typeof game>, card: string, d = data) =>
+    legalPlays(d, s)
+      .filter((p) => p.card === card)
+      .map((p) => p.targets);
+
+  it('Jagd: Art-Slot bietet nur Pflanzenfresser, die in der Zone leben; Bestand −2', () => {
+    const s = game({ hand: ['hunt'], breath: 5, life: false });
+    setPops(s, 'forest', { deer: 3, beetle: 4, wolf: 1 });
+    expect(targetsOf(s, 'hunt')).toEqual([{ zone: 'forest', prey: 'deer' }]);
+    const { state, events } = play(s, 'hunt', { zone: 'forest', prey: 'deer' });
+    expect(zone(state, 'forest').populations.deer).toBe(1);
+    expect(events).toContainEqual({
+      type: 'populationChanged',
+      zone: 'forest',
+      species: 'deer',
+      from: 3,
+      to: 1,
+      cause: 'card:hunt',
+    });
+    expect(() => play(s, 'hunt', { zone: 'forest', prey: 'beetle' })).toThrow(/Ungültiges Ziel/);
+    const v = view(data, s, 'de').hand[0]!;
+    expect(v.slots).toEqual([
+      { id: 'zone', kind: 'zone', label: 'Zone' },
+      { id: 'prey', kind: 'species', label: 'Pflanzenfresser' },
+    ]);
+    expect(v.text).toBe('Bestand Pflanzenfresser −2');
+  });
+
+  it('Art-Slot mit Nahrungsfilter (eats)', () => {
+    const d = dataWith((r) => {
+      const hunt = r.cards.cards.find((c: { id: string }) => c.id === 'hunt');
+      hunt.slots[1] = { id: 'prey', kind: 'species', in: 'zone', eats: 'plankton' };
+    });
+    const s = game({ hand: ['hunt'], breath: 5, life: false, d });
+    setPops(s, 'river', { plankton: 3, fish: 2 });
+    expect(targetsOf(s, 'hunt', d)).toEqual([{ zone: 'river', prey: 'fish' }]);
+    expect(cardText(d, d.cards.get('hunt')!, 'en')).toBe('Species population −2');
+  });
+
+  it('Laichzug: 1 Fisch wandert in eine Nachbarzone mit Wasser', () => {
+    const s = game({ hand: ['spawning_run'], breath: 1, life: false });
+    setPops(s, 'river', { fish: 3 });
+    expect(targetsOf(s, 'spawning_run')).toEqual([{ zone: 'river', target: 'coast' }]);
+    const { state, events } = play(s, 'spawning_run', { zone: 'river', target: 'coast' });
+    expect(zone(state, 'river').populations.fish).toBe(2);
+    expect(zone(state, 'coast').populations.fish).toBe(1);
+    expect(events).toContainEqual({ type: 'migrated', species: 'fish', from: 'river', to: 'coast', count: 1 });
+    expect(cardText(data, data.cards.get('spawning_run')!, 'de')).toBe(
+      'Nur Fisch ≥ 1 und (Zone mit Wasserstand oder Zone mit Salz): 1 Fisch wandert (Wohin)',
+    );
+  });
+
+  it('Siedlung nur, wo Menschen leben: Mensch-Bestand +2', () => {
+    const s = game({ hand: ['settlement'], breath: 2, life: false });
+    expect(targetsOf(s, 'settlement')).toEqual([]);
+    setPops(s, 'plains', { human: 2 });
+    expect(targetsOf(s, 'settlement')).toEqual([{ zone: 'plains' }]);
+    const { state } = play(s, 'settlement', { zone: 'plains' });
+    expect(zone(state, 'plains').populations.human).toBe(4);
+    expect(state.species.human).toEqual({ since: 0, extinct: null });
+  });
+
+  it('Feuer: Brandrodung (Störung), Ackerbau: Boden −1, Vegetation +2', () => {
+    const s = game({ hand: ['fire', 'farming'], breath: 1, life: false });
+    const fired = play(s, 'fire', { zone: 'plains' });
+    expect(zone(fired.state, 'plains').stats).toMatchObject({ vegetation: 0, soil: 4 });
+    expect(zone(fired.state, 'plains').lastDisturbance).toBe(1);
+    expect(fired.events).toContainEqual({ type: 'disturbance', zone: 'plains', cause: 'trigger:fire.slash_and_burn' });
+    const farmed = play(fired.state, 'farming', { zone: 'plains' });
+    expect(zone(farmed.state, 'plains').stats).toMatchObject({ vegetation: 2, soil: 3 });
+    expect(targetsOf(farmed.state, 'fire').map((t) => t.zone)).not.toContain('plains'); // nichts mehr zu brennen
+  });
+
+  it('Bestände per Effekt bleiben in 0–9; Wandern ohne Tiere bewirkt nichts', () => {
+    const s = game({ life: false });
+    const events: GameEvent[] = [];
+    const ctx = {
+      data,
+      state: s,
+      emit: (e: GameEvent) => events.push(e),
+      bind: { a: 'river', b: 'coast' },
+      cause: 't',
+    };
+    applyEffect(ctx, { population: 'fish', by: 12, at: 'a', scope: 'self' });
+    expect(zone(s, 'river').populations.fish).toBe(9);
+    applyEffect(ctx, { population: 'fish', by: -12, at: 'a', scope: 'self' });
+    expect(zone(s, 'river').populations.fish).toBeUndefined();
+    applyEffect(ctx, { move: 'fish', amount: 2, from: 'a', at: 'b' });
+    expect(events.filter((e) => e.type === 'migrated')).toEqual([]);
+    expect(() => applyEffect(ctx, { population: 'dragon', by: 1, at: 'a', scope: 'self' })).toThrow(/Unbekannte Art/);
   });
 });

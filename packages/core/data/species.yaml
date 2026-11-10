@@ -1,0 +1,123 @@
+# Arten und Stammbaum (Konzept 5.3). Reihenfolge = Stufe aufsteigend; sie bestimmt auch, wer zuerst frisst.
+#
+# tier      – Entwicklungsstufe (Evolution: Zonenstufe ≥ tier − 2; Wertung: Punkte je Runde)
+# ancestor  – Vorfahr (null = Startleben)
+# habitat   – Formen, in denen die Art wachsen kann (Konzept 4.2 „Lebensraum für“)
+# diet      – Nahrung in Reihenfolge des Vorzugs: Werte (Pflanzenfresser) oder Arten (Räuber)
+# gift      – Karten, die ins Deck kommen, wenn die Art erstmals entsteht
+# evolve    – Sonderbedingungen an die Ursprungszone (Bedingungssprache wie bei Formen und Karten)
+# hunts     – Arten, deren Bestand diese Art jede Runde in ihrer Zone senkt
+# human     – Mensch: Harmoniekosten je Tier, Wertung doppelt
+#
+# AUSLEGUNG: „Urwald – alle Waldarten“ (4.2) = jede Art, die in einer anderen Waldform lebt.
+
+species:
+  - id: plankton
+    name: { de: Plankton, en: Plankton }
+    tier: 1
+    habitat: [brook, stream, reef, mudflat]
+    diet: [light]
+    gift: [algal_bloom]
+
+  - id: beetle
+    name: { de: Käfer, en: Beetle }
+    tier: 1
+    habitat: [burnt_land, primeval_forest, mixed_forest, bog, meadow]
+    # AUSLEGUNG: Käfer fressen Totholz; wo es keins gibt (Flachland), Pflanzenreste (Vegetation).
+    diet: [deadwood, vegetation]
+    gift: [decomposition]
+
+  - id: fish
+    name: { de: Fisch, en: Fish }
+    tier: 2
+    ancestor: plankton
+    habitat: [floodplain, stream, mangrove, reef]
+    diet: [plankton]
+    gift: [spawning_run]
+
+  - id: bee
+    name: { de: Biene, en: Bee }
+    tier: 2
+    ancestor: beetle
+    habitat: [alpine_meadow, primeval_forest, open_forest, flower_meadow]
+    diet: [vegetation]
+    gift: [pollination]
+
+  - id: frog
+    name: { de: Frosch, en: Frog }
+    tier: 3
+    ancestor: fish
+    habitat: [bog, brook, floodplain, mangrove]
+    diet: [beetle, bee]
+    gift: [rain_call]
+
+  - id: lizard
+    name: { de: Echse, en: Lizard }
+    tier: 4
+    ancestor: frog
+    habitat: [rock, dry_forest, primeval_forest, steppe, beach]
+    diet: [beetle]
+    gift: [sunbathing]
+
+  - id: small_mammal
+    name: { de: Kleinsäuger, en: Small mammal }
+    tier: 5
+    ancestor: lizard
+    habitat: [alpine_meadow, primeval_forest, mixed_forest, flower_meadow, steppe, shrubland, meadow]
+    diet: [vegetation]
+    gift: [burrowing]
+
+  - id: bird
+    name: { de: Vogel, en: Bird }
+    tier: 5
+    ancestor: lizard
+    habitat: [mountain_forest, primeval_forest, open_forest, shrubland, floodplain, mangrove, mudflat]
+    diet: [beetle, fish]
+    gift: [seed_flight]
+
+  - id: deer
+    name: { de: Hirsch, en: Deer }
+    tier: 6
+    ancestor: small_mammal
+    habitat: [alpine_meadow, primeval_forest, open_forest, flower_meadow, meadow]
+    diet: [vegetation]
+    gift: [browsing]
+
+  - id: wolf
+    name: { de: Wolf, en: Wolf }
+    tier: 6
+    ancestor: small_mammal
+    habitat: [mountain_forest, primeval_forest, mixed_forest, steppe]
+    diet: [deer, small_mammal]
+    gift: [hunt]
+    evolve: [{ population: deer, gte: 1 }] # braucht Hirsche
+
+  - id: raptor
+    name: { de: Greifvogel, en: Bird of prey }
+    tier: 6
+    ancestor: bird
+    habitat: [mountain_forest, rock]
+    diet: [small_mammal, fish]
+    gift: [scout_eye]
+
+  - id: primate
+    name: { de: Primat, en: Primate }
+    tier: 6
+    ancestor: small_mammal
+    habitat: [primeval_forest]
+    diet: [vegetation]
+    gift: [fruit_rain]
+    evolve: [{ form: primeval_forest }] # nur im Urwald
+
+  - id: human
+    name: { de: Mensch, en: Human }
+    tier: 7
+    ancestor: primate
+    habitat: [flower_meadow, meadow, floodplain]
+    # AUSLEGUNG: „frisst alles“ = Wild, Fisch, dann Pflanzen.
+    diet: [deer, small_mammal, fish, vegetation]
+    gift: [fire, farming, settlement]
+    # Zone Stufe ≥ 5, am Fluss (AUSLEGUNG: der Fluss selbst oder ein Nachbar des Flusses)
+    evolve: [{ minLevel: 5 }, { any: [{ geography: river }, { anyNeighbor: [{ geography: river }] }] }]
+    hunts: [small_mammal, deer, primate] # jagt alle Pflanzenfresser (AUSLEGUNG: Bienen ausgenommen)
+    human: true

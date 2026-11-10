@@ -10,8 +10,9 @@ turn:
 deck: { minSize: 8, maxSize: 10 }
 
 # Natur-Phase und Bilanz in fester Reihenfolge (Konzept 3). Module: src/rules/.
-# Später: event (nach season), life und evolution (nach levels), score, forecast.
-pipeline: [season, couplings, healing, forms, levels, harmony, breath]
+# Später: event (nach season), forecast.
+# AUSLEGUNG: score vor harmony – auch die Runde des Kollapses zählt noch.
+pipeline: [season, couplings, healing, forms, levels, life, evolution, score, harmony, breath]
 
 rules:
   season: {}
@@ -26,9 +27,35 @@ rules:
     riseAfter: 3 # Runden am Stück in derselben, nicht verödeten Form
     idealFrom: 4 # Stufe 4 und 5 nur in der Idealform
     species:
-      enabled: false # AUSLEGUNG: aus, solange es keine Arten gibt (Phase 2 schaltet ein)
+      enabled: true
       forRise: 1 # „genügend Arten“ (Platzhalter)
       forTop: 4 # Stufe 5 verlangt ≥ 4 Arten
+  life:
+    max: 9 # Bestand je Art und Zone 0–9
+    food:
+      perStat: 2 # 1 Punkt Vegetation/Totholz/Licht … ernährt 2 Tiere
+      perPrey: 1 # 1 Beutetier ernährt 1 Räuber
+      huntNeighbors: true # Räuber jagen auch in Nachbarzonen
+    growth: 1 # satt und in passender Form: +1 (nicht im Winter)
+    hunger: 1 # nicht satt: −1
+    degradedLoss: 1 # außerhalb des Lebensraums in verödeter Form: −1
+    overuse: # Überweidung: hungrige Tiere fressen einen Wert leer (Effekte auf die Zone)
+      vegetation: [{ adjust: vegetation, by: -1 }, { adjust: soil, by: -1 }]
+      deadwood: [{ adjust: deadwood, by: -1 }]
+    overhunt: 1 # zu viele Räuber: Beute −1
+    hunt: 1 # Jäger (Mensch) senken jeden gejagten Bestand ihrer Zone um 1
+    migration: { from: 4, amount: 1 } # ab Bestand 4 wandert 1 Tier in eine passende Nachbarzone
+  evolution:
+    minAncestor: 5 # Bestand des Vorfahren in der Zone
+    rounds: 3 # Runden in Folge
+    amount: 2 # so viele Tiere wechseln zur neuen Art
+    levelGap: 2 # Zonenstufe ≥ Stufe der Art − 2
+    pressure: # Selektionsdruck ab Stufe 4: Störung in Zone oder Nachbarzone in den letzten 4 Runden
+      fromTier: 4
+      when: [{ any: [{ disturbedWithin: 4 }, { anyNeighbor: [{ disturbedWithin: 4 }] }] }]
+    startGifts: true # AUSLEGUNG: Gaben des Startlebens kommen zu Spielbeginn ins Deck
+  score:
+    humanFactor: 2 # solange Menschen leben, zählt jede Runde doppelt
   harmony: {}
   breath:
     start: 3 # AUSLEGUNG: Startodem = Zufluss bei Start-Harmonie (1 + ⌊60/25⌋)
@@ -52,6 +79,8 @@ texts:
   effect.transfer: { de: 'bis zu {n} {stat} fließen als {into} ab', en: 'up to {n} {stat} flow off as {into}' }
   effect.draw: { de: 'ziehe {n} Karten', en: 'draw {n} cards' }
   effect.breath: { de: 'Odem {n}', en: 'Breath {n}' }
+  effect.population: { de: 'Bestand {species} {n}', en: '{species} population {n}' }
+  effect.move: { de: '{n} {species} wandert', en: '{n} {species} migrates' }
   scope.neighbors: { de: '{text} auf allen Nachbarzonen', en: '{text} on all neighbouring zones' }
   scope.area: { de: '{text} hier und auf allen Nachbarzonen', en: '{text} here and on all neighbouring zones' }
   scope.all: { de: '{text} auf allen Zonen', en: '{text} on all zones' }
@@ -66,6 +95,7 @@ texts:
   cond.formKind: { de: 'Form {kind}', en: '{kind} form' }
   cond.season: { de: 'im {season}', en: 'in {season}' }
   cond.disturbedWithin: { de: 'Störung in den letzten {n} Runden', en: 'disturbed within the last {n} rounds' }
+  cond.minLevel: { de: 'Zonenstufe ≥ {n}', en: 'zone level ≥ {n}' }
   cond.anyNeighbor: { de: 'ein Nachbar mit {conds}', en: 'a neighbour with {conds}' }
   cond.not: { de: 'nicht ({conds})', en: 'not ({conds})' }
   join.and: { de: ' und ', en: ' and ' }
@@ -76,6 +106,7 @@ texts:
   slot.when: { de: 'Nur {conds}: {text}', en: 'Only {conds}: {text}' }
   slot.zone: { de: 'Zone', en: 'Zone' }
   slot.neighbor: { de: 'Nachbarzone', en: 'Neighbouring zone' }
+  slot.species: { de: 'Art', en: 'Species' }
   kind.ideal: { de: 'ideal', en: 'ideal' }
   kind.normal: { de: 'normal', en: 'normal' }
   kind.degraded: { de: 'verödet', en: 'degraded' }

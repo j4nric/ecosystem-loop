@@ -1,4 +1,4 @@
-import type { GameState } from '@being-god/core';
+import { STATE_VERSION, type GameState } from '@being-god/core';
 
 /** Ein gespeicherter Spielstand: Engine-Zustand (reines JSON) und der Seed, mit dem die Partie begann. */
 export interface SavedGame {
@@ -29,7 +29,7 @@ export class LocalSaveStore implements SaveStore {
       if (!raw) return null;
       const parsed = JSON.parse(raw) as Partial<SavedGame> | null;
       if (!parsed || parsed.version !== 1 || typeof parsed.seed !== 'string' || !parsed.state) return null;
-      if (parsed.state.version !== 2) return null;
+      if (parsed.state.version !== STATE_VERSION) return null;
       return parsed as SavedGame;
     } catch {
       return null;

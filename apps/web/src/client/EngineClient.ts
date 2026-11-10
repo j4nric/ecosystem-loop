@@ -168,6 +168,10 @@ export class EngineClient implements GameClient {
     return (zone && this.data.geographies.get(zone.geography)?.name[this.locale]) ?? zoneId;
   }
 
+  private speciesName(id: string): string {
+    return this.data.species.get(id)?.name[this.locale] ?? id;
+  }
+
   private formName(formId: string): string {
     return this.data.forms.get(formId)?.form.name[this.locale] ?? formId;
   }
@@ -216,6 +220,38 @@ export class EngineClient implements GameClient {
         case 'collapsed':
           head.unshift({ type: 'collapsed' });
           break;
+        case 'speciesEmerged':
+          (e.first ? head : body).push({
+            type: 'emerged',
+            species: this.speciesName(e.species),
+            zone: this.zoneName(e.zone),
+            first: e.first,
+          });
+          break;
+        case 'speciesExtinct':
+          head.push({ type: 'extinct', species: this.speciesName(e.species) });
+          break;
+        case 'migrated':
+          body.push({
+            type: 'migrated',
+            species: this.speciesName(e.species),
+            from: this.zoneName(e.from),
+            to: this.zoneName(e.to),
+          });
+          break;
+        case 'hunger':
+          body.push({ type: 'hunger', species: this.speciesName(e.species), zone: this.zoneName(e.zone) });
+          break;
+        case 'giftAdded':
+          body.push({
+            type: 'gift',
+            species: this.speciesName(e.species),
+            card: this.data.cards.get(e.card)?.name[lc] ?? e.card,
+          });
+          break;
+        case 'populationChanged': // Details; zusammengefasst über Hunger, Wanderung, Entstehung
+        case 'overpopulation':
+        case 'scored':
         case 'cardDrawn':
         case 'deckReshuffled':
         case 'disturbance': // kommt immer zusammen mit 'triggered' oder einem Formwechsel zur Störungsform
@@ -227,7 +263,13 @@ export class EngineClient implements GameClient {
           break;
       }
     }
-    const rank: Partial<Record<Notice['type'], number>> = { collapsed: 0, round: 1, harmony: 2 };
+    const rank: Partial<Record<Notice['type'], number>> = {
+      collapsed: 0,
+      extinct: 1,
+      emerged: 2,
+      round: 3,
+      harmony: 4,
+    };
     head.sort((a, b) => (rank[a.type] ?? 9) - (rank[b.type] ?? 9));
     return [...head, ...body];
   }

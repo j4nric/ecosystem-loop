@@ -1,5 +1,6 @@
 # Startwelten. adjust verschiebt einen Wert in allen Zonen, die ihn haben; zones überschreibt einzelne Zonen.
 # harmony/breath überschreiben die Startwerte aus harmony.yaml bzw. config.yaml.
+# populations: Startleben je Zone (Konzept 5.3: Plankton im Wasser, Käfer an Land).
 
 scenarios:
   - id: standard
@@ -7,6 +8,11 @@ scenarios:
     description:
       de: 'Alle Zonen in ihrem natürlichen Zustand.'
       en: 'Every zone in its natural state.'
+    populations: &start_life
+      river: { plankton: 3 }
+      coast: { plankton: 3 }
+      forest: { beetle: 3 }
+      plains: { beetle: 3 }
 
   - id: drought
     name: { de: Dürrejahr, en: Year of drought }
@@ -17,6 +23,7 @@ scenarios:
     zones:
       river: { stats: { water: 1 } }
       mountains: { stats: { snow: 1 } }
+    populations: *start_life
 
   - id: wet
     name: { de: Regenzeit, en: Rainy season }
@@ -26,6 +33,7 @@ scenarios:
     adjust: { moisture: 1, light: -1 }
     zones:
       river: { stats: { water: 4 } }
+    populations: *start_life
 
   - id: fragile
     name: { de: Zerbrechliche Welt, en: Fragile world }
@@ -36,3 +44,4 @@ scenarios:
     breath: 2
     zones:
       forest: { stats: { vegetation: 1, deadwood: 4 } }
+    populations: *start_life

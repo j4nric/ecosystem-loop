@@ -3,6 +3,7 @@ import type { Targets } from '../api.ts';
 import { holdsAll } from '../conditions.ts';
 import type { Card, GameData, Slot, Trigger } from '../schema/index.ts';
 import type { GameEvent, GameState } from '../state.ts';
+import { populationOf } from '../population.ts';
 import { getZone, markDisturbance, RuleError } from '../world.ts';
 import { applyEffect, type EffectContext } from './effects.ts';
 
@@ -12,8 +13,21 @@ export function getCard(data: GameData, id: string): Card {
   return c;
 }
 
-/** Gültige Zonen für einen Slot, abhängig von bereits gewählten Slots. */
+/** Gültige Zonen (bzw. Arten) für einen Slot, abhängig von bereits gewählten Slots. */
 export function slotOptions(data: GameData, state: GameState, slot: Slot, bound: Targets): string[] {
+  if (slot.kind === 'species') {
+    const zid = bound[slot.in];
+    if (zid === undefined) return [];
+    const zone = getZone(state, zid);
+    return [...data.species.values()]
+      .filter(
+        (sp) =>
+          populationOf(zone, sp.id) > 0 &&
+          (slot.eats === undefined || sp.diet.includes(slot.eats)) &&
+          (slot.species === undefined || slot.species.includes(sp.id)),
+      )
+      .map((sp) => sp.id);
+  }
   const candidates =
     slot.kind === 'zone'
       ? state.zones

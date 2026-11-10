@@ -29,6 +29,8 @@ export function holds(c: Condition, ctx: ConditionContext): boolean {
   if ('season' in c) return seasonOf(data, state.round).id === c.season;
   if ('disturbedWithin' in c)
     return zone.lastDisturbance !== null && state.round - zone.lastDisturbance < c.disturbedWithin;
+  if ('population' in c) return statHolds(c, zone.populations[c.population] ?? 0);
+  if ('minLevel' in c) return zone.level >= c.minLevel;
   if ('anyNeighbor' in c)
     return zone.neighbors.some((n) => holdsAll(c.anyNeighbor, { ...ctx, zone: getZone(state, n) }));
   if ('not' in c) return !holdsAll(c.not, ctx);

@@ -77,5 +77,18 @@ function noticeToast(n: Notice): Omit<Toast, 'id'> {
       return { text: t.toastHarmony(n.delta), tone: n.delta > 0 ? 'good' : 'bad' };
     case 'collapsed':
       return { text: t.toastCollapsed, tone: 'bad' };
+    case 'emerged':
+      return {
+        text: n.first ? t.toastEmergedFirst(n.species, n.zone) : t.toastEmerged(n.species, n.zone),
+        tone: 'good',
+      };
+    case 'extinct':
+      return { text: t.toastExtinct(n.species), tone: 'bad' };
+    case 'migrated':
+      return { text: t.toastMigrated(n.species, n.from, n.to), tone: 'info' };
+    case 'hunger':
+      return { text: t.toastHunger(n.species, n.zone), tone: 'bad' };
+    case 'gift':
+      return { text: t.toastGift(n.species, n.card), tone: 'good' };
   }
 }

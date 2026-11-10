@@ -4,6 +4,7 @@
  */
 import type { Effect, GameData, Scope } from '../schema/index.ts';
 import type { GameEvent, GameState, ZoneState } from '../state.ts';
+import { lifeParams, populationOf, setPopulation } from '../population.ts';
 import { breathMax } from '../rules/breath.ts';
 import { clamp, geographyOf, getZone, RuleError } from '../world.ts';
 import { drawUpTo } from './deck.ts';
@@ -66,6 +67,11 @@ export function towardRest(
   setStat(data, zone, stat, v + move, emit, cause);
 }
 
+/** Art eines Effekts: Id eines Art-Slots (gebunden) oder Art-Id. */
+function speciesRef(ctx: EffectContext, ref: string): string {
+  return ctx.bind[ref] ?? ref;
+}
+
 export function applyEffect(ctx: EffectContext, e: Effect): void {
   const { data, state, emit, cause } = ctx;
   if ('adjust' in e) {
@@ -99,6 +105,20 @@ export function applyEffect(ctx: EffectContext, e: Effect): void {
     if (to !== from) {
       state.breath = to;
       emit({ type: 'breathChanged', from, to, cause });
+    }
+  } else if ('population' in e) {
+    const species = speciesRef(ctx, e.population);
+    for (const z of zonesFor(ctx, e.at, e.scope))
+      setPopulation(data, state, z, species, populationOf(z, species) + e.by, emit, cause);
+  } else if ('move' in e) {
+    const species = speciesRef(ctx, e.move);
+    const src = boundZone(ctx, e.from);
+    for (const z of zonesFor(ctx, e.at, 'self')) {
+      const moved = Math.min(e.amount, populationOf(src, species), lifeParams(data).max - populationOf(z, species));
+      if (moved <= 0 || z === src) continue;
+      setPopulation(data, state, src, species, populationOf(src, species) - moved, emit, cause);
+      setPopulation(data, state, z, species, populationOf(z, species) + moved, emit, cause);
+      emit({ type: 'migrated', species, from: src.id, to: z.id, count: moved });
     }
   } else {
     const never: never = e;
