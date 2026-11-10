@@ -84,23 +84,23 @@ Abnahme:
 - Ereignisse, Ankündigung, Gegenkarten und Freischaltungen sind durch Tests belegt
 - Das Schöpfungsbuch bleibt zwischen Partien erhalten
 
-### Phase 4 – App-Gerüst
+### Phase 4 – Web-App-Gerüst
 
-**Ziel:** Das Spiel läuft als Web-App und auf dem Handy, mit einfacher 3D-Insel und Platzhaltermodellen.
+**Ziel:** Das Spiel läuft als mobile Web-App im iPhone-Browser, mit einfacher 3D-Insel und Platzhaltermodellen,
+und wird auf dem eigenen vServer bereitgestellt. Native Builds (Capacitor, Stores) folgen später.
 
 Umfang:
 
-- `apps/mobile`: Vite + React + TypeScript, React Three Fiber, Capacitor
-- Insel-Diorama mit 5 Zonen-Kacheln, Form als Farbe/Platzhaltermodell, Tiere als einfache Figuren
+- `apps/web`: Vite + React + TypeScript, React Three Fiber; als Web-App zum Home-Bildschirm hinzufügbar
+- Insel-Diorama mit 5 Zonen, Form als Farbe/Platzhaltermodell, Arten als einfache Figuren
 - Engine aus `@being-god/core` direkt angebunden (YAML zur Build-Zeit eingebunden)
-- Spielstand speichern und laden (lokal); Speicher-Adapter für späteren Cloud-Sync
-- CI: Web-Build, Android-Debug-Build; iOS-Build sobald ein Apple-Entwicklerkonto da ist
-- Vorschau-Link je PR (Web-Build als Artefakt)
+- Spielstand speichern und laden (lokal im Browser); Speicher-Adapter für späteren Cloud-Sync
+- CI: Web-Build bei jedem PR; Deploy auf den vServer nach Merge auf `main` (sobald Zugangsdaten hinterlegt sind)
 
 Abnahme:
 
-- Eine komplette Partie ist im Handy-Browser und als Android-App spielbar
-- 60 fps auf einem Mittelklasse-Handy bei der Insel-Ansicht
+- Eine komplette Partie ist im iPhone-Browser spielbar
+- Flüssige Darstellung (Ziel 60 fps) auf einem aktuellen iPhone
 
 ### Phase 5 – Bedienung und Spielgefühl
 
@@ -143,9 +143,8 @@ Umfang:
 
 ## Abhängigkeiten von dir
 
-| Wann      | Was                                                                       |
-| --------- | ------------------------------------------------------------------------- |
-| jetzt     | Branch-Schutz für `main` mit Pflicht-Check „CI ok“ (GitHub-Einstellungen) |
-| Phase 4   | Google Play Console (25 $ einmalig) für Android-Tests                     |
-| Phase 4/7 | Apple Developer Program (99 $/Jahr) für iOS-Builds und TestFlight         |
-| laufend   | Antworten auf Fragen im Cockpit, Feedback zu Features                     |
+| Wann    | Was                                                                   |
+| ------- | --------------------------------------------------------------------- |
+| Phase 4 | Zugang zum vServer für den Deploy (als GitHub-Secrets, siehe Cockpit) |
+| Phase 8 | Store-Konten (Apple, Google), falls native Apps gewünscht             |
+| laufend | Antworten auf Fragen im Cockpit, Feedback zu Features                 |

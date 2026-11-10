@@ -19,7 +19,7 @@ packages/
     tests/
   sim/      @being-god/sim – Bots, Balancing-Simulation, Konsolen-Prototyp
 apps/
-  mobile/   iOS-/Android-App (geplant: Vite + React Three Fiber + Capacitor)
+  mobile/   mobile Web-App (Vite + React Three Fiber), später nativ
 docs/       Konzept und Entscheidungen
 ```
 

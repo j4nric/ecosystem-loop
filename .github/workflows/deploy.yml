@@ -1,0 +1,61 @@
+name: Deploy Web-App
+
+# Baut apps/web und kopiert den statischen Build per rsync/SSH auf den vServer.
+# Läuft nur, wenn die Secrets DEPLOY_HOST, DEPLOY_USER, DEPLOY_PATH und DEPLOY_SSH_KEY gesetzt sind
+# (Anleitung: docs/deploy.md). Ohne Secrets wird der Lauf übersprungen statt rot zu werden.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build und Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+    steps:
+      - name: Zugangsdaten vorhanden?
+        id: guard
+        run: |
+          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ] || [ -z "$DEPLOY_PATH" ]; then
+            echo "Keine Deploy-Secrets gesetzt – Deploy übersprungen (siehe docs/deploy.md)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.skip != 'true'
+      - uses: actions/setup-node@v7
+        if: steps.guard.outputs.skip != 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - if: steps.guard.outputs.skip != 'true'
+        run: npm ci
+      - if: steps.guard.outputs.skip != 'true'
+        run: npm run -w apps/web build
+      - name: SSH-Schlüssel einrichten
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+      - name: Hochladen
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_PORT:-22}" \
+            apps/web/dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
