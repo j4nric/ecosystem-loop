@@ -2,7 +2,8 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CardView, Targets } from '@core/api';
 import type { DeckStore, GameClient } from './client/index.ts';
 import { initialDeck } from './logic/deck.ts';
-import { zoneTints } from './logic/ideal.ts';
+import { isWorldCard, worldTints, zoneEffects, zoneTints } from './logic/ideal.ts';
+import { worldDropAction } from './logic/targeting.ts';
 import { t } from './i18n/index.ts';
 import { IslandScene } from './scene/IslandScene.tsx';
 import type { ZonePicker } from './scene/registry.ts';
@@ -51,16 +52,20 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
 
   const fxRef = useRef<EffectsApi | null>(null);
   const zoneIds = useMemo(() => new Set(view.zones.map((z) => z.id)), [view.zones]);
+  const hand = view.hand;
   const play = useCallback(
     (uid: number, targets: Targets) => {
-      // Karte fliegt zur ersten Zielzone; die Wertänderungen steigen danach über der Zone auf (Effects).
-      fxRef.current?.flyCard(uid, Object.values(targets).find((v) => zoneIds.has(v)) ?? null);
+      // Gezielte Karte fliegt zur ersten Zielzone, Weltkarte löst eine Welle über die Insel aus; die
+      // Wertänderungen steigen danach über den Zonen auf (Effects).
+      const card = hand.find((c) => c.uid === uid);
+      if (card && isWorldCard(card)) fxRef.current?.worldWave(uid);
+      else fxRef.current?.flyCard(uid, Object.values(targets).find((v) => zoneIds.has(v)) ?? null);
       dispatch({ type: 'play', uid, targets });
     },
-    [dispatch, zoneIds],
+    [dispatch, zoneIds, hand],
   );
   const targeting = useTargeting(client, view, play);
-  const { cancel: cancelTargeting, startAt } = targeting;
+  const { cancel: cancelTargeting, startAt, start: startTargeting } = targeting;
 
   const drag = useCardDrag({
     client,
@@ -71,6 +76,14 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
       setDetailUid(null);
     }, [cancelTargeting]),
     onDrop: useCallback((card: CardView, zoneId: string) => void startAt(card, zoneId), [startAt]),
+    // Weltkarte über der Spielfläche losgelassen: ohne Slots sofort ausspielen, sonst erst die Wahl (Chips).
+    onDropWorld: useCallback(
+      (card: CardView) => {
+        if (worldDropAction(card) === 'play') play(card.uid, {});
+        else startTargeting(card);
+      },
+      [play, startTargeting],
+    ),
     onLongPress: useCallback(
       (card: CardView) => {
         cancelTargeting();
@@ -82,20 +95,41 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
   });
   const dragging = drag.drag;
 
+  const dragCard = dragging?.card;
+  const dragValid = dragging?.valid;
+  const dragWorld = dragging?.world ?? false;
+
+  // Weltkarte beim Ziehen: eine Vorschau ohne Ziele für alle Zonen (nur Karten ohne Wahl-Slot).
+  const worldDragPreview = useMemo(() => {
+    if (!dragCard || !dragWorld || dragCard.slots.length > 0) return null;
+    return client.preview(dragCard.uid, {});
+  }, [client, dragCard, dragWorld]);
+  const dragEffects = useMemo(() => zoneEffects(worldDragPreview, view.zones), [worldDragPreview, view.zones]);
+
   const dragPreview = useMemo(() => {
+    if (dragWorld) return worldDragPreview;
     if (!dragging?.zone || !dragging.valid.has(dragging.zone) || dragging.card.slots.length !== 1) return null;
     const slot = dragging.card.slots[0]!;
     return client.preview(dragging.card.uid, { [slot.id]: dragging.zone });
-  }, [client, dragging]);
+  }, [client, dragging, dragWorld, worldDragPreview]);
 
-  // Beim Ziehen: jede gültige Zone nach der Wirkung auf ihre Idealform einfärben (nur Karten mit einem Slot).
-  const dragCard = dragging?.card;
-  const dragValid = dragging?.valid;
+  // Beim Ziehen: jede gültige Zone nach der Wirkung auf ihre Idealform einfärben (nur Karten mit einem Slot);
+  // Weltkarte: alle betroffenen Zonen zugleich.
   const dragTints = useMemo(() => {
+    if (dragWorld) return worldTints(dragEffects);
     const slot = dragCard?.slots[0];
     if (!dragCard || !dragValid || !slot || dragCard.slots.length !== 1) return null;
     return zoneTints(dragValid, (zone) => client.preview(dragCard.uid, { [slot.id]: zone }));
-  }, [client, dragCard, dragValid]);
+  }, [client, dragCard, dragValid, dragWorld, dragEffects]);
+  const dragTargets = useMemo(
+    () =>
+      dragWorld
+        ? dragEffects.length > 0
+          ? new Set(dragEffects.map((e) => e.zone))
+          : null // Weltkarte mit Wahl-Slot: Wirkung erst nach der Wahl bekannt, nichts abdunkeln
+        : (dragValid ?? null),
+    [dragWorld, dragEffects, dragValid],
+  );
 
   const onZoneTap = useCallback(
     (zoneId: string) => {
@@ -154,7 +188,7 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
   // Während eines Kartenzugs zeigt das Sheet die erste gewählte Zielzone, sonst die angetippte Zone.
   const firstSlot = active?.card.slots[0];
   const targetZoneId = active && firstSlot ? (active.targets[firstSlot.id] ?? null) : null;
-  const focusZone = dragging ? dragging.zone : active ? targetZoneId : selectedZone;
+  const focusZone = dragging ? (dragging.world ? null : dragging.zone) : active ? targetZoneId : selectedZone;
   const zone = view.zones.find((z) => z.id === focusZone);
   const speciesSlot = targeting.editSlot?.kind === 'species';
 
@@ -167,7 +201,12 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
     />
   );
   const preview = active && targeting.complete && (
-    <PlayPreview card={active.card} preview={targeting.preview} shownZone={zone?.id ?? null}>
+    <PlayPreview
+      card={active.card}
+      preview={targeting.preview}
+      shownZone={zone?.id ?? null}
+      effects={targeting.world ? targeting.effects : undefined}
+    >
       {chips}
     </PlayPreview>
   );
@@ -188,7 +227,7 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
         harmony={view.harmony.value / Math.max(1, view.harmony.max)}
         season={view.season.id}
         selectedZone={focusZone}
-        validTargets={dragging ? dragging.valid : active ? targeting.validZones : null}
+        validTargets={dragging ? dragTargets : active ? targeting.validZones : null}
         tints={dragging ? dragTints : active ? targeting.tints : null}
         reducedMotion={reducedMotion}
         pickerRef={pickerRef}
@@ -213,7 +252,9 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
         <Toasts toasts={toasts} />
       </div>
 
-      <footer className={`dock${dragging ? ' is-dragging' : ''}`}>
+      <footer
+        className={`dock${dragging ? ' is-dragging' : ''}${!dragging && active && targeting.world && targeting.complete ? ' is-world-preview' : ''}`}
+      >
         {!dragging && detailCard && !active && (
           <CardDetail
             card={detailCard}
@@ -236,7 +277,11 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
           </ZoneSheet>
         )}
         {!dragging && active && targeting.complete && !zone && (
-          <section className="sheet sheet--compact" role="dialog" aria-label={active.card.name}>
+          <section
+            className={`sheet sheet--compact${targeting.world ? ' sheet--world' : ''}`}
+            role="dialog"
+            aria-label={active.card.name}
+          >
             <div className="sheet__body">{preview}</div>
             <div className="sheet__footer">{actions}</div>
           </section>
@@ -293,7 +338,15 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
         />
       </footer>
 
-      {dragging && <DragOverlay drag={dragging} zones={view.zones} preview={dragPreview} ghostRef={drag.ghostRef} />}
+      {dragging && (
+        <DragOverlay
+          drag={dragging}
+          zones={view.zones}
+          preview={dragPreview}
+          effects={dragEffects}
+          ghostRef={drag.ghostRef}
+        />
+      )}
 
       {view.phase === 'over' && (
         <GameOver

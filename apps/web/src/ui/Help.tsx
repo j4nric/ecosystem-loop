@@ -35,6 +35,12 @@ export function Help({ onClose, onTutorial }: { onClose: () => void; onTutorial:
           <p>{t.helpIdealTools}</p>
           <p>{t.helpIdealTint}</p>
 
+          <h3>
+            <span aria-hidden>🌍 </span>
+            {t.helpWorld}
+          </h3>
+          <p>{t.helpWorldText}</p>
+
           <h3>{t.helpForms}</h3>
           <dl className="help__list">
             {KINDS.map((k) => (

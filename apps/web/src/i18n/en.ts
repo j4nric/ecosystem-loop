@@ -108,6 +108,26 @@ export const en: Strings = {
   dragInvalid: (zone) => `${zone}: not possible here`,
   dragMoreTargets: 'More targets follow after you let go.',
   dragCardLabel: (name) => `${name} – tap or drag onto the island, long-press for details`,
+  worldShort: 'acts everywhere',
+  worldHint: 'Weather acts everywhere – each zone responds differently.',
+  worldCardLabel: (name) => `${name} – weather, acts everywhere. Tap for the preview or drag onto the island to play`,
+  worldDragHint: 'Drag onto the island and let go to play',
+  worldDragArmed: 'Let go to play the card',
+  worldDragCancel: 'Drag back to your hand to cancel.',
+  worldDragChoice: 'After letting go you still pick an option.',
+  worldNone: 'No zone changes.',
+  worldBalance: (b) => {
+    const zones = (n: number) => (n === 1 ? '1 zone' : `${n} zones`);
+    const parts = [
+      b.better > 0 ? `${zones(b.better)} closer` : '',
+      b.worse > 0 ? `${b.better > 0 ? b.worse : zones(b.worse)} further away` : '',
+      b.neutral > 0 ? `${b.better + b.worse > 0 ? b.neutral : zones(b.neutral)} unchanged` : '',
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : 'No zone changes.';
+  },
+  worldDistance: (before, after) => `Ideal ${before} → ${after}`,
+  worldEffectsTitle: 'Effect per zone',
+  playWorld: 'Play',
   cardDetails: 'Card details',
   cardDetailsHint: 'Long-press shows the full card text.',
   deckTitle: 'Starting deck',
@@ -144,6 +164,7 @@ export const en: Strings = {
     ['▲ ▼', 'Harmony trend since the last round.'],
     ['🔥', 'Hazard on a zone: a card in your hand would trigger a threshold there.'],
     ['◯', 'Glowing ring: valid target of the selected card.'],
+    ['🌍', 'Weather card: acts on all zones without choosing a target; each zone responds differently.'],
   ],
   helpCreatures: 'Figures on the island',
   helpCreaturesText: 'Each figure stands for part of a species’ population.',
@@ -179,6 +200,9 @@ export const en: Strings = {
     'Lowering cards like drought, storm or frost are tools when a value is above its target range. You must play at least one card every round – even an awkward one.',
   helpIdealTint:
     'While targeting, zones glow green (▲ closer to ideal), red (▼ further away) or yellow (no change). You see at once where a card helps.',
+  helpWorld: 'Weather acts everywhere',
+  helpWorldText:
+    'Weather acts everywhere – each zone responds differently. Gifts, miracles and species you place on a target. Weather cards (🌍) need no target: drag them onto the island or tap them. All affected zones light up at once in green, red or yellow, and the preview lists each zone with its distance to the ideal before → after. Whether the trade is worth it is your call.',
   helpFog: 'As harmony sinks, the island grows pale and mist rises.',
   showTutorial: 'Show introduction',
   tutorialSkip: 'Skip',
@@ -195,12 +219,17 @@ export const en: Strings = {
     {
       icon: '✦',
       title: 'Breath',
-      text: 'Cards cost breath (top left). New breath flows in every round – more, the healthier the world is. Forces of nature are free, but crude.',
+      text: 'Cards cost breath (top left). New breath flows in every round – more, the healthier the world is. Weather is cheap, but hits every zone at once.',
     },
     {
       icon: '🂠',
       title: 'Playing cards',
-      text: 'Tap a card and then a glowing zone – or drag the card straight onto the island. Before confirming you see its effect.',
+      text: 'Gifts, miracles and species you place on a target: tap the card and then a glowing zone – or drag it straight onto the zone. Before confirming you see its effect.',
+    },
+    {
+      icon: '🌍',
+      title: 'Weather acts everywhere',
+      text: 'Weather acts everywhere – each zone responds differently. Gifts, miracles and species you place on a target. Drag a weather card onto the island or tap it: all affected zones light up at once. Whether the trade is worth it is your call.',
     },
     {
       icon: '⛰',

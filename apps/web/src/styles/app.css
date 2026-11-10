@@ -1731,3 +1731,197 @@ button.forecast.is-now .forecast__when {
   font-size: 11px;
   font-weight: 600;
 }
+
+/* ---------- Weltkarten (Wetter): wirken überall ---------- */
+.card--weather {
+  --card-color: #5b9bd5;
+}
+.card--world {
+  --card-color: #5b9bd5;
+  background: linear-gradient(180deg, #eef6ff 0%, var(--panel-strong) 60%);
+  box-shadow:
+    0 3px 12px rgba(60, 50, 90, 0.16),
+    inset 0 0 0 2px rgba(91, 155, 213, 0.55),
+    inset 0 3px 0 var(--card-color);
+}
+.card--world.is-active {
+  box-shadow:
+    0 0 0 3px var(--gold),
+    0 10px 20px rgba(60, 50, 90, 0.25),
+    inset 0 0 0 2px rgba(91, 155, 213, 0.55),
+    inset 0 3px 0 var(--card-color);
+}
+.card__globe {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 13px;
+  line-height: 1;
+}
+.card__reach {
+  margin-top: auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: #3d74a8;
+  letter-spacing: 0.01em;
+}
+.play-preview--world {
+  background: rgba(91, 155, 213, 0.1);
+  box-shadow: inset 0 0 0 2px rgba(91, 155, 213, 0.6);
+}
+.play-preview__world {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3d74a8;
+}
+.sheet--world {
+  max-height: 46dvh;
+}
+.play-preview--world {
+  gap: 4px;
+  padding: 8px 10px;
+}
+.play-preview--world .play-preview__text {
+  font-size: 12px;
+}
+small.play-preview__world {
+  font-size: 12px;
+}
+.world-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.world-preview__balance {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.world-preview__zones {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.world-preview__zones.is-compact {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.world-zone {
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: inset 3px 0 0 #ffd66b;
+}
+.world-zone.is-better {
+  background: #eef9ea;
+  box-shadow: inset 3px 0 0 #5fbf5a;
+}
+.world-zone.is-worse {
+  background: #fdeeec;
+  box-shadow: inset 3px 0 0 #e0604f;
+}
+/* Eine Zeile je Zone: Name ▲ | Wirkungen | Abstand vorher → nachher */
+.world-zone {
+  display: grid;
+  grid-template-columns: minmax(84px, auto) 1fr auto;
+  align-items: baseline;
+  column-gap: 10px;
+  font-size: 14px;
+}
+.world-zone__name {
+  grid-column: 1;
+  grid-row: 1;
+  white-space: nowrap;
+}
+.world-zone.is-better .world-zone__name {
+  color: #2f6a24;
+}
+.world-zone.is-worse .world-zone__name {
+  color: #9a3526;
+}
+.world-zone__dist {
+  grid-column: 3;
+  grid-row: 1;
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.world-zone__list {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.world-zone__list .is-better,
+.world-zone__list .is-good {
+  color: #3f7a2f;
+}
+.world-zone__list .is-worse,
+.world-zone__list .is-bad {
+  color: #a8402f;
+}
+.is-compact .world-zone {
+  grid-template-columns: auto auto;
+  column-gap: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+.is-compact .world-zone__dist {
+  grid-column: 2;
+}
+.drag-panel--world {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.drag-panel__hint.is-armed {
+  color: #3d74a8;
+}
+.drag-panel__sub {
+  font-size: 12px;
+  text-align: center;
+}
+.drag-ghost.card--world.is-valid {
+  box-shadow:
+    0 0 0 3px #5b9bd5,
+    0 0 26px rgba(91, 155, 213, 0.7),
+    0 12px 28px rgba(40, 30, 70, 0.32);
+}
+.fx-wave {
+  position: fixed;
+  width: var(--wave-w, 300px);
+  height: calc(var(--wave-w, 300px) * 0.55);
+  border-radius: 50%;
+  border: 6px solid rgba(232, 244, 255, 1);
+  box-shadow:
+    0 0 30px rgba(110, 180, 245, 0.95),
+    inset 0 0 30px rgba(110, 180, 245, 0.75);
+  will-change: transform, opacity;
+}
+.fx-wave--echo {
+  border-width: 2px;
+}
+.fx-sheen {
+  position: fixed;
+  width: var(--wave-w, 300px);
+  height: calc(var(--wave-w, 300px) * 0.55);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(190, 225, 255, 0.85), rgba(190, 225, 255, 0) 70%);
+  will-change: transform, opacity;
+}
+/* Vorschau einer Weltkarte: Hand und Leiste weichen, damit die gefärbten Zonen der Insel sichtbar bleiben. */
+.dock.is-world-preview .dock__bar,
+.dock.is-world-preview .hand {
+  display: none;
+}
