@@ -33,6 +33,8 @@ export function game(
     seed?: string;
     scenario?: string;
     life?: boolean;
+    /** Ereignis-Ankündigung der ersten Runde behalten (Standard: entfernt, damit Tests ohne Zufall starten). */
+    forecast?: boolean;
   } = {},
 ): GameState {
   const d = opts.d ?? data;
@@ -41,6 +43,7 @@ export function game(
     for (const z of s.zones) z.populations = {};
     s.species = {};
   }
+  if (!opts.forecast) s.forecast = null;
   let uid = 1000;
   if (opts.hand) s.hand = opts.hand.map((card) => ({ uid: uid++, card }));
   if (opts.draw) s.drawPile = opts.draw.map((card) => ({ uid: uid++, card }));

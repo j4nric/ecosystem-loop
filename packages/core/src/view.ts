@@ -3,6 +3,7 @@ import type { CardView, GameView, Locale, ZoneView } from './api.ts';
 import { applyEffect } from './cards/effects.ts';
 import { firingTriggers, getCard } from './cards/play.ts';
 import { cardText, slotLabel } from './cards/text.ts';
+import { forecastView } from './describe.ts';
 import { canEndTurn, legalPlays } from './turn.ts';
 import { runNature } from './nature.ts';
 import { populationOf } from './population.ts';
@@ -29,7 +30,7 @@ function warnings(data: GameData, state: GameState, zone: ZoneState, locale: Loc
     seen.add(inst.card);
     const card = getCard(data, inst.card);
     const first = card.slots[0];
-    if (!first || first.kind === 'species') continue;
+    if (!first || first.kind !== 'zone') continue;
     const bound = { [first.id]: zone.id };
     const firing = new Set(
       firingTriggers(data, state, card, bound, 'before')
@@ -97,7 +98,13 @@ export function view(data: GameData, state: GameState, locale: Locale = 'de'): G
       cost: card.cost,
       text: cardText(data, card, locale),
       playable: playable.has(inst.uid),
-      slots: card.slots.map((s) => ({ id: s.id, kind: s.kind, label: slotLabel(data, s, locale) })),
+      slots: card.slots.map((s) => {
+        const slot: CardView['slots'][number] = { id: s.id, kind: s.kind, label: slotLabel(data, s, locale) };
+        if (s.kind === 'neighbor') slot.of = s.of;
+        if (s.kind === 'species') slot.of = s.in;
+        if (s.kind === 'choice') slot.options = s.options.map((o) => ({ id: o.id, label: o.label[locale] }));
+        return slot;
+      }),
     };
   });
   const tiers = Object.keys(state.species).map((id) => data.species.get(id)?.tier ?? 0);
@@ -117,7 +124,8 @@ export function view(data: GameData, state: GameState, locale: Locale = 'de'): G
     playsThisTurn: state.playsThisTurn,
     minPlays: data.config.turn.minPlays,
     canEndTurn: canEndTurn(data, state),
-    forecast: null,
+    forecast: forecastView(data, state, locale),
+    eventShield: state.eventShield,
     highestTier: Math.max(0, ...tiers),
   };
 }

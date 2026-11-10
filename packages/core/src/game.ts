@@ -1,10 +1,12 @@
 /**
- * Fassade der Engine v2: newGame, step, view, legalPlays, preview.
+ * Fassade der Engine v2: newGame, step, view, legalPlays, slotOptions, preview, describeEvent.
  * `step` ist rein: Der Eingangszustand wird nie verändert, Zufall läuft über den Seed im Zustand.
  */
 import type { Action, GameSetup, Locale, Preview, Targets } from './api.ts';
 import { drawUpTo } from './cards/deck.ts';
-import { getCard, playFromHand } from './cards/play.ts';
+import { bindingsFor, getCard, playFromHand } from './cards/play.ts';
+import { deckIssueText, validateDeck } from './meta.ts';
+import { drawForecast } from './rules/forecast.ts';
 import { canEndTurn } from './turn.ts';
 import { runNature } from './nature.ts';
 import { addGifts, setPopulation } from './population.ts';
@@ -16,9 +18,10 @@ import { paramsOf } from './rules/module.ts';
 import { rngOf, seedFrom } from './rng.ts';
 import type { GameData } from './schema/index.ts';
 import { STATE_VERSION, type GameEvent, type GameState, type ZoneState } from './state.ts';
-import { clamp, getZone, RuleError, seasonOf } from './world.ts';
+import { clamp, geographyOf, getZone, RuleError, seasonOf, statsOf } from './world.ts';
 
 export { view } from './view.ts';
+export { describeEvent } from './describe.ts';
 export { runNature } from './nature.ts';
 export { canEndTurn, legalPlays } from './turn.ts';
 
@@ -32,10 +35,9 @@ export function newGame(data: GameData, setup: GameSetup): GameState {
   const scenario = data.scenarios.get(scenarioId);
   if (!scenario) throw new RuleError(`Unbekanntes Szenario: ${scenarioId}`);
   const deck = setup.deck ?? data.config.starterDeck;
-  for (const c of deck) if (!data.cards.has(c)) throw new RuleError(`Unbekannte Karte im Deck: ${c}`);
-  const { minSize, maxSize } = data.config.deck;
-  if (deck.length < minSize || deck.length > maxSize)
-    throw new RuleError(`Deck mit ${deck.length} Karten, erlaubt ${minSize}–${maxSize}.`);
+  // AUSLEGUNG: Ohne Schöpfungsbuch (Tests, Bots, Konsole) gilt nur Größe/Kopien/bekannte Karten, nicht der Pool.
+  const issues = validateDeck(data, setup.book ?? null, deck);
+  if (issues.length > 0) throw new RuleError(issues.map(deckIssueText).join(' '));
 
   const { min, max } = data.config.scale;
   const lv = paramsOf(data, { id: 'levels', params: LevelsParams });
@@ -82,7 +84,12 @@ export function newGame(data: GameData, setup: GameSetup): GameState {
     cardPlays: {},
     species: {},
     score: 0,
+    extinctions: [],
+    forecast: null,
+    eventShield: 0,
+    eventsOccurred: 0,
   };
+  if (setup.vary ?? data.config.startWorld.vary) varyWorld(data, state, setup.seed);
   for (const z of state.zones) z.form = formFor(data, state, z).id;
   // Startleben: zählt ab Runde 0 als entstanden.
   state.round = 0;
@@ -96,7 +103,38 @@ export function newGame(data: GameData, setup: GameSetup): GameState {
   if (evolutionParams(data).startGifts)
     for (const sp of data.species.values()) if (sp.id in state.species) addGifts(state, sp, rng.int, () => {});
   drawUpTo(state, data.config.turn.handSize, () => {});
+  // Vorschau der ersten Runde (Konzept 3, Phase 1 „Vorschau“), nur wenn die Pipeline Ereignisse kennt.
+  if (data.config.pipeline.includes('forecast')) drawForecast(data, state, state.round, rng, () => {});
   return state;
+}
+
+/**
+ * Variierte Startwelt (Konzept 10, Wiederspielwert): Jeder Startwert streut um ±spread, deterministisch aus dem
+ * Seed. Eigener Zufallsstrom, damit Deck und Ereignisse davon unabhängig bleiben.
+ */
+function varyWorld(data: GameData, state: GameState, seed: string | number): void {
+  const spread = data.config.startWorld.spread;
+  const rng = rngOf({ rng: seedFrom(`world:${seed}`) });
+  for (const z of state.zones)
+    for (const s of statsOf(data, geographyOf(data, z)))
+      z.stats[s] = clamp(z.stats[s]! + rng.int(2 * spread + 1) - spread, data.config.scale.min, data.config.scale.max);
+}
+
+/**
+ * Gültige Werte für den nächsten offenen Slot einer Handkarte (Zonen-, Art- oder Options-Ids), gegeben die
+ * schon gewählten Ziele. Nur Werte, mit denen sich die Karte vollständig belegen lässt; Odem zählt hier nicht.
+ * Leer, wenn die Karte nicht auf der Hand ist, alle Slots belegt sind oder die Wahl ungültig ist.
+ */
+export function slotOptions(data: GameData, state: GameState, uid: number, chosen: Targets): string[] {
+  const inst = state.hand.find((c) => c.uid === uid);
+  if (!inst) return [];
+  const card = getCard(data, inst.card);
+  const slot = card.slots.find((s) => chosen[s.id] === undefined);
+  if (!slot) return [];
+  const out = new Set<string>();
+  for (const b of bindingsFor(data, state, card))
+    if (Object.entries(chosen).every(([k, v]) => b[k] === v)) out.add(b[slot.id]!);
+  return [...out];
 }
 
 export function step(data: GameData, state: GameState, action: Action): StepResult {
@@ -136,23 +174,60 @@ export function preview(
   const events: GameEvent[] = [];
   playFromHand(data, sim, play.uid, play.targets, (e) => events.push(e), true);
 
+  const zoneName = (id: string) => geographyOf(data, getZone(state, id)).name[locale];
+  const formName = (id: string) => data.forms.get(id)?.form.name[locale] ?? id;
   const changes = new Map<string, Preview['changes'][number]>();
+  const pops = new Map<string, NonNullable<Preview['populationChanges']>[number]>();
   const triggers: Preview['triggers'] = [];
+  const eventChanges: NonNullable<Preview['eventChanges']> = [];
+  const eventName = (id: string) => data.events.get(id)?.name[locale] ?? id;
   for (const e of events) {
     if (e.type === 'statChanged') {
       const key = `${e.zone}.${e.stat}`;
       const prev = changes.get(key);
-      changes.set(key, { zone: e.zone, stat: e.stat, from: prev?.from ?? e.from, to: e.to });
+      changes.set(key, {
+        zone: e.zone,
+        stat: e.stat,
+        from: prev?.from ?? e.from,
+        to: e.to,
+        zoneName: zoneName(e.zone),
+        statName: data.stats.get(e.stat)?.name[locale] ?? e.stat,
+      });
+    } else if (e.type === 'populationChanged') {
+      const key = `${e.zone}.${e.species}`;
+      const prev = pops.get(key);
+      pops.set(key, {
+        zone: e.zone,
+        zoneName: zoneName(e.zone),
+        species: e.species,
+        speciesName: data.species.get(e.species)?.name[locale] ?? e.species,
+        from: prev?.from ?? e.from,
+        to: e.to,
+      });
     } else if (e.type === 'triggered') {
       const t = card.triggers.find((x) => x.id === e.trigger)!;
-      triggers.push({ zone: e.zone, trigger: t.id, name: t.name[locale], icon: t.icon });
+      triggers.push({ zone: e.zone, trigger: t.id, name: t.name[locale], icon: t.icon, zoneName: zoneName(e.zone) });
+    } else if (e.type === 'eventCancelled') {
+      eventChanges.push({ event: e.event, name: eventName(e.event), change: 'cancelled' });
+    } else if (e.type === 'eventDelayed') {
+      eventChanges.push({ event: e.event, name: eventName(e.event), change: 'delayed', round: e.round });
     }
   }
+  if (sim.eventShield > state.eventShield) eventChanges.push({ event: null, name: null, change: 'shielded' });
   const formChanges: Preview['formChanges'] = [];
   sim.zones.forEach((z, i) => {
-    const to = formFor(data, sim, z).id;
+    const to = formFor(data, sim, z);
     const from = state.zones[i]!.form;
-    if (to !== from) formChanges.push({ zone: z.id, from, to });
+    if (to.id !== from)
+      formChanges.push({
+        zone: z.id,
+        from,
+        to: to.id,
+        zoneName: zoneName(z.id),
+        fromName: formName(from),
+        toName: to.name[locale],
+        kind: to.kind,
+      });
   });
   return {
     cost: card.cost,
@@ -160,5 +235,7 @@ export function preview(
     changes: [...changes.values()].filter((c) => c.from !== c.to),
     triggers,
     formChanges,
+    populationChanges: [...pops.values()].filter((c) => c.from !== c.to),
+    eventChanges,
   };
 }

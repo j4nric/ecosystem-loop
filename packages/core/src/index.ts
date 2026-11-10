@@ -10,3 +10,4 @@ export { RuleError } from './world.ts';
 export { cardText, describeCondition, describeEffect } from './cards/text.ts';
 export { formFor } from './rules/forms.ts';
 export { RULES, type RuleContext, type RuleModule } from './rules/index.ts';
+export * from './meta.ts';

@@ -107,5 +107,14 @@ export const Effect = z.union([
   z.strictObject({ population: Id, by: z.number().int(), at: At, scope: Scope }),
   /** Bis zu `amount` Tiere einer Art (Art-Id oder Art-Slot) wandern von Zone `from` in Zone `at`. */
   z.strictObject({ move: Id, amount: z.number().int().positive(), from: Id, at: At }),
+  /** Die Zone(n) gelten in dieser Runde als gestört (Zonenstufe, Harmonie, Selektionsdruck). */
+  z.strictObject({ disturb: z.literal(true), at: At, scope: Scope }),
+  /** Zonenstufe fest setzen (begrenzt auf rules.levels min–max). */
+  z.strictObject({ setLevel: z.number().int(), at: At, scope: Scope }),
+  /**
+   * Angekündigtes Ereignis: cancel = entfällt (ist keins angekündigt, entfällt das nächste),
+   * delay = tritt `rounds` Runden später ein.
+   */
+  z.strictObject({ event: z.enum(['cancel', 'delay']), rounds: z.number().int().positive().default(1) }),
 ]);
 export type Effect = z.infer<typeof Effect>;

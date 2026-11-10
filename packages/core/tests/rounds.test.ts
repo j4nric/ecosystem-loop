@@ -66,7 +66,10 @@ describe('Partie-Aufbau', () => {
       newGame(data, { seed: 1, deck: ['rain', 'nope', 'rain', 'rain', 'rain', 'rain', 'rain', 'rain'] }),
     ).toThrow(RuleError);
     expect(() => newGame(data, { seed: 1, deck: ['rain'] })).toThrow(/Deck/);
-    expect(newGame(data, { seed: 1, deck: Array(8).fill('rain') }).hand.every((c) => c.card === 'rain')).toBe(true);
+    expect(() => newGame(data, { seed: 1, deck: Array(8).fill('rain') })).toThrow(/rain 8× im Deck, erlaubt 2/);
+    const deck = ['rain', 'rain', 'sun', 'sun', 'seeds', 'seeds', 'storm', 'storm'];
+    const s = newGame(data, { seed: 1, deck });
+    expect([...s.hand, ...s.drawPile].filter((c) => c.card === 'rain')).toHaveLength(2);
   });
 });
 
