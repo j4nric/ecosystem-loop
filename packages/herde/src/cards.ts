@@ -3,7 +3,7 @@ import { startFire } from './nature.ts';
 import { nextFloat } from './rng.ts';
 import type { Card, HerdeData } from './schema.ts';
 import type { Emit, HerdeState, Pos } from './state.ts';
-import { cellAt, inside, islandOf, maxFood, RuleError, samePos, transform } from './world.ts';
+import { cellAt, inside, islandOf, maxFood, RuleError, samePos, stageOf, transform } from './world.ts';
 
 export function getCard(data: HerdeData, id: string): Card {
   const card = data.cards.get(id);
@@ -46,6 +46,10 @@ export function canTarget(data: HerdeData, s: HerdeState, card: Card, pos: Pos):
   // AUSLEGUNG: Der Prototyp sperrt nur „Fels auf die Herde“; hier folgt das allgemein aus den Daten:
   // Wird das Ziel unbetretbar, darf die Herde nicht darauf stehen.
   if (card.effect.type === 'transform' && !data.landscapes.get(card.effect.to)!.walk && samePos(pos, s.herd))
+    return false;
+  // Das Lagerfeld darf keine Landschaft werden, auf der kein Lager stehen kann (z. B. Quelle → Fluss).
+  const camp = stageOf(data, s).camp;
+  if (card.effect.type === 'transform' && s.camp && camp && samePos(pos, s.camp) && !camp.on.includes(card.effect.to))
     return false;
   return true;
 }

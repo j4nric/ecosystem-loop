@@ -467,6 +467,15 @@ describe('Stufe 5: Mensch und Lager', () => {
     expect(s.prey).toEqual([]); // gejagt (Umkreis 2)
   });
 
+  it('Karten machen das Lagerfeld nicht zu einer Landschaft ohne Lager (Quelle → Fluss)', () => {
+    const s = act(campSiteState(), { type: 'settle', x: 3, y: 3 }).state;
+    s.hand = ['spring', 'trees'];
+    const hand = view(data, s).hand;
+    expect(hand[0]!.targets).not.toContainEqual({ x: 3, y: 3 }); // Fluss steht nicht in camp.on
+    expect(() => step(data, s, { type: 'play', hand: 0, x: 3, y: 3 })).toThrow(RuleError);
+    if (data.cards.get('trees')!.on.includes(at(s, 3, 3).land)) expect(hand[1]!.targets).toContainEqual({ x: 3, y: 3 });
+  });
+
   it('Rodung: einmal im Jahr wird Gehölz am Lager zu Wiese, Altwald vor Wald', () => {
     const s = campSiteState();
     put(s, 4, 4, 'old');
