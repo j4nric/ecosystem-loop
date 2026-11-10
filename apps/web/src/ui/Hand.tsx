@@ -1,6 +1,6 @@
 import type { HandCardView, HerdeData } from '@being-god/herde';
 import { locale, t } from '../i18n/index.ts';
-import { textOf } from '../logic/format.ts';
+import { isPlayable, textOf } from '../logic/format.ts';
 
 interface Props {
   data: HerdeData;
@@ -12,7 +12,7 @@ interface Props {
 
 /**
  * Kartenleiste: Symbol, Name, Wildnis-Kosten. Antippen wählt die Karte (dann ein hervorgehobenes Feld);
- * eine Karte ohne gültiges Ziel ist ausgegraut. Kein Ablegen.
+ * eine Karte ohne gültiges Ziel ist ausgegraut; gewählt zeigt ihr Sheet „kein passendes Feld“. Kein Ablegen.
  */
 export function Hand({ data, cards, selected, disabled, onTap }: Props) {
   if (cards.length === 0) return <p className="hand hand--empty">{t.emptyHand}</p>;
@@ -21,7 +21,7 @@ export function Hand({ data, cards, selected, disabled, onTap }: Props) {
       {cards.map((card) => {
         const def = data.cards.get(card.card);
         const name = textOf(def?.name, locale, card.card);
-        const playable = card.global || card.targets.length > 0;
+        const playable = isPlayable(card);
         const active = selected === card.index;
         return (
           <button

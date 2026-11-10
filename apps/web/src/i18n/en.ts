@@ -1,5 +1,12 @@
 import type { Strings } from './de.ts';
 
+const ordinal = (n: number): string => {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+};
+const months = (n: number) => `${n} ${n === 1 ? 'month' : 'months'}`;
+
 /** UI strings (English). Names of landscapes, cards, seasons and months come from the game data (`name.en`). */
 export const en: Strings = {
   appTitle: 'The Herd',
@@ -11,11 +18,16 @@ export const en: Strings = {
   iceLeft: (n) => `${n} mo. left`,
   statusLabel: (herd, fat, fatMax, wolves) => `Herd ${herd}, reserve ${fat} of ${fatMax}, wolves ${wolves}`,
   date: (year, month) => `Year ${year} · ${month}`,
-  seasonHint: {
-    spring: 'Grass grows, calves in the 2nd month',
-    summer: 'The herd needs water, old forest may burn',
-    autumn: 'Grass grows slower, build up reserves',
-    winter: 'No grass, the herd needs shelter',
+  seasonHint: (season, r) => {
+    const hint = (
+      {
+        spring: 'Grass grows',
+        summer: 'The herd needs water, old forest may burn',
+        autumn: 'Grass grows slower, build up reserves',
+        winter: 'No grass, the herd needs shelter',
+      } as Record<string, string>
+    )[season];
+    return hint && r.birthSeason === season ? `${hint}, calves in the ${ordinal(r.birthMonth)} month` : hint;
   },
   seasonHintFallback: 'The herd moves on',
   iceHint: (n) => `Ice age: ${n} more ${n === 1 ? 'month' : 'months'} of winter`,
@@ -28,7 +40,6 @@ export const en: Strings = {
   },
   intentLine: (reason) => `The herd ${reason}`,
   stays: '(stays)',
-  intentAfter: 'Then',
   intentSame: 'The herd keeps its intention.',
   hand: 'Hand',
   emptyHand: 'No cards. New ones arrive at the start of the next season.',
@@ -55,7 +66,6 @@ export const en: Strings = {
   previewFire: 'Fire may spread to neighbouring woodland.',
   previewPackGone: 'The wolf pack there will be driven out.',
   previewIntentChanged: 'New intention:',
-  fieldHint: 'Tap a field: food and what will happen there by itself.',
   fertile: 'fertile',
   food: (n, max) => `Food ${n} of ${max}`,
   forecastUngrazedSoon: (to, n) =>
@@ -118,7 +128,7 @@ export const en: Strings = {
   incompatibleText:
     'Your saved game does not match the current version of the game and has been discarded. A new game has started.',
   ok: 'Continue',
-  tutorial: [
+  tutorial: (r) => [
     {
       icon: '🐑',
       title: 'The herd moves by itself',
@@ -137,7 +147,7 @@ export const en: Strings = {
     {
       icon: '❄️',
       title: 'Wildness and the ice age',
-      text: 'Every month and every card makes the wildness grow. At 100 the ice age begins: six months of winter without calves. Bring the herd through it and the age is won.',
+      text: `Every month and every card makes the wildness grow. At ${r.wildMax} the ice age begins: ${months(r.iceMonths)} of winter without calves. Bring the herd through it and the age is won.`,
     },
     {
       icon: '▶',
@@ -153,14 +163,14 @@ export const en: Strings = {
   showTutorial: 'Show introduction',
   helpTitle: 'How to play',
   helpGoal: 'Goal',
-  helpGoalText:
-    'Bring the herd through the ice age. It begins when the wildness reaches 100 – every month and every card makes it grow. Intervening a lot prepares you better, but calls the trial sooner.',
+  helpGoalText: (r) =>
+    `Bring the herd through the ice age. It begins when the wildness reaches ${r.wildMax} – every month and every card makes it grow. Intervening a lot prepares you better, but calls the trial sooner.`,
   helpHerd: 'The herd',
-  helpHerdText:
-    'It moves at most one field per month and grazes on its own and the 8 neighbouring fields. Surplus becomes reserve, shortage eats into it, then animals die. Summer: thirst without water nearby. Winter: cold without woodland nearby. Spring: calves, depending on the reserve.',
+  helpHerdText: (r) =>
+    `It moves at most one field per month and grazes on its own and the ${r.neighbors} neighbouring fields. Surplus becomes reserve, shortage eats into it, then animals die. Summer: thirst without water nearby. Winter: cold without woodland nearby. Spring: calves, depending on the reserve.`,
   helpCards: 'Cards',
-  helpCardsText:
-    'At the start of every season you draw new cards, at most 5 in hand. Tap a card, then a glowing field – the preview shows what happens to the field and whether the herd changes its intention. Rain works on the whole island.',
+  helpCardsText: (r) =>
+    `At the start of every season you draw new cards, at most ${r.handMax} in hand. Tap a card, then a glowing field – the preview shows what happens to the field and whether the herd changes its intention. Rain works on the whole island.`,
   helpWorld: 'The world is alive',
   helpWorldText:
     'Land changes by itself. Wolves live in woodland, move hungry through forest corridors towards the herd and kill animals nearby. Fire and rock drive them away.',

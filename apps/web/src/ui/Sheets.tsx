@@ -51,6 +51,7 @@ export function CardSheet({
   card,
   wild,
   global,
+  playable,
   chosen,
   preview,
   onCancel,
@@ -59,6 +60,8 @@ export function CardSheet({
   card: string;
   wild: number;
   global: boolean;
+  /** false: kein gültiges Ziel – das Sheet sagt das, statt zur Feldwahl aufzufordern */
+  playable: boolean;
   chosen: boolean;
   preview: PlayPreview | null;
   onCancel: () => void;
@@ -74,7 +77,11 @@ export function CardSheet({
       aside={<span className="wild-cost">{t.wildCost(wild)}</span>}
     >
       <p className="sheet__text">{textOf(def?.text, locale)}</p>
-      {!global && !chosen && <p className="hint">{t.pickField}</p>}
+      {!playable ? (
+        <p className="hint is-bad">{t.noTargets}</p>
+      ) : (
+        !global && !chosen && <p className="hint">{t.pickField}</p>
+      )}
       {preview && <PreviewLines data={data} preview={preview} />}
     </Sheet>
   );

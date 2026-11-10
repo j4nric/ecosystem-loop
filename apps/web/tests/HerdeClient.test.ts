@@ -100,6 +100,24 @@ describe('HerdeClient', () => {
     expect(reports[0]!.notices[0]!.text).toBe(de.evRejected);
   });
 
+  it('Regen meldet die Felder, deren Futter gewachsen ist', () => {
+    const state = newGame(data, { seed: 'regen' });
+    state.hand = ['rain'];
+    for (const cell of state.cells) cell.food = 0;
+    const store = new MemorySaveStore();
+    store.save({ version: 2, seed: 'regen', savedAt: 0, state, log: [] });
+    const { client: c } = client({ store });
+    const reports: StepReport[] = [];
+    c.subscribeReports((r) => reports.push(r));
+    const before = c.getView();
+    expect(c.dispatch({ type: 'play', hand: 0 })).toBe(true);
+    const after = c.getView();
+    const rain = reports[0]!.fx.find((f) => f.type === 'rain');
+    const want = after.cells.filter((cell, i) => cell.food > before.cells[i]!.food).map(({ x, y }) => ({ x, y }));
+    expect(want.length).toBeGreaterThan(0);
+    expect(rain).toEqual({ type: 'rain', cells: want });
+  });
+
   it('setzt einen gespeicherten Stand fort', () => {
     const store = new MemorySaveStore();
     const first = client({ store, seed: 'weiter' }).client;

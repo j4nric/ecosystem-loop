@@ -1,9 +1,8 @@
 /**
  * Deterministischer Zufall. Der Zustand ist eine Zahl im Spielzustand (`rng`), damit Spielstände klonbar und
- * Läufe per Seed reproduzierbar sind. Bauweise wie packages/core/src/rng.ts (kopiert, damit herde unabhängig
- * bleibt).
+ * Läufe per Seed reproduzierbar sind. Bauweise wie in der alten Engine (Konzept 0.4, siehe docs/archiv/).
  *
- * AUSLEGUNG: Abweichend von core schreitet der Zustand wie im Prototyp (`rand(s)`) fort: Jeder Zug wertet die
+ * AUSLEGUNG: Abweichend von der alten Engine schreitet der Zustand wie im Prototyp (`rand(s)`) fort: Jeder Zug wertet die
  * mulberry32-Mischung einmal auf dem aktuellen Zustand aus und erhöht ihn dann um 0x9e3779b9. So liefert die
  * Engine für denselben Seed dieselbe Zahlenfolge wie `prototypes/herde/index.html` (Gleichheitstest).
  */

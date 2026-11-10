@@ -1,12 +1,13 @@
 import type { HerdeData } from '@being-god/herde';
 import { locale, t } from '../i18n/index.ts';
-import { textOf } from '../logic/format.ts';
+import { ruleNumbers, textOf } from '../logic/format.ts';
 import { landStyle } from '../scene/palette.ts';
 import { useEscape } from './useEscape.ts';
 
 /** Hilfe: Ziel, Herde, Karten (aus den Daten), lebende Welt, Landschaften mit Farbe; Einführung erneut zeigen. */
 export function Help({ data, onClose, onTutorial }: { data: HerdeData; onClose: () => void; onTutorial: () => void }) {
   useEscape(onClose);
+  const rules = ruleNumbers(data);
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" onClick={onClose}>
       <div className="overlay__panel help" onClick={(e) => e.stopPropagation()}>
@@ -18,11 +19,11 @@ export function Help({ data, onClose, onTutorial }: { data: HerdeData; onClose: 
         </header>
         <div className="help__body">
           <h3>{t.helpGoal}</h3>
-          <p>{t.helpGoalText}</p>
+          <p>{t.helpGoalText(rules)}</p>
           <h3>{t.helpHerd}</h3>
-          <p>{t.helpHerdText}</p>
+          <p>{t.helpHerdText(rules)}</p>
           <h3>{t.helpCards}</h3>
-          <p>{t.helpCardsText}</p>
+          <p>{t.helpCardsText(rules)}</p>
           <dl className="help__list">
             {[...data.cards.values()].map((card) => (
               <div key={card.id}>

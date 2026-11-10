@@ -113,6 +113,23 @@ describe('Wölfe', () => {
     expect(r.state.packs).toEqual([{ id: strong.id, x: 6, y: 0, size: 1, fed: 0, hungry: 4 }]);
   });
 
+  it('nach dem Verkümmern zählt der Hunger ab wolves.starveReset weiter (Parameter wirkt)', () => {
+    const d = tweak((x) => {
+      x.params.wolves.starveAfter = 8;
+      x.params.wolves.starveReset = 1;
+    });
+    const s = season(blank(), 2);
+    put(s, 6, 0, 'forest');
+    const pack = addPack(s, 6, 0, 2, { hungry: 7 });
+    const r = step(d, s, { type: 'advance' });
+    expect(ofType(r.events, 'packStarved')).toEqual([{ type: 'packStarved', pack: pack.id, size: 1 }]);
+    expect(r.state.packs[0]).toMatchObject({ size: 1, hungry: 1 });
+    // ein Monat später: weiter hungrig, aber weit unter der Schwelle – kein erneutes Verkümmern
+    const next = step(d, r.state, { type: 'advance' });
+    expect(ofType(next.events, 'packStarved')).toEqual([]);
+    expect(next.state.packs[0]).toMatchObject({ size: 1, hungry: 2 });
+  });
+
   describe('Einwandern', () => {
     const sure = tweak((d) => (d.params.wolves.spawnChance = 1));
     const forests = (n: number, land = 'forest') => {

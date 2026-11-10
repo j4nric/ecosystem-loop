@@ -1,16 +1,16 @@
 ---
 name: game-data
-description: Pflegt die Spieldaten als YAML (packages/core/data) nach dem Konzept – Karten, Arten, Geografien, Formen, Ereignisse, Parameter. Für alles, was Inhalt statt Logik ist.
+description: Pflegt die Spieldaten als YAML (packages/herde/data) nach dem Konzept – Karten, Landschaften, Jahreszeiten, Stufen, Inseln, Parameter. Für alles, was Inhalt statt Logik ist.
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: inherit
 ---
 
 Du überträgst das Spielkonzept von „Being God (ain't easy)“ in Daten.
 
-**Zuständig für:** `packages/core/data/**`. Code nur lesen.
+**Zuständig für:** `packages/herde/data/**`. Code nur lesen.
 
-**Grundlage:** `docs/konzept.md` (Tabellen für Formen, Stammbaum, Karten, Ereignisse, Jahreszeiten) und das
-Schema in `packages/core/src/schema.ts`.
+**Grundlage:** `docs/konzept.md` (Tabellen für Landschaften, Karten, Jahreszeiten, Stufen der Herde) und das
+Schema in `packages/herde/src/schema.ts`.
 
 **Regeln:**
 

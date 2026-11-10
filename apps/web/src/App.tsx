@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { Action, Pos } from '@being-god/herde';
 import type { GameClient, StartupNotice } from './client/index.ts';
 import { t } from './i18n/index.ts';
-import { monthsToNextSeason } from './logic/format.ts';
+import { isPlayable, monthsToNextSeason } from './logic/format.ts';
 import { IslandScene } from './scene/IslandScene.tsx';
 import { haptic, useReducedMotion } from './state/motion.ts';
 import { hasSeenTutorial, markTutorialSeen } from './state/tutorialStore.ts';
@@ -149,6 +149,7 @@ export function App({ client }: { client: GameClient }) {
             card={card.card}
             wild={card.wild}
             global={card.global}
+            playable={isPlayable(card)}
             chosen={chosen !== null}
             preview={preview}
             onCancel={clearSelection}
@@ -240,7 +241,7 @@ export function App({ client }: { client: GameClient }) {
           }}
         />
       )}
-      {tutorialOpen && !startup && <Tutorial onDone={closeTutorial} />}
+      {tutorialOpen && !startup && <Tutorial data={data} onDone={closeTutorial} />}
     </div>
   );
 }

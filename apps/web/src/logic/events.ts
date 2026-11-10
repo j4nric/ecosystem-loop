@@ -25,7 +25,8 @@ export type Fx =
   | { type: 'hunt'; x: number; y: number; packs: Pos[] }
   | { type: 'born'; x: number; y: number }
   | { type: 'loss'; x: number; y: number }
-  | { type: 'rain' };
+  /** `cells`: Felder mit mehr Futter (für das ruhige Einfärben bei reduzierter Bewegung) */
+  | { type: 'rain'; cells: Pos[] };
 
 export interface Described {
   notices: Notice[];
@@ -35,6 +36,7 @@ export interface Described {
 /**
  * @param herdAt Position der Herde nach dem Schritt (für Effekte an der Herde)
  * @param packsAt Positionen der Rudel vor dem Schritt (Id → Feld), um reißende Rudel zu zeigen
+ * @param grown Felder, deren Futter im Schritt gewachsen ist (für den Regen-Effekt)
  */
 export function describeEvents(
   data: HerdeData,
@@ -43,6 +45,7 @@ export function describeEvents(
   events: readonly HerdeEvent[],
   herdAt: Pos,
   packsAt: ReadonlyMap<number, Pos> = new Map(),
+  grown: readonly Pos[] = [],
 ): Described {
   const notices: Notice[] = [];
   const fx: Fx[] = [];
@@ -77,7 +80,7 @@ export function describeEvents(
         break;
       case 'grassGrew':
         say(t.evRain(e.cells), 'good');
-        fx.push({ type: 'rain' });
+        fx.push({ type: 'rain', cells: [...grown] });
         break;
       case 'fire':
         say(e.cause === 'lightning' ? t.evLightning(e.cells.length) : t.evWildfire(e.cells.length), 'bad');
