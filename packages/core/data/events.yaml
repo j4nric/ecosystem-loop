@@ -41,6 +41,7 @@ events:
     weight: 3
     target: { pick: random }
     card: thunderstorm
+    scales: false # Karten werden nicht skaliert – die Anzeige soll keine Stärke vortäuschen
 
   # AUSLEGUNG: Seuche, Sturmflut, Heuschrecken und Meteorit stören die getroffenen Zonen (zählt für Selektionsdruck,
   # Zonenstufe und Harmonie); Hitzesommer und Kälteeinbruch treffen alle Zonen mild und stören nicht.
