@@ -14,6 +14,7 @@
 import {
   formFor,
   holdsAll,
+  isWorldCard,
   legalPlays,
   step,
   type Action,
@@ -23,6 +24,7 @@ import {
   type GameState,
   type Play,
   type ZoneState,
+  worldZoneEffects,
 } from '@being-god/core';
 
 export interface Profile {
@@ -252,11 +254,13 @@ function projectEvent(data: GameData, state: GameState): void {
   for (const e of def.effects) applyLite(data, state, e, bind, strength);
   if (def.card && bind.target) {
     const card = data.cards.get(def.card)!;
-    const slot = card.slots[0]!.id;
-    const cb = { [slot]: bind.target };
     const zone = state.zones.find((z) => z.id === bind.target)!;
+    // Weltkarte als Ereigniskarte: wirkt nur auf die Zielzone, je nach deren Geografie (Zone als "self").
+    const world = isWorldCard(card);
+    const cb = world ? { self: bind.target } : { [card.slots[0]!.id]: bind.target };
+    const effects = world ? worldZoneEffects(card, zone.geography) : card.effects;
     const firing = card.triggers.filter((t) => t.check === 'before' && holdsAll(t.when, { data, state, zone }));
-    for (const e of card.effects) applyLite(data, state, e, cb);
+    for (const e of effects) applyLite(data, state, e, cb);
     for (const t of firing) {
       for (const e of t.effects) applyLite(data, state, e, cb);
       if (t.disturbance) zone.lastDisturbance = state.round;
