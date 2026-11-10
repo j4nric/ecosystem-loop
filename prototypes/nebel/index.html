@@ -1,0 +1,482 @@
+<title>Herde im Nebel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap">
+<style>
+  /* Layout: Spiel im Hochformat – Status oben, Bedarfsampel, Karte (Canvas) füllt die Mitte, Hand und Steuerung unten. */
+  :root {
+    --bg: #e9ece2; --panel: #f7f8f2; --fg: #22271e; --muted: #626a59; --line: #d0d6c2;
+    --ok: #3f8a3c; --warn: #c48a12; --bad: #b8392c; --sel: #1f5fa8; --accent: #b8692a;
+    --f-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --f-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #15180f; --panel: #1f231a; --fg: #e5e9dc; --muted: #98a08c; --line: #33392b;
+      --ok: #79c06b; --warn: #e3b24a; --bad: #e8705f; --sel: #6fa8ec; --accent: #e0914f; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #15180f; --panel: #1f231a; --fg: #e5e9dc; --muted: #98a08c; --line: #33392b;
+    --ok: #79c06b; --warn: #e3b24a; --bad: #e8705f; --sel: #6fa8ec; --accent: #e0914f; color-scheme: dark; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px;
+    padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px));
+    padding-block: 8px; box-sizing: border-box;
+  }
+  .app { max-width: 520px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; gap: 6px; }
+  .top { display: flex; gap: 6px; align-items: stretch; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; min-width: 0; flex: 1; }
+  .stat span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .stat b { font-family: var(--f-display); font-size: 17px; font-variant-numeric: tabular-nums; }
+  .needs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .need { border-radius: 8px; padding: 4px 6px; border: 1px solid var(--line); background: var(--panel); min-width: 0; }
+  .need .h { display: flex; gap: 4px; align-items: center; font-weight: 600; font-size: 12px; }
+  .need .t { font-size: 11px; color: var(--muted); line-height: 1.25; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .ok { background: var(--ok); } .warn { background: var(--warn); } .bad { background: var(--bad); }
+  .stage { position: relative; flex: 1; min-height: 240px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #10140e; touch-action: none; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .intent { position: absolute; left: 8px; right: 8px; top: 8px; background: rgba(20,24,16,0.78); color: #eef2e6; border-radius: 8px; padding: 6px 10px; font-size: 13px; pointer-events: none; }
+  .alert { position: absolute; left: 8px; right: 8px; bottom: 8px; border-radius: 8px; padding: 8px 10px; font-size: 13px; color: #fff; background: var(--bad); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+  .alert.w { background: #8a6410; }
+  .alert b { display: block; font-family: var(--f-display); }
+  .floatbtn { position: absolute; right: 8px; top: 48px; border: 0; border-radius: 8px; padding: 6px 9px; background: rgba(20,24,16,0.78); color: #eef2e6; font: inherit; font-size: 12px; cursor: pointer; }
+  .hand { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 4px; font: inherit; color: var(--fg); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; }
+  .card .ic { font-size: 20px; line-height: 1.1; }
+  .card .nm { font-size: 11px; font-weight: 600; text-align: center; }
+  .card.sel { border-color: var(--sel); box-shadow: 0 0 0 2px var(--sel); }
+  .card.empty { visibility: hidden; }
+  .bar { display: flex; gap: 6px; }
+  .btn { font: inherit; font-weight: 600; border-radius: 8px; padding: 9px 10px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; }
+  .btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); flex: 1; }
+  .btn:focus-visible, .card:focus-visible { outline: 3px solid var(--sel); outline-offset: 2px; }
+  .hint { font-size: 12px; color: var(--muted); min-height: 16px; }
+  .over { position: absolute; inset: 0; background: rgba(10,12,8,0.82); color: #eef2e6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 16px; }
+  .over h2 { font-family: var(--f-display); margin: 0; }
+  details { font-size: 12px; color: var(--muted); }
+  details ul { margin: 4px 0; padding-left: 18px; }
+</style>
+
+<div class="app">
+  <div class="top">
+    <div class="stat"><span>Herde</span><b id="s-n">–</b></div>
+    <div class="stat"><span>Vorrat</span><b id="s-fat">–</b></div>
+    <div class="stat" style="flex:1.6"><span id="s-season">–</span><b id="s-date">–</b></div>
+    <div class="stat"><span>Rekord</span><b id="s-best">–</b></div>
+  </div>
+  <div class="needs" id="needs"></div>
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="intent" id="intent">–</div>
+    <button class="floatbtn" id="b-center" type="button">◎ Herde</button>
+    <div class="alert" id="alert" hidden></div>
+    <div class="over" id="over" hidden>
+      <h2>Die Herde ist ausgestorben</h2>
+      <p id="over-text"></p>
+      <button class="btn primary" id="b-restart" type="button" style="flex:none">Neue Herde</button>
+    </div>
+  </div>
+  <div class="hint" id="hint">Karte antippen, dann ein Feld – überall außer auf der Herde, auch im Nebel.</div>
+  <div class="hand" id="hand"></div>
+  <div class="bar">
+    <button class="btn primary" id="b-play" type="button">⏸ Pause</button>
+    <button class="btn" id="b-speed" type="button">1×</button>
+    <button class="btn" id="b-auto" type="button" title="Bei Gefahr automatisch pausieren">Auto-Pause: an</button>
+  </div>
+  <details>
+    <summary>Wie es funktioniert</summary>
+    <ul>
+      <li>Die Zeit läuft. Ein Monat dauert gut eine Sekunde. Pausiere, wenn du eingreifen willst. Auto-Pause hält bei Gefahr und bei Verlusten an.</li>
+      <li>Die Herde zieht selbst: zu Futter, im Sommer zu Wasser, im Winter in Gehölz, weg von Wölfen, und gern ins Unbekannte. Sie sieht nur das Land um sich herum.</li>
+      <li>Hinter dem Nebel entsteht das Land von selbst – meist karg. Ohne dich hält die Herde nicht lange durch.</li>
+      <li>Karten wirken auf ein Feld und seine Nachbarn. Leg sie dorthin, wo die Herde hin soll – auch in den Nebel.</li>
+      <li>Die Welt lebt: Wiese verbuscht, Busch wird Wald, alter Wald brennt im Sommer, Brand wird fruchtbare Wiese. Wölfe leben im Wald.</li>
+    </ul>
+  </details>
+</div>
+
+<script id="logic">
+/* ---------- Regeln (rein) ---------- */
+const DIRS = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+const key = (q, r) => q + ',' + r;
+const hexDist = (a, b) => (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - b.q - b.r)) / 2;
+function ring(q, r, rad) {
+  const out = [];
+  for (let dq = -rad; dq <= rad; dq++)
+    for (let dr = Math.max(-rad, -dq - rad); dr <= Math.min(rad, -dq + rad); dr++) out.push([q + dq, r + dr]);
+  return out;
+}
+const TER = {
+  steppe: { name: 'Steppe', max: 1, grow: [1, 0, 0, 0], walk: true, color: '#cdbd86' },
+  meadow: { name: 'Wiese', max: 6, grow: [3, 2, 1, 0], walk: true, color: '#8fc05e' },
+  bush:   { name: 'Busch', max: 2, grow: [1, 1, 1, 0], walk: true, shelter: true, wood: true, color: '#62a04c' },
+  forest: { name: 'Wald', max: 1, grow: [1, 1, 0, 0], walk: true, shelter: true, wood: true, color: '#357244' },
+  old:    { name: 'Altwald', max: 0, grow: [0, 0, 0, 0], walk: true, shelter: true, wood: true, color: '#244e30' },
+  burnt:  { name: 'Brand', max: 0, grow: [0, 0, 0, 0], walk: true, color: '#5a463b' },
+  water:  { name: 'Wasser', max: 0, grow: [0, 0, 0, 0], walk: true, water: true, color: '#4a8fbf' },
+  rock:   { name: 'Fels', max: 0, grow: [0, 0, 0, 0], walk: false, color: '#8f8b81' },
+};
+const SEASONS = ['Frühling', 'Sommer', 'Herbst', 'Winter'];
+const MONTHS = ['März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember', 'Januar', 'Februar'];
+const P = { sight: 3, simRadius: 9, genRadius: 5, eatFactor: 1.4, fatCap: 2, birthRate: 0.3, thirstLoss: 0.12, coldLoss: 0.12,
+  overgrow: 12, bushToForest: 18, forestToOld: 36, burntToMeadow: 4, fertile: 24, fireChance: 0.03, fireSpread: 0.45,
+  packChance: 0.06, packHungry: 2, packStarve: 8, handMax: 5, drawEvery: 2 };
+const CARDS = {
+  meadow: { name: 'Wiese', icon: '🌱', text: 'Feld + Nachbarn werden Wiese (außer Wasser, Fels)', weight: 3 },
+  grove:  { name: 'Hain', icon: '🌳', text: 'Feld wird Wald, Nachbarn Busch – sofort Schutz', weight: 3 },
+  spring: { name: 'Quelle', icon: '💧', text: 'Feld wird Wasser, Nachbarn grünen (+2 Futter)', weight: 2 },
+  rock:   { name: 'Fels', icon: '🪨', text: 'Feld wird Fels – versperrt den Weg', weight: 1 },
+  fire:   { name: 'Blitz', icon: '⚡', text: 'Gehölz brennt, vertreibt Wölfe, wird später Wiese', weight: 2 },
+  rain:   { name: 'Regen', icon: '🌧', text: 'Alles in Sichtweite: +3 Futter', global: true, weight: 2 },
+};
+
+function hash(seed, a, b, c) {
+  let h = (seed ^ Math.imul(a, 374761393) ^ Math.imul(b, 668265263) ^ Math.imul(c, 2147483647)) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+function noise(seed, q, r, ch) {
+  const cq = Math.floor(q / 3), cr = Math.floor(r / 3);
+  return 0.6 * hash(seed, cq, cr, ch) + 0.4 * hash(seed, q, r, ch + 7);
+}
+function rng(s) { s.rs = (s.rs + 0x6d2b79f5) >>> 0; let t = s.rs; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+
+function genCell(s, q, r) {
+  const k = key(q, r);
+  if (s.cells[k]) return s.cells[k];
+  const m = noise(s.seed, q, r, 1), h = noise(s.seed, q, r, 2);
+  let t = 'steppe';
+  if (h > 0.83) t = 'rock';
+  else if (m > 0.86) t = 'water';
+  else if (m > 0.66) t = hash(s.seed, q, r, 9) < 0.3 ? 'old' : 'forest';
+  else if (m > 0.5) t = 'meadow';
+  else if (m > 0.44) t = 'bush';
+  const c = { t, food: Math.min(TER[t].max, 1 + Math.floor(hash(s.seed, q, r, 11) * 3)), age: Math.floor(hash(s.seed, q, r, 12) * 20), grazed: -Math.floor(hash(s.seed, q, r, 13) * 8), fert: 0, seen: false };
+  s.cells[k] = c;
+  if (TER[t].wood && hash(s.seed, q, r, 17) < P.packChance) s.packs.push({ q, r, size: 1, hungry: 0, fed: 0 });
+  return c;
+}
+const cellAt = (s, q, r) => genCell(s, q, r);
+
+function newGame(seed) {
+  const s = { seed: seed >>> 0, rs: seed >>> 0, month: 0, cells: {}, packs: [], hand: [], log: [], warn: [], losses: { hunger: 0, thirst: 0, cold: 0, wolves: 0, fire: 0 } };
+  for (const [q, r] of ring(0, 0, 1)) { const c = genCell(s, q, r); c.t = 'meadow'; c.food = 4; c.grazed = 0; }
+  s.packs = s.packs.filter((p) => hexDist(p, { q: 0, r: 0 }) > 3);
+  s.herd = { q: 0, r: 0, n: 10, fat: 10, thirst: 0, trail: [], visited: { [key(0, 0)]: 1 } };
+  for (let i = 0; i < 4; i++) s.hand.push(draw(s));
+  reveal(s);
+  return s;
+}
+function draw(s) {
+  const ids = Object.keys(CARDS); const tot = ids.reduce((a, i) => a + CARDS[i].weight, 0);
+  let x = rng(s) * tot; for (const i of ids) { x -= CARDS[i].weight; if (x < 0) return i; } return ids[0];
+}
+function reveal(s) {
+  for (const [q, r] of ring(s.herd.q, s.herd.r, P.genRadius)) genCell(s, q, r);
+  for (const [q, r] of ring(s.herd.q, s.herd.r, P.sight)) cellAt(s, q, r).seen = true;
+}
+const season = (s) => Math.floor((s.month % 12) / 3);
+const maxFood = (c) => TER[c.t].max + (c.t === 'meadow' && c.fert > 0 ? 2 : 0);
+const near = (s, q, r, rad, pred) => ring(q, r, rad).some(([a, b]) => pred(cellAt(s, a, b)));
+const packsNear = (s, q, r, rad = 1) => s.packs.filter((p) => hexDist(p, { q, r }) <= rad).reduce((a, p) => a + p.size, 0);
+function say(s, text, tone = '') { s.log.unshift({ text, tone, m: s.month }); s.log.length = Math.min(30, s.log.length); }
+
+/* Herdenwahl: Nachbarfeld oder bleiben; sie sieht und riecht nur, was im Sichtkreis liegt. */
+function intention(s) {
+  const h = s.herd, se = season(s), want = Math.ceil(h.n * P.eatFactor);
+  const opts = [[h.q, h.r], ...DIRS.map(([dq, dr]) => [h.q + dq, h.r + dr])];
+  let best = null;
+  for (const [q, r] of opts) {
+    const c = cellAt(s, q, r);
+    if (!TER[c.t].walk) continue;
+    const food = Math.min(want, ring(q, r, 1).reduce((a, [u, v]) => a + cellAt(s, u, v).food, 0));
+    let lure = 0, waterL = 0, shelterL = 0;
+    for (const [u, v] of ring(h.q, h.r, P.sight)) {
+      const d = hexDist({ q, r }, { q: u, r: v }); const k = cellAt(s, u, v);
+      if (d === 0) continue;
+      lure += k.food / (d * d);
+      if (TER[k.t].water) waterL += 1 / (d * d);
+      if (TER[k.t].shelter) shelterL += 1 / (d * d);
+    }
+    const needWater = se === 1 || h.thirst > 0, needShelter = se === 3 || (se === 2 && s.month % 3 === 2);
+    const water = needWater ? (near(s, q, r, 1, (k) => TER[k.t].water) ? h.n * 0.8 : waterL * h.n * 0.5) : 0;
+    const shelter = needShelter ? (near(s, q, r, 1, (k) => TER[k.t].shelter) ? h.n * 0.8 : shelterL * h.n * 0.5) : 0;
+    const wolves = packsNear(s, q, r) * h.n * 0.9;
+    const recent = h.trail.some((p) => p.q === q && p.r === r) ? h.n * 0.35 : 0;
+    const novel = h.visited[key(q, r)] ? 0 : h.n * 0.12;
+    const score = food + lure * 0.6 + water + shelter - wolves - recent + novel + (q === h.q && r === h.r ? 0.01 : 0);
+    if (!best || score > best.score) best = { q, r, score, parts: { food: food + lure * 0.6, water, shelter, wolves, novel } };
+  }
+  const p = best.parts, here = packsNear(s, h.q, h.r);
+  let why = 'grast';
+  if (here > 0) why = 'flieht vor Wölfen';
+  else if (p.water > p.food * 0.5 && p.water > 0) why = 'sucht Wasser';
+  else if (p.shelter > p.food * 0.5 && p.shelter > 0) why = 'sucht Schutz';
+  else if (best.q !== h.q || best.r !== h.r) why = p.novel > 0 && p.food < h.n ? 'erkundet' : 'zieht zu Futter';
+  return { q: best.q, r: best.r, why };
+}
+
+function ignite(s, q, r, depth = 0) {
+  const c = cellAt(s, q, r); if (!TER[c.t].wood) return 0;
+  c.t = 'burnt'; c.food = 0; c.age = 0; s.burned.push(key(q, r));
+  s.packs = s.packs.filter((p) => !(p.q === q && p.r === r));
+  let n = 1;
+  if (depth < 6) for (const [dq, dr] of DIRS) { const k = cellAt(s, q + dq, r + dr); if (TER[k.t].wood && rng(s) < P.fireSpread) n += ignite(s, q + dq, r + dr, depth + 1); }
+  return n;
+}
+
+function play(s, i, q, r) {
+  const id = s.hand[i], card = CARDS[id];
+  if (!card || s.over) return false;
+  if (!card.global && q === s.herd.q && r === s.herd.r) return false;
+  s.burned = [];
+  const area = card.global ? [] : ring(q, r, 1);
+  if (id === 'meadow') for (const [a, b] of area) { const c = cellAt(s, a, b); if (c.t !== 'water' && c.t !== 'rock') { c.t = 'meadow'; c.food = Math.max(c.food, 3); c.grazed = s.month; c.age = 0; } }
+  if (id === 'grove') for (const [a, b] of area) { const c = cellAt(s, a, b); if (c.t === 'water' || c.t === 'rock') continue; const center = a === q && b === r; c.t = center ? 'forest' : (c.t === 'forest' || c.t === 'old' ? c.t : 'bush'); c.age = 0; c.food = Math.min(c.food, maxFood(c)); }
+  if (id === 'spring') { const c = cellAt(s, q, r); c.t = 'water'; c.food = 0; for (const [a, b] of area) { const k = cellAt(s, a, b); k.food = Math.min(maxFood(k), k.food + 2); } }
+  if (id === 'rock') { const c = cellAt(s, q, r); c.t = 'rock'; c.food = 0; s.packs = s.packs.filter((p) => !(p.q === q && p.r === r)); }
+  if (id === 'fire') { const n = ignite(s, q, r); say(s, n ? `Blitz: ${n} Felder brennen.` : 'Blitz ohne Wirkung (kein Gehölz).', n ? 'bad' : ''); }
+  if (id === 'rain') for (const [a, b] of ring(s.herd.q, s.herd.r, P.sight)) { const c = cellAt(s, a, b); c.food = Math.min(maxFood(c), c.food + 3); }
+  if (id !== 'fire') say(s, `${card.name} gelegt.`);
+  s.hand.splice(i, 1);
+  return true;
+}
+
+function nextMonth(s) {
+  if (s.over) return { deaths: [] };
+  s.burned = [];
+  const se = season(s), h = s.herd, deaths = [];
+  // Welt um die Herde lebt
+  for (const [q, r] of ring(h.q, h.r, P.simRadius)) {
+    const c = cellAt(s, q, r);
+    c.food = Math.min(maxFood(c), c.food + TER[c.t].grow[se]);
+    c.age++; if (c.fert > 0) c.fert--;
+    if (c.t === 'meadow' && s.month - c.grazed >= P.overgrow) { c.t = 'bush'; c.age = 0; c.food = Math.min(c.food, 2); }
+    else if (c.t === 'bush' && c.age >= P.bushToForest) { c.t = 'forest'; c.age = 0; c.food = Math.min(c.food, 1); }
+    else if (c.t === 'forest' && c.age >= P.forestToOld) { c.t = 'old'; c.age = 0; c.food = 0; }
+    else if (c.t === 'burnt' && c.age >= P.burntToMeadow) { c.t = 'meadow'; c.age = 0; c.fert = P.fertile; c.food = 3; c.grazed = s.month; }
+  }
+  if (se === 1) for (const [q, r] of ring(h.q, h.r, P.simRadius)) if (cellAt(s, q, r).t === 'old' && rng(s) < P.fireChance) { const n = ignite(s, q, r); if (cellAt(s, q, r).seen) say(s, `Waldbrand! ${n} Felder.`, 'bad'); }
+  if (s.burned.includes(key(h.q, h.r))) deaths.push(['fire', Math.ceil(h.n * 0.2)]);
+  // Zug
+  const go = intention(s);
+  h.trail.push({ q: h.q, r: h.r }); if (h.trail.length > 4) h.trail.shift();
+  h.q = go.q; h.r = go.r; h.visited[key(h.q, h.r)] = 1;
+  reveal(s);
+  // Fressen
+  const want = Math.ceil(h.n * P.eatFactor); let eaten = 0;
+  for (const c of ring(h.q, h.r, 1).map(([q, r]) => cellAt(s, q, r)).sort((a, b) => b.food - a.food)) {
+    if (eaten >= want) break; const t = Math.min(c.food, want - eaten); if (t > 0) { c.food -= t; eaten += t; c.grazed = s.month; }
+  }
+  if (eaten >= h.n) h.fat = Math.min(h.n * P.fatCap, h.fat + eaten - h.n);
+  else { const def = h.n - eaten; if (h.fat >= def) h.fat -= def; else { deaths.push(['hunger', Math.ceil((def - h.fat) / 2)]); h.fat = 0; } }
+  if (se === 1) { if (near(s, h.q, h.r, 1, (k) => TER[k.t].water)) h.thirst = 0; else if (++h.thirst >= 2) deaths.push(['thirst', Math.ceil(h.n * P.thirstLoss)]); } else h.thirst = 0;
+  if (se === 3 && !near(s, h.q, h.r, 1, (k) => TER[k.t].shelter)) deaths.push(['cold', Math.ceil(h.n * P.coldLoss)]);
+  // Wölfe
+  for (const p of s.packs) {
+    if (hexDist(p, h) <= 1) { deaths.push(['wolves', p.size]); p.fed += p.size; p.hungry = 0; }
+    else p.hungry++;
+    if (p.hungry >= P.packHungry && hexDist(p, h) <= 6) {
+      let bestStep = null;
+      for (const [dq, dr] of DIRS) { const q = p.q + dq, r = p.r + dr; if (!TER[cellAt(s, q, r).t].wood || s.packs.some((o) => o.q === q && o.r === r)) continue; const d = hexDist({ q, r }, h); if (d < hexDist(p, h) && (!bestStep || d < bestStep.d)) bestStep = { q, r, d }; }
+      if (bestStep) { p.q = bestStep.q; p.r = bestStep.r; }
+    }
+    if (p.fed >= 4 && p.size < 3) { p.size++; p.fed = 0; }
+    if (p.hungry >= P.packStarve) { p.size--; p.hungry = 4; }
+  }
+  s.packs = s.packs.filter((p) => p.size > 0 && TER[cellAt(s, p.q, p.r).t].wood);
+  // Verluste anwenden
+  let total = 0;
+  for (const d of deaths) { const k = Math.min(d[1], h.n - total); d[1] = k; total += k; s.losses[d[0]] += k; }
+  h.n -= total; h.fat = Math.min(h.fat, h.n * P.fatCap);
+  if (s.month % 12 === 1 && h.n > 0) { const b = Math.floor(h.n * P.birthRate * Math.min(1, h.fat / h.n)); if (b > 0) { h.n += b; h.fat = Math.max(0, h.fat - b); say(s, `Frühling: ${b} Kälber geboren.`, 'good'); } }
+  s.month++;
+  if (s.month % P.drawEvery === 0 && s.hand.length < P.handMax) s.hand.push(draw(s));
+  if (h.n <= 0) s.over = true;
+  return { deaths: deaths.filter((d) => d[1] > 0) };
+}
+
+/* Bedarf und Vorwarnung – was droht in den nächsten Monaten? */
+function needs(s) {
+  const h = s.herd, se = season(s), moy = s.month % 12;
+  const food = ring(h.q, h.r, 1).reduce((a, [q, r]) => a + cellAt(s, q, r).food, 0);
+  const foodFar = ring(h.q, h.r, 2).reduce((a, [q, r]) => a + cellAt(s, q, r).food, 0);
+  const growing = se !== 3;
+  const deficit = Math.max(0, h.n - food);
+  const months = deficit > 0 ? Math.floor(h.fat / deficit) : 99;
+  const out = [];
+  const f = food >= h.n ? 'ok' : (foodFar >= h.n * 2 || months >= 3) ? 'warn' : 'bad';
+  out.push({ id: 'food', icon: '🌾', name: 'Futter', state: f, text: food >= h.n ? `${food} in Reichweite` : months >= 99 ? 'knapp' : `Vorrat reicht ~${months} Mon.` });
+  const toSummer = (3 - moy + 12) % 12, waterNear = near(s, h.q, h.r, 1, (k) => TER[k.t].water), waterSeen = near(s, h.q, h.r, P.sight, (k) => TER[k.t].water);
+  let w = 'ok', wt = 'kein Bedarf';
+  if (se === 1) { w = waterNear ? 'ok' : waterSeen ? 'warn' : 'bad'; wt = waterNear ? 'Wasser da' : waterSeen ? 'Wasser in Sicht' : 'kein Wasser in Sicht'; }
+  else if (toSummer <= 2) { w = waterSeen ? 'ok' : 'warn'; wt = waterSeen ? 'für den Sommer da' : `Sommer in ${toSummer || 3} Mon., kein Wasser`; }
+  out.push({ id: 'water', icon: '💧', name: 'Wasser', state: w, text: wt });
+  const toWinter = (9 - moy + 12) % 12, shNear = near(s, h.q, h.r, 1, (k) => TER[k.t].shelter), shSeen = near(s, h.q, h.r, P.sight, (k) => TER[k.t].shelter);
+  let c = 'ok', ct = 'kein Bedarf';
+  if (se === 3) { c = shNear ? 'ok' : shSeen ? 'warn' : 'bad'; ct = shNear ? 'geschützt' : shSeen ? 'Gehölz in Sicht' : 'kein Gehölz in Sicht'; }
+  else if (toWinter <= 3) { c = shSeen ? 'ok' : 'warn'; ct = shSeen ? 'für den Winter da' : `Winter in ${toWinter} Mon., kein Gehölz`; }
+  out.push({ id: 'shelter', icon: '🌲', name: 'Schutz', state: c, text: ct });
+  const wolvesNear = packsNear(s, h.q, h.r, 1), wolvesSeen = packsNear(s, h.q, h.r, P.sight);
+  out.push({ id: 'wolves', icon: '🐺', name: 'Gefahr', state: wolvesNear ? 'bad' : wolvesSeen ? 'warn' : 'ok', text: wolvesNear ? 'Wölfe greifen an' : wolvesSeen ? `${wolvesSeen} Wölfe in Sicht` : 'ruhig' });
+  return out;
+}
+const FIX = {
+  hunger: 'Leg eine Wiese oder Quelle in die Nähe der Herde – sie zieht dorthin.',
+  thirst: 'Leg eine Quelle in Sichtweite – im Sommer zieht die Herde zum Wasser.',
+  cold: 'Leg einen Hain in die Nähe – im Winter braucht sie Gehölz.',
+  wolves: 'Blitz in den Wald der Wölfe oder Fels dazwischen.',
+  fire: 'Altwald brennt im Sommer – halte die Herde fern oder brenne ihn vorher ab.',
+};
+const CAUSE = { hunger: 'Hunger', thirst: 'Durst', cold: 'Kälte', wolves: 'Wölfe', fire: 'Feuer' };
+if (typeof module !== 'undefined') module.exports = { newGame, nextMonth, play, intention, needs, CARDS };
+if (typeof window !== 'undefined') window.N = { newGame, nextMonth, play, intention, needs, CARDS, TER, SEASONS, MONTHS, P, FIX, CAUSE, cellAt, season, maxFood, ring, hexDist, key };
+</script>
+
+<script>
+/* ---------- Oberfläche ---------- */
+(() => {
+  const N = window.N, $ = (id) => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  let s, sel = null, running = true, speed = 1, autoPause = true, cam = { x: 0, y: 0 }, follow = true, alertTimer = null, lastWarn = new Set(), acc = 0, last = 0;
+  const SIZE = 26;
+  const best = () => { try { return +localStorage.getItem('nebel.best') || 0; } catch { return 0; } };
+  const setBest = (v) => { try { localStorage.setItem('nebel.best', String(v)); } catch {} };
+
+  function start() { s = N.newGame((Date.now() % 1e9) | 0); sel = null; running = true; follow = true; lastWarn = new Set(); $('over').hidden = true; $('alert').hidden = true; centerOn(s.herd); ui(); }
+  const toPx = (q, r) => ({ x: SIZE * Math.sqrt(3) * (q + r / 2), y: SIZE * 1.5 * r });
+  function fromPx(x, y) {
+    const q = (Math.sqrt(3) / 3 * x - y / 3) / SIZE, r = (2 / 3 * y) / SIZE;
+    let rx = Math.round(q), rz = Math.round(r), ry = Math.round(-q - r);
+    const dx = Math.abs(rx - q), dz = Math.abs(rz - r), dy = Math.abs(ry + q + r);
+    if (dx > dy && dx > dz) rx = -ry - rz; else if (dz > dy) rz = -rx - ry;
+    return { q: rx, r: rz };
+  }
+  function centerOn(h) { const p = toPx(h.q, h.r); cam.x = p.x; cam.y = p.y; }
+
+  function resize() { const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1; cv.width = r.width * d; cv.height = r.height * d; ctx.setTransform(d, 0, 0, d, 0, 0); }
+  function hexPath(cx, cy, sz) { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 180 * (60 * i - 30); const x = cx + sz * Math.cos(a), y = cy + sz * Math.sin(a); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.closePath(); }
+
+  function render() {
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (follow) { const p = toPx(s.herd.q, s.herd.r); cam.x += (p.x - cam.x) * 0.12; cam.y += (p.y - cam.y) * 0.12; }
+    ctx.fillStyle = '#10140e'; ctx.fillRect(0, 0, w, h);
+    const c0 = fromPx(cam.x, cam.y), rad = Math.ceil(Math.max(w, h) / (SIZE * 1.5)) + 1;
+    const go = s.over ? null : N.intention(s);
+    for (const [q, r] of N.ring(c0.q, c0.r, rad)) {
+      const p = toPx(q, r), x = p.x - cam.x + w / 2, y = p.y - cam.y + h / 2;
+      if (x < -SIZE * 2 || y < -SIZE * 2 || x > w + SIZE * 2 || y > h + SIZE * 2) continue;
+      const k = s.cells[N.key(q, r)];
+      hexPath(x, y, SIZE - 1);
+      if (!k || !k.seen) {
+        ctx.fillStyle = '#262c22'; ctx.fill();
+        if (k && k.placed) { ctx.globalAlpha = 0.5; ctx.font = '14px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(k.placed, x, y); ctx.globalAlpha = 1; }
+      } else {
+        ctx.fillStyle = N.TER[k.t].color; ctx.fill();
+        const m = N.maxFood(k);
+        if (m > 0 && k.food > 0) { ctx.fillStyle = 'rgba(250,245,200,0.85)'; ctx.fillRect(x - 9, y + 11, 18 * k.food / m, 3); }
+        const icon = { forest: '🌲', old: '🌳', bush: '🌿', water: '', rock: '🪨', burnt: '·' }[k.t];
+        if (icon) { ctx.font = '13px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(icon, x, y - 2); }
+        if (s.burned && s.burned.includes(N.key(q, r))) { hexPath(x, y, SIZE - 1); ctx.fillStyle = 'rgba(230,90,40,0.6)'; ctx.fill(); }
+      }
+      if (sel !== null && !N.CARDS[s.hand[sel]].global && !(q === s.herd.q && r === s.herd.r)) { hexPath(x, y, SIZE - 1); ctx.strokeStyle = 'rgba(224,145,79,0.35)'; ctx.lineWidth = 1; ctx.stroke(); }
+      if (go && go.q === q && go.r === r && !(q === s.herd.q && r === s.herd.r)) { hexPath(x, y, SIZE - 3); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.stroke(); }
+    }
+    for (const p of s.packs) { const k = s.cells[N.key(p.q, p.r)]; if (!k || !k.seen) continue; const pp = toPx(p.q, p.r); ctx.font = '15px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🐺' + (p.size > 1 ? p.size : ''), pp.x - cam.x + w / 2 + 6, pp.y - cam.y + h / 2 - 8); }
+    const hp = toPx(s.herd.q, s.herd.r), hx = hp.x - cam.x + w / 2, hy = hp.y - cam.y + h / 2;
+    hexPath(hx, hy, SIZE - 4); ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fill();
+    ctx.fillStyle = '#22271e'; ctx.font = '600 12px Inter, system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🐑' + s.herd.n, hx, hy);
+    if (sel !== null && hover) { const p = toPx(hover.q, hover.r); const x = p.x - cam.x + w / 2, y = p.y - cam.y + h / 2; for (const [a, b] of N.ring(hover.q, hover.r, N.CARDS[s.hand[sel]].global ? 0 : (s.hand[sel] === 'rock' || s.hand[sel] === 'fire' ? 0 : 1))) { const pp = toPx(a, b); hexPath(pp.x - cam.x + w / 2, pp.y - cam.y + h / 2, SIZE - 2); ctx.strokeStyle = '#e0914f'; ctx.lineWidth = 2.5; ctx.stroke(); } }
+  }
+  let hover = null;
+
+  function ui() {
+    const h = s.herd, se = N.season(s);
+    $('s-n').textContent = h.n; $('s-fat').textContent = `${h.fat}/${h.n * N.P.fatCap}`;
+    $('s-season').textContent = N.SEASONS[se]; $('s-date').textContent = `J${Math.floor(s.month / 12) + 1} · ${N.MONTHS[s.month % 12]}`;
+    $('s-best').textContent = `${Math.max(best(), Math.floor(s.month / 12))} J`;
+    $('needs').innerHTML = N.needs(s).map((n) => `<div class="need"><div class="h"><i class="dot ${n.state}"></i>${n.icon} ${n.name}</div><div class="t">${n.text}</div></div>`).join('');
+    const go = s.over ? null : N.intention(s);
+    $('intent').textContent = go ? `Die Herde ${go.why}${go.q === h.q && go.r === h.r ? '' : ' →'}` : '';
+    $('hand').innerHTML = '';
+    for (let i = 0; i < N.P.handMax; i++) {
+      const id = s.hand[i], b = document.createElement('button'); b.type = 'button';
+      if (!id) { b.className = 'card empty'; $('hand').appendChild(b); continue; }
+      b.className = 'card' + (sel === i ? ' sel' : ''); b.innerHTML = `<span class="ic">${N.CARDS[id].icon}</span><span class="nm">${N.CARDS[id].name}</span>`;
+      b.addEventListener('click', () => { sel = sel === i ? null : i; if (sel !== null) running = false; hint(); ui(); });
+      $('hand').appendChild(b);
+    }
+    $('b-play').textContent = running ? '⏸ Pause' : '▶ Weiter';
+    hint();
+  }
+  function hint() {
+    if (sel === null) { $('hint').textContent = 'Karte antippen, dann ein Feld – überall außer auf der Herde, auch im Nebel.'; return; }
+    const c = N.CARDS[s.hand[sel]];
+    $('hint').innerHTML = c.global ? `${c.icon} <b>${c.name}</b>: ${c.text}. <button class="btn" id="b-cast" type="button" style="padding:3px 8px">Ausspielen</button>` : `${c.icon} <b>${c.name}</b>: ${c.text}. Feld antippen.`;
+    const bc = $('b-cast'); if (bc) bc.addEventListener('click', () => { N.play(s, sel, 0, 0); sel = null; ui(); });
+  }
+  function showAlert(title, text, warnOnly) {
+    const a = $('alert'); a.className = 'alert' + (warnOnly ? ' w' : ''); a.innerHTML = `<b>${title}</b>${text}`; a.hidden = false;
+    clearTimeout(alertTimer); alertTimer = setTimeout(() => { a.hidden = true; }, 6000);
+  }
+
+  function tick() {
+    const r = N.nextMonth(s);
+    if (r.deaths.length) {
+      const d = r.deaths.sort((a, b) => b[1] - a[1])[0];
+      const all = r.deaths.map(([c, k]) => `${N.CAUSE[c]} −${k}`).join(', ');
+      showAlert(`${all}`, N.FIX[d[0]], false);
+      if (autoPause) running = false;
+    } else {
+      const now = new Set(N.needs(s).filter((n) => n.state !== 'ok').map((n) => n.id + n.state));
+      const fresh = N.needs(s).filter((n) => n.state !== 'ok' && !lastWarn.has(n.id + n.state));
+      if (fresh.length) { const f = fresh[0]; showAlert(`${f.icon} ${f.name}: ${f.text}`, N.FIX[{ food: 'hunger', water: 'thirst', shelter: 'cold', wolves: 'wolves' }[f.id]], true); if (autoPause && fresh.some((n) => n.state === 'bad' || n.id !== 'food')) running = false; }
+      lastWarn = now;
+    }
+    if (s.over) {
+      running = false; const years = Math.floor(s.month / 12); if (years > best()) setBest(years);
+      const L = s.losses; $('over-text').textContent = `${years} Jahre, ${s.month % 12} Monate. Verluste: Hunger ${L.hunger}, Durst ${L.thirst}, Kälte ${L.cold}, Wölfe ${L.wolves}, Feuer ${L.fire}.`;
+      $('over').hidden = false;
+    }
+    ui();
+  }
+  function loop(t) {
+    const dt = Math.min(100, t - last); last = t;
+    if (running && !s.over) { acc += dt * speed; if (acc >= 1200) { acc = 0; tick(); } }
+    render(); requestAnimationFrame(loop);
+  }
+
+  // Eingabe: Tippen legt Karte bzw. zeigt Feld; Ziehen verschiebt die Ansicht
+  let down = null, moved = false;
+  cv.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y }; moved = false; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', (e) => {
+    const rect = cv.getBoundingClientRect(); hover = fromPx(e.clientX - rect.left - rect.width / 2 + cam.x, e.clientY - rect.top - rect.height / 2 + cam.y);
+    if (!down) return; const dx = e.clientX - down.x, dy = e.clientY - down.y;
+    if (Math.abs(dx) + Math.abs(dy) > 8) { moved = true; follow = false; cam.x = down.cx - dx; cam.y = down.cy - dy; }
+  });
+  cv.addEventListener('pointerup', (e) => {
+    if (down && !moved) {
+      const rect = cv.getBoundingClientRect(); const hx = fromPx(e.clientX - rect.left - rect.width / 2 + cam.x, e.clientY - rect.top - rect.height / 2 + cam.y);
+      hover = hx;
+      if (sel !== null && !N.CARDS[s.hand[sel]].global) {
+        const k = N.cellAt(s, hx.q, hx.r), id = s.hand[sel];
+        if (N.play(s, sel, hx.q, hx.r)) { if (!k.seen) k.placed = N.CARDS[id].icon; sel = null; ui(); }
+        else showAlert('Nicht auf die Herde', 'Karten wirken überall außer direkt auf dem Feld der Herde.', true);
+      } else {
+        const k = s.cells[N.key(hx.q, hx.r)];
+        if (k && k.seen) showAlert(`${N.TER[k.t].name}`, `Futter ${k.food}/${N.maxFood(k)}${k.t === 'meadow' ? ` · verbuscht in ${Math.max(0, N.P.overgrow - (s.month - k.grazed))} Mon. ohne Beweidung` : ''}`, true);
+        else showAlert('Nebel', 'Unbekanntes Land. Was du hier legst, findet die Herde vor.', true);
+      }
+    }
+    down = null;
+  });
+  $('b-play').addEventListener('click', () => { if (s.over) return; running = !running; if (running) sel = null; ui(); });
+  $('b-speed').addEventListener('click', () => { speed = speed === 1 ? 2 : speed === 2 ? 0.5 : 1; $('b-speed').textContent = `${speed}×`; });
+  $('b-auto').addEventListener('click', () => { autoPause = !autoPause; $('b-auto').textContent = `Auto-Pause: ${autoPause ? 'an' : 'aus'}`; });
+  $('b-center').addEventListener('click', () => { follow = true; });
+  $('b-restart').addEventListener('click', start);
+  window.addEventListener('resize', resize);
+  resize(); start(); requestAnimationFrame((t) => { last = t; loop(t); });
+})();
+</script>
