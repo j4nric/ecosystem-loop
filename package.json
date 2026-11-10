@@ -5,7 +5,9 @@
   "scripts": {
     "play": "tsx packages/sim/src/cli/play.ts",
     "sim": "tsx packages/sim/src/cli/simulate.ts",
-    "validate": "tsx packages/sim/src/cli/validate.ts",
+    "validate": "tsx packages/sim/src/cli/validate.ts && tsx packages/herde/src/node/cli/validate.ts",
+    "herde": "tsx packages/herde/src/node/cli/play.ts",
+    "herde:smoke": "tsx packages/herde/src/node/cli/smoke.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit && npm run -w apps/web typecheck",
