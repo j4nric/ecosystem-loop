@@ -181,25 +181,20 @@ const START_VALUES: Record<string, number[]> = {
 type Range = { min: number; max: number } | null;
 
 /**
- * Zielbereiche der Idealform je Geografie (Licht, Feuchte, Vegetation, Sonderwert) – Vorschau-Daten nach dem
- * Konzept-Beispiel (Aue: Wasserstand genau 3; Urwald: Vegetation 5, Feuchte ≥ 4, Totholz 2–3).
+ * Zielbereiche der Idealform je Geografie (Licht, Feuchte, Vegetation, Sonderwert) – Abschrift der Engine-Werte
+ * aus geographies.yaml (siehe packages/core/tests/targets.test.ts).
  */
 const IDEALS: Record<string, Range[]> = {
-  mountains: [{ min: 3, max: 5 }, null, { min: 1, max: 2 }, { min: 2, max: 3 }],
+  mountains: [{ min: 3, max: 5 }, null, { min: 2, max: 3 }, { min: 1, max: 2 }],
   forest: [null, { min: 4, max: 5 }, { min: 5, max: 5 }, { min: 2, max: 3 }],
   plains: [
     { min: 3, max: 5 },
-    { min: 2, max: 3 },
-    { min: 3, max: 4 },
-    { min: 3, max: 5 },
-  ],
-  river: [null, { min: 3, max: 5 }, { min: 2, max: 4 }, { min: 3, max: 3 }],
-  coast: [
-    { min: 3, max: 5 },
+    { min: 0, max: 3 },
     { min: 2, max: 4 },
-    { min: 2, max: 4 },
-    { min: 2, max: 3 },
+    { min: 4, max: 5 },
   ],
+  river: [null, null, { min: 4, max: 5 }, { min: 3, max: 3 }],
+  coast: [null, { min: 4, max: 5 }, { min: 4, max: 5 }, { min: 2, max: 3 }],
 };
 
 /** Abstand der Werte zur Idealform: Summe der Schritte außerhalb der Zielbereiche. */
@@ -457,8 +452,6 @@ export class MockClient implements GameClient {
       notices.push({ type: 'round', round: s.round, season: season.name[this.locale] });
       if (s.lastHarmonyDelta !== 0) notices.push({ type: 'harmony', delta: s.lastHarmonyDelta });
       if (this.state.phase === 'over') notices.push({ type: 'collapsed' });
-    } else {
-      return; // weitere Aktionen kennt die Vorschau nicht
     }
     this.emit();
     if (notices.length > 0) for (const listener of this.noticeListeners) listener(notices);

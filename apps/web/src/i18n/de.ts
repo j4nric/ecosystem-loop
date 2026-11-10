@@ -151,12 +151,12 @@ export const de = {
       ? `${zone}: näher ans Ideal (${before} → ${after} Schritte)`
       : after > before
         ? `${zone}: weiter weg vom Ideal (${before} → ${after} Schritte)`
-        : `${zone}: Abstand zum Ideal bleibt ${before}`,
+        : `${zone}: Abstand zum Ideal bleibt ${before} Schritte`,
   fxMore: (n: number) => `+${n} weitere`,
   fxDelta: (delta: number, stat: string) => `${delta > 0 ? '+' : '−'}${Math.abs(delta)} ${stat}`,
   helpIdeal: 'Zielbereiche statt Maximum',
   helpIdealText:
-    'Werte gehen von 0 bis 5 – höher ist nicht besser. Jede Geografie hat eine Idealform mit Zielbereichen (z. B. Aue: Wasserstand genau 3; Urwald: Vegetation 5, Feuchte ≥ 4, Totholz 2–3). Im Zonen-Sheet ist der Zielbereich auf jedem Balken umrandet; daneben steht „zu niedrig“ ▾, „passt“ ✓ oder „zu hoch“ ▴.',
+    'Werte gehen von 0 bis 5 – höher ist nicht besser. Jede Geografie hat eine Idealform mit Zielbereichen (z. B. Aue: Wasserstand genau 3; Urwald: Vegetation 5, Feuchte ≥ 4, Totholz 2–3). In der Zonenansicht ist der Zielbereich auf jedem Balken umrandet; daneben steht „zu niedrig“ ▾, „passt“ ✓ oder „zu hoch“ ▴.',
   helpIdealTools:
     'Senkende Karten wie Dürre, Sturm oder Frost sind Werkzeuge, wenn ein Wert über dem Zielbereich liegt. Du musst jede Runde mindestens eine Karte spielen – auch eine unbequeme.',
   helpIdealTint:

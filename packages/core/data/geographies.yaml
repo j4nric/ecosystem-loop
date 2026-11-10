@@ -85,7 +85,13 @@ geographies:
       - id: flower_meadow
         name: { de: Blumenwiese, en: Flower meadow }
         kind: ideal
-        when: [{ stat: vegetation, gte: 2, lte: 4 }, { stat: soil, gte: 4 }, { stat: light, gte: 3 }]
+        when:
+          [
+            { stat: vegetation, gte: 2, lte: 4 },
+            { stat: soil, gte: 4 },
+            { stat: light, gte: 3 },
+            { stat: moisture, lte: 3 },
+          ]
       - id: steppe
         name: { de: Steppe, en: Steppe }
         kind: normal

@@ -162,7 +162,7 @@ export const en: Strings = {
   targetShort: (range) => `Goal ${range}`,
   targetRange: (range) => `Target range ${range}`,
   targetStatus: { low: 'too low', ok: 'on target', high: 'too high' },
-  toward: { better: 'closer to ideal', worse: 'further away', neutral: 'no change' },
+  toward: { better: 'closer to ideal', worse: 'further away', neutral: 'same distance' },
   towardShort: { better: 'closer', worse: 'further', neutral: 'same' },
   previewIdeal: (zone, before, after) =>
     after < before

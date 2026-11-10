@@ -119,14 +119,14 @@ Bei mehreren passenden Formen gilt die erste in der Tabelle.
 
 **Flachland** (Sonderwert Boden)
 
-| Form                      | Bedingung                            | Lebensraum für                         |
-| ------------------------- | ------------------------------------ | -------------------------------------- |
-| Ödland · _verödet_        | Vegetation 0, Feuchte ≤ 1            | –                                      |
-| Moor                      | Feuchte ≥ 4                          | Frösche, Käfer                         |
-| **Blumenwiese** · _ideal_ | Vegetation 2–4, Boden ≥ 4, Licht ≥ 3 | Bienen, Kleinsäuger, Hirsche, Menschen |
-| Steppe                    | Feuchte ≤ 2                          | Echsen, Kleinsäuger, Wölfe             |
-| Buschland                 | Vegetation 5                         | Kleinsäuger, Vögel                     |
-| Wiese                     | sonst                                | Käfer, Kleinsäuger, Hirsche, Menschen  |
+| Form                      | Bedingung                                         | Lebensraum für                         |
+| ------------------------- | ------------------------------------------------- | -------------------------------------- |
+| Ödland · _verödet_        | Vegetation 0, Feuchte ≤ 1                         | –                                      |
+| Moor                      | Feuchte ≥ 4                                       | Frösche, Käfer                         |
+| **Blumenwiese** · _ideal_ | Vegetation 2–4, Boden ≥ 4, Licht ≥ 3, Feuchte ≤ 3 | Bienen, Kleinsäuger, Hirsche, Menschen |
+| Steppe                    | Feuchte ≤ 2                                       | Echsen, Kleinsäuger, Wölfe             |
+| Buschland                 | Vegetation 5                                      | Kleinsäuger, Vögel                     |
+| Wiese                     | sonst                                             | Käfer, Kleinsäuger, Hirsche, Menschen  |
 
 **Fluss** (Sonderwert Wasserstand)
 

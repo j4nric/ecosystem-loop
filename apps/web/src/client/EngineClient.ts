@@ -264,13 +264,21 @@ export class EngineClient implements GameClient {
   }
 
   private emitNotices(notices: Notice[]): void {
-    if (notices.length > 0) for (const listener of this.noticeListeners) listener(notices);
+    if (notices.length === 0) return;
+    for (const listener of this.noticeListeners) {
+      // Ein fehlerhafter Zuhörer (z. B. Effekte ohne Web Animations) darf die übrigen (Toasts) nicht abschneiden.
+      try {
+        listener(notices);
+      } catch (err) {
+        console.error('Meldung konnte nicht angezeigt werden', err);
+      }
+    }
   }
 
   /** Ist die Aktion laut Engine gültig? Wirft die Prüfung selbst, gilt der Zustand als unpassend. */
   private isLegal(action: Action): boolean {
     try {
-      if (action.type !== 'play') return action.type === 'endTurn' && this.view.canEndTurn;
+      if (action.type === 'endTurn') return this.view.canEndTurn;
       return legalPlays(this.data, this.state).some(
         (p) =>
           p.uid === action.uid &&

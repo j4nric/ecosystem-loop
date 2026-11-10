@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { preview, view } from '../src/game.ts';
+import { formFor } from '../src/rules/forms.ts';
 import { idealDistance, idealTargetOf, rangesOf, statDistance, targetStatus } from '../src/targets.ts';
-import { data, dataWith, game, setStats, uidOf } from './helpers.ts';
+import { data, dataWith, game, setStats, uidOf, zone } from './helpers.ts';
 
 const scale = { min: 0, max: 5 };
 
@@ -19,7 +20,12 @@ describe('Zielbereiche der Idealform (Konzept 4.2)', () => {
       },
       plains: {
         form: 'flower_meadow',
-        ranges: { vegetation: { min: 2, max: 4 }, soil: { min: 4, max: 5 }, light: { min: 3, max: 5 } },
+        ranges: {
+          vegetation: { min: 2, max: 4 },
+          soil: { min: 4, max: 5 },
+          light: { min: 3, max: 5 },
+          moisture: { min: 0, max: 3 },
+        },
       },
       river: { form: 'floodplain', ranges: { water: { min: 3, max: 3 }, vegetation: { min: 4, max: 5 } } },
       coast: {
@@ -67,6 +73,38 @@ describe('Zielbereiche der Idealform (Konzept 4.2)', () => {
         river.forms.find((f: { id: string }) => f.id === 'floodplain').kind = 'normal';
       }),
     ).toThrow(/river: genau eine Idealform nötig \(gefunden 0\)/);
+  });
+
+  it('Abstand 0 ⇔ Idealform: im ganzen Zielbereich greift keine frühere Form', () => {
+    const { min, max } = data.config.scale;
+    for (const g of data.geographies.values()) {
+      const zid = data.zones.find((z) => z.geography === g.id)!.id;
+      const stats = [...data.commonStats, g.special];
+      const target = data.ideals.get(g.id)!;
+      const total = (max - min + 1) ** stats.length;
+      for (let n = 0; n < total; n++) {
+        const v: Record<string, number> = {};
+        let k = n;
+        for (const st of stats) {
+          v[st] = min + (k % (max - min + 1));
+          k = Math.floor(k / (max - min + 1));
+        }
+        const s = game();
+        setStats(s, zid, v);
+        const isIdeal = formFor(data, s, zone(s, zid)).id === target.form;
+        expect(isIdeal, `${g.id} ${JSON.stringify(v)}`).toBe(idealDistance(target, v) === 0);
+      }
+    }
+  });
+
+  it('Datenprüfung: frühere Form darf den Zielbereich nicht überdecken', () => {
+    expect(() =>
+      dataWith((r) => {
+        const plains = r.geographies.geographies.find((g: { id: string }) => g.id === 'plains');
+        const meadow = plains.forms.find((f: { id: string }) => f.id === 'flower_meadow');
+        meadow.when = meadow.when.filter((c: { stat?: string }) => c.stat !== 'moisture');
+      }),
+    ).toThrow(/plains: Form bog steht vor der Idealform/);
   });
 
   it('Status low/ok/high und Abstand an den Grenzen', () => {
