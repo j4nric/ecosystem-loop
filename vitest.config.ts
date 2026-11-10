@@ -15,7 +15,8 @@ export default defineConfig({
         functions: 80,
         branches: 75,
         statements: 80,
-        // Die Herde-Engine (Konzept 1.x) muss die Schwellen auch für sich allein erfüllen.
+        // Jede Engine muss die Schwellen auch für sich allein erfüllen (die globale Schwelle zählt alle Dateien).
+        'packages/core/src/**/*.ts': { lines: 80, functions: 80, branches: 75, statements: 80 },
         'packages/herde/src/**/*.ts': { lines: 80, functions: 80, branches: 75, statements: 80 },
       },
     },

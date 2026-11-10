@@ -67,7 +67,8 @@ export const Card = z.strictObject({
   on: z.array(Id).min(1),
   global: z.boolean().default(false),
   effect: CardEffect,
-  wild: Rate,
+  /** Konzept 7: Jede Karte erhöht die Wildnis. */
+  wild: z.number().positive(),
   weight: z.number().positive(),
 });
 export type Card = z.infer<typeof Card>;

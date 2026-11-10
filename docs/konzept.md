@@ -1,4 +1,4 @@
-# Being God (ain't easy) – Konzept 1.0 „Die Herde“
+# Being God (ain't easy) – Konzept 1.2 „Die Herde“
 
 Stand: 10.11.2026 · Status: **Richtung bestätigt** (Prototyp gespielt), Details als Entwurf.
 Vorgänger: [Konzept 0.4](archiv/konzept-0.4.md) (Werte-Optimierung mit fünf Geografien, verworfen).
