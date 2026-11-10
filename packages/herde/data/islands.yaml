@@ -1,0 +1,28 @@
+# Inseln als Raster (Zeile für Zeile, oben = Norden). Die erste Insel ist die Standard-Insel.
+# legend ordnet jedem Zeichen eine Landschaft zu; herd und packs sind Startpositionen (x = Spalte, y = Zeile ab 0).
+islands:
+  - id: start
+    name: { de: Startinsel, en: Starting island }
+    legend:
+      '~': sea
+      '.': steppe
+      W: meadow
+      B: bush
+      F: forest
+      A: old
+      X: burnt
+      R: river
+      S: rock
+    rows:
+      - '~..S..~'
+      - '.WW.FF~'
+      - '.W.RFA.'
+      - '..WR.F.'
+      - 'S..R..S'
+      - '.W.R.W.'
+      - '..BR...'
+      - '~.WRW.~'
+      - '~~.R.~~'
+    herd: { x: 1, y: 5 }
+    packs:
+      - { x: 5, y: 2, size: 1 }

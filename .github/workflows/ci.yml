@@ -60,6 +60,8 @@ jobs:
         run: npm run sim -- --bot random --runs 20 --scenario random
       - name: Absturz-Test (gieriger Bot)
         run: npm run sim -- --bot greedy --runs 3 --scenario random
+      - name: Absturz-Test Herde (Zufalls-Bot)
+        run: npm run herde:smoke -- --runs 20
 
   web:
     name: Web-App bauen

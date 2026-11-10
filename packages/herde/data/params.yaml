@@ -1,0 +1,27 @@
+# Parameter der Regeln (Prototyp-Objekt P, soweit nicht bei Landschaften oder Stufen). Zahlen sind Platzhalter.
+herd:
+  stage: herd # Startstufe (stages.yaml)
+  size: 10 # Startgröße
+  fat: 10 # Startvorrat
+  birthMonth: 1 # Monat im Jahr mit Nachwuchs (0 = erster Monat des Frühlings)
+fire:
+  spread: 0.45 # Chance, auf ein brennbares Nachbarfeld (4er-Nachbarschaft) überzuspringen
+wolves:
+  hungryAfter: 2 # ab so vielen Monaten ohne Beute zieht ein Rudel durchs Gehölz zur Herde
+  fedToGrow: 4 # gerissene Tiere, damit ein Rudel wächst bzw. (in voller Stärke) ein neues gründet
+  maxSize: 3
+  foundRadius: 3 # neue Rudel gründen sich in diesem Umkreis im Gehölz
+  starveAfter: 8 # nach so vielen hungrigen Monaten verliert ein Rudel an Stärke
+  spawnChance: 0.04 # Chance je Monat, dass ohne Rudel neue einwandern
+  spawnMinWood: 5 # dafür nötige Zahl an Gehölz-Feldern
+wild:
+  start: 8
+  perMonth: 0.5
+  max: 100 # bei diesem Wert beginnt die Eiszeit
+ice:
+  months: 6
+  season: winter # Jahreszeit während der Eiszeit
+cards:
+  startHand: 3
+  drawPerSeason: 2
+  handMax: 5

@@ -3,6 +3,19 @@
 Ziel: **modular und datengetrieben**, damit sich Regeln ändern lassen, ohne den Rest anzufassen. Grundlage ist
 das [Konzept](konzept.md); dieses Dokument legt fest, _wo_ welche Regel lebt.
 
+## Neue Engine `packages/herde` (Konzept 1.x „Die Herde“, Phase H1)
+
+`@being-god/herde` setzt die Regeln des Prototyps `prototypes/herde/index.html` als eigenes Paket um, nach derselben
+Bauweise wie core: Fassade (`newGame`, `step`, `view`, `legalPlays`, `validateState`), reiner `step` auf einer
+Kopie, Seed-Zufall im Zustand, Ereignisse mit Ids statt Texten, alle Regeln und Zahlen in YAML
+(`landscapes`, `cards`, `seasons`, `stages`, `params`, `islands`) mit zod-Schema und Prüfung der Querverweise.
+Die Bedürfnisse der Herde stehen als **Stufe** in `stages.yaml` (Zustand `herd.stage`), damit H3 Entwicklungsstufen
+ergänzen kann. Ein Monat läuft in fester Reihenfolge (Natur → Herde → Wölfe → Nachwuchs → Wildnis/Eiszeit →
+Karten ziehen); Details, Erweiterungspunkte und Auslegungen: [packages/herde/README.md](../packages/herde/README.md).
+Ein Gleichheitstest prüft Schritt für Schritt gegen die Prototyp-Logik. Konsole: `npm run herde`, Absturz-Test:
+`npm run herde:smoke` (auch in der CI). App und Deploy laufen bis H2 weiter auf core; mit dem Umstieg wird core
+entfernt. Der Rest dieses Dokuments beschreibt core (Konzept 0.4).
+
 ## Schichten
 
 ```

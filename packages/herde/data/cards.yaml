@@ -1,0 +1,59 @@
+# Karten: die Eingriffe des Gottes (Konzept 7). Zahlen sind Platzhalter aus dem Prototyp.
+#
+# on      Landschaften, auf die die Karte gelegt werden darf (global: Landschaften, auf die sie wirkt)
+# global  wirkt ohne Zielfeld auf die ganze Insel
+# effect  transform: Feld wird `to`, Futter `food` (ohne Angabe gekappt auf das neue Maximum)
+#         ignite:    Feld brennt, Feuer springt über
+#         grow:      Futter + amount, höchstens bis zum Maximum
+#         Eine Karte, die ein Feld unbetretbar macht, darf nicht auf die Herde gelegt werden.
+# wild    Wildnis-Kosten · weight  Ziehgewicht
+cards:
+  - id: seed
+    name: { de: Wiese säen, en: Sow meadow }
+    text: { de: Steppe oder Brand wird Wiese, en: Steppe or burnt land becomes meadow }
+    icon: '🌱'
+    on: [steppe, burnt]
+    effect: { type: transform, to: meadow, food: 2 }
+    wild: 2
+    weight: 3
+  - id: trees
+    name: { de: Bäume pflanzen, en: Plant trees }
+    text: { de: Steppe oder Wiese wird Busch, en: Steppe or meadow becomes bush }
+    icon: '🌳'
+    on: [steppe, meadow]
+    effect: { type: transform, to: bush, food: 0 }
+    wild: 2
+    weight: 3
+  - id: spring
+    name: { de: Quelle, en: Spring }
+    text: { de: Steppe oder Wiese wird Wasser, en: Steppe or meadow becomes water }
+    icon: '💧'
+    on: [steppe, meadow]
+    effect: { type: transform, to: river, food: 0 }
+    wild: 2
+    weight: 2
+  - id: rock
+    name: { de: Fels, en: Rock }
+    text: { de: Sperrt ein Feld für die Herde, en: Blocks a field for the herd }
+    icon: '🪨'
+    on: [steppe, meadow, bush]
+    effect: { type: transform, to: rock, food: 0 }
+    wild: 1
+    weight: 2
+  - id: lightning
+    name: { de: Blitz, en: Lightning }
+    text: { de: 'Gehölz brennt, Feuer springt über', en: 'Woodland burns, fire spreads' }
+    icon: '⚡'
+    on: [bush, forest, old]
+    effect: { type: ignite }
+    wild: 1
+    weight: 2
+  - id: rain
+    name: { de: Regen, en: Rain }
+    text: { de: 'Ganze Insel: Gras +2', en: 'Whole island: grass +2' }
+    icon: '🌧'
+    global: true
+    on: [meadow, steppe, bush, forest]
+    effect: { type: grow, amount: 2 }
+    wild: 2
+    weight: 2
