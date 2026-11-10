@@ -69,5 +69,8 @@ describe('Konsole', () => {
     expect(r.stdout).toContain('Runde 2');
     expect(r.stdout).toContain('Keine solche Karte');
     expect(r.stdout).toContain('Aufgehört.');
+    // Zielbereiche der Idealform: z. B. Wasserstand der Aue genau 3, dazu Abstand bzw. ✓.
+    expect(r.stdout).toMatch(/W \d \[=3 [↑✓↓]\]/);
+    expect(r.stdout).toMatch(/→ Aue( ✓| \(Abstand \d+\))/);
   });
 });

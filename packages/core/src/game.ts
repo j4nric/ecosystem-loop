@@ -8,6 +8,7 @@ import { bindingsFor, getCard, playFromHand } from './cards/play.ts';
 import { deckIssueText, validateDeck } from './meta.ts';
 import { drawForecast } from './rules/forecast.ts';
 import { canEndTurn } from './turn.ts';
+import { idealDistance, statDistance } from './targets.ts';
 import { runNature } from './nature.ts';
 import { addGifts, setPopulation } from './population.ts';
 import { breathParams } from './rules/breath.ts';
@@ -232,10 +233,29 @@ export function preview(
         kind: to.kind,
       });
   });
+  // Richtung zum Zielbereich der Idealform und Abstand der betroffenen Zonen (nur Karteneffekt, ohne Natur-Phase).
+  const changed = [...changes.values()].filter((c) => c.from !== c.to);
+  for (const c of changed) {
+    const range = data.ideals.get(getZone(state, c.zone).geography)?.ranges[c.stat];
+    const delta = range ? statDistance(range, c.to) - statDistance(range, c.from) : 0;
+    c.toward = delta < 0 ? 'better' : delta > 0 ? 'worse' : 'neutral';
+  }
+  const idealDistances: NonNullable<Preview['idealDistance']> = [];
+  for (const zid of new Set(changed.map((c) => c.zone))) {
+    const before = getZone(state, zid);
+    const ideal = data.ideals.get(before.geography);
+    if (ideal)
+      idealDistances.push({
+        zone: zid,
+        before: idealDistance(ideal, before.stats),
+        after: idealDistance(ideal, getZone(sim, zid).stats),
+      });
+  }
   return {
     cost: card.cost,
     affordable: card.cost <= state.breath,
-    changes: [...changes.values()].filter((c) => c.from !== c.to),
+    changes: changed,
+    idealDistance: idealDistances,
     triggers,
     formChanges,
     populationChanges: [...pops.values()].filter((c) => c.from !== c.to),
