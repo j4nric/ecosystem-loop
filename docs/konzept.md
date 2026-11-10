@@ -1,4 +1,4 @@
-# Being God (ain't easy) – Konzept 1.4 „Die Herde“
+# Being God (ain't easy) – Konzept 1.5 „Die Herde“
 
 Stand: 10.11.2026 · Status: **Richtung bestätigt** (Prototyp gespielt), Details als Entwurf.
 Vorgänger: [Konzept 0.4](archiv/konzept-0.4.md) (Werte-Optimierung mit fünf Geografien, verworfen).
@@ -83,7 +83,9 @@ Zu Beginn jeder Jahreszeit 2 Karten, höchstens 5 auf der Hand. Kein Ablegen. Je
 
 - Die **Wildnis** wächst jeden Monat ein wenig und mit jeder gelegten Karte. Bei 100 beginnt die **Eiszeit**:
   6 Monate Winter, kein Nachwuchs.
-- Übersteht die Herde die Eiszeit, ist das Zeitalter (die Partie) gewonnen. Wertung: Zahl der Überlebenden.
+- Die Eiszeit ist eine **Prüfung unterwegs** (ab 1.5, siehe 9.2): Übersteht die Herde sie, geht die Partie weiter und
+  die Wildnis fällt zurück. **Gewonnen** ist das Zeitalter, wenn die Herde als Mensch mit Lager eine Eiszeit übersteht.
+  Wertung: Zahl der Überlebenden.
 - Wer viel eingreift, ist besser vorbereitet, ruft die Prüfung aber früher herbei.
 
 ## 9. Entscheidungen und offene Punkte
@@ -102,15 +104,19 @@ Zu Beginn jeder Jahreszeit 2 Karten, höchstens 5 auf der Hand. Kein Ablegen. Je
      −1 je Rudel, Durst einen Monat später), in der Reihenfolge der Wahl. Die Wirkung bleibt über den Stufensprung
      erhalten; für die Reife zählt ein Merkmal nur auf der Stufe, auf der es gewählt wurde (9.2).
 
-   | Merkmal      | Erfahrung                  | Schwelle | Wirkung                 |
-   | ------------ | -------------------------- | -------- | ----------------------- |
-   | Dichtes Fell | Kälte-Monate mit Schutz    | 3        | Kälteverlust × 0,5      |
-   | Wachsamkeit  | Wolfsangriffe überlebt     | 2        | je Rudel 1 Tier weniger |
-   | Genügsam     | Durst-Monate am Wasser     | 4        | Durst 1 Monat später    |
-   | Feuerscheu   | Waldbrände in der Nähe     | 1        | Brandverlust × 0,5      |
-   | Waldkundig   | Monate im Gehölz gefressen | 4        | Vorratsdeckel + 1       |
-   | Weitblick    | Monate auf offener Fläche  | 6        | Durstverlust × 0,5      |
-   | Ausdauer     | gegangene Felder           | 12       | Hungertote × 0,5        |
+   | Merkmal         | Erfahrung                  | Schwelle | Wirkung                 |
+   | --------------- | -------------------------- | -------- | ----------------------- |
+   | Dichtes Fell    | Kälte-Monate mit Schutz    | 3        | Kälteverlust × 0,5      |
+   | Wachsamkeit     | Wolfsangriffe überlebt     | 2        | je Rudel 1 Tier weniger |
+   | Genügsam        | Durst-Monate am Wasser     | 4        | Durst 1 Monat später    |
+   | Feuerscheu      | Waldbrände in der Nähe     | 1        | Brandverlust × 0,5      |
+   | Waldkundig      | Monate im Gehölz gefressen | 4        | Vorratsdeckel + 1       |
+   | Weitblick       | Monate auf offener Fläche  | 6        | Durstverlust × 0,5      |
+   | Ausdauer        | gegangene Felder           | 12       | Hungertote × 0,5        |
+   | Spurenleser     | Monate nahe Wild           | 4        | Jagd: 1 Wild mehr       |
+   | Feuerhüter      | Feuer ohne Verlust nah     | 1        | Jagd im Feuer: +1 Wild  |
+   | Wetterfest      | Kälte-Monate mit Schutz    | 12       | Kälteverlust × 0,5      |
+   | Erfahrene Jäger | Monate nahe Wild           | 12       | Futter je Wild + 1      |
 
 2. ✅ **Entwicklung bis zum Menschen innerhalb einer Partie, fester Weg** (Phase H3, ersetzt „Herde bleibt
    Herde“). Jede Stufe bringt neue Bedürfnisse; was der einen Stufe half, kann der nächsten schaden, und Landschaft
@@ -126,8 +132,7 @@ Zu Beginn jeder Jahreszeit 2 Karten, höchstens 5 auf der Hand. Kein Ablegen. Je
 
    Auslöser: Merkmale aus dem Erlebten (9.1) machen die Herde reif für die nächste Stufe; der Spieler entscheidet,
    wann sie den Sprung macht, ohne Rückweg. Die Eiszeit wird eine Prüfung unterwegs statt des Partie-Endes; Sieg =
-   Menschen erreicht und letzte Prüfung überstanden (kommt mit H3b; bis dahin endet die Partie wie bisher mit der
-   Eiszeit). Bedürfnisse je Stufe stehen in den Daten (`stages.yaml`, `herd.stage`).
+   Menschen erreicht und letzte Prüfung überstanden (H3b, siehe unten). Bedürfnisse je Stufe stehen in den Daten (`stages.yaml`, `herd.stage`).
 
    Kurzspezifikation H3a (Stufen 1–3, Zahlen sind Platzhalter):
    - **Reife:** Jede Stufe nennt ihre Folgestufe (`next`) und was sie zur Reife braucht: eine Zahl an Merkmalen und
@@ -144,18 +149,67 @@ Zu Beginn jeder Jahreszeit 2 Karten, höchstens 5 auf der Hand. Kein Ablegen. Je
    | ----------- | ----------------------------------- | ---------- | ------ | --------- | -------- | -------------------------------------------- |
    | 1. Herde    | Wiese, Steppe, Busch, Wald          | Sommer     | Winter | –         | 1        | 2 neue Merkmale, darunter Waldkundig         |
    | 2. Sammler  | Früchte: Busch 3, Wald 4, Altwald 3 | ganzjährig | Winter | –         | 1        | 3 neue Merkmale, darunter Weitblick/Ausdauer |
-   | 3. Wanderer | Wiese, Steppe                       | ganzjährig | Winter | Altwald   | 2        | (H3b: Jäger)                                 |
+   | 3. Wanderer | Wiese, Steppe                       | ganzjährig | Winter | Altwald   | 2        | 2 neue Merkmale, darunter Spurenleser        |
 
    Futter je Feld ist ein einziger Vorrat; die Stufe bestimmt, wie viel er höchstens fasst und wie schnell er
    wächst. Nach dem Sprung wächst ein Waldfeld also auf das Maximum der Sammler; eine Wiese wächst weiter wie
    bisher, zählt für den Sammler aber nicht als Futter.
 
-3. ✅ **Jahreskreis mit Wetterfeldern** (Phase H4): je Jahreszeit ein Feld; eine Wetterkarte dort wirkt jedes Jahr
-   wieder in dieser Jahreszeit, bis sie ersetzt wird; höchstens ein Wechsel pro Jahr. Beispiele: nasser Frühling
-   (Wiesen wachsen doppelt, Gehölz auch), Gewittersommer (Wasser überall, mehr Brände), milder Herbst (längeres
-   Graswachstum, satte Wölfe), strenger Winter (Altwald stirbt, Rudel verhungern, Herde braucht mehr Schutz).
-4. 💡 **Größere Insel mit Wegen und Gabelungen**, mehrere Szenarien (Inseltypen), Ereignisse (Dürrejahr, Seuche).
-5. **Partielänge:** Ziel 20–30 Minuten; der Prototyp liegt bei 10–15 (Wildnis-Tempo anpassen).
+   Kurzspezifikation H3b (Stufen 4–5, Wild, Lager, Sieg; Zahlen sind Platzhalter in `params.yaml`, `stages.yaml`,
+   `traits.yaml`):
+   - **Wild** (Beutetiere) ist ein eigenes Spielobjekt wie die Rudel: Bestände der Größe 1–3 auf ihrem Lebensraum
+     (Wiese, Busch), ohne Kampf. Je Monat (nach den Wölfen) fressen sie Gras auf ihrem Feld und den Nachbarfeldern.
+     Satt: nach einigen Monaten wächst der Bestand, in voller Größe gründet er einen neuen auf dem futterreichsten
+     freien Nachbarfeld. Nicht satt: Er zieht auf das futterreichste freie Nachbarfeld seines Lebensraums, nach
+     einigen hungrigen Monaten schrumpft er, bei 0 ist er weg. Wird sein Feld unbegehbar und gibt es kein freies
+     Nachbarfeld im Lebensraum, verschwindet er. Alles ohne Zufall.
+   - **Einwandern:** Ohne Wild wandert mit einer Chance je Monat ein Bestand auf ein Feld des Lebensraums ein, sobald
+     genug Lebensraum da ist – aber erst, wenn die Herde die Stufe `prey.from` erreicht hat (Platzhalter: Wanderer).
+     So bleibt die Startphase genau wie im Prototyp, und der Spieler hat eine Stufe Zeit, Wild anzusiedeln.
+   - **Wölfe fressen zuerst Wild:** Ein Rudel mit Wild im Umkreis 1 reißt davon (statt Tiere der Herde) und ist satt.
+     Hungrige Rudel ziehen durchs Gehölz zum nächsten Wild, ohne Wild wie bisher zur Herde. Das gilt auf jeder Stufe.
+   - **Jagd:** Eine Stufe mit `preyFood > 0` jagt beim Fressen: erst Pflanzen wie bisher, dann Wild im Umkreis
+     `reach`, die größten Bestände zuerst, höchstens `huntKill` Tiere je Monat, jedes bringt `preyFood` Futter.
+     **Feuer als Werkzeug:** Liegt im Umkreis eine frische Brandfläche (in diesem oder im letzten Monat gebrannt, auch
+     durch den Blitz), treibt das Feuer Wild auf: `fireHunt` Tiere mehr. Die Stufe kann `wolves: rival` haben: Wölfe
+     greifen die Herde dann nicht an, jagen aber dasselbe Wild.
+   - **Lager:** Eine Stufe mit `camp` kann sich niederlassen (`settle`, zwischen den Monaten, nicht in der Eiszeit) –
+     auf einem Feld, das sie in diesem Monat erreichen könnte und in dessen Umkreis `camp.radius` je eine Landschaft
+     aus jeder Gruppe von `camp.near` liegt (Wasser, Wiese, Wald). Danach zieht die Herde nicht mehr und frisst aus
+     dem Umkreis des Lagers. Einmal im Jahr (`camp.clear.month`) rodet sie das erste Gehölz-Feld aus `clear.lands`
+     im Umkreis des Lagers zu Wiese (Altwald vor Wald).
+   - **Eiszeiten und Sieg:** Endet eine Eiszeit mit lebender Herde, ist sie überstanden; steht die Herde dann auf der
+     letzten Stufe und hat ein Lager, ist die Partie **gewonnen**. Sonst fällt die Wildnis auf `ice.wildAfter`, und
+     die nächste Eiszeit kommt, wenn sie wieder voll ist. Die `ice.ages`-te Eiszeit ist die letzte Prüfung: Wer sie
+     nicht als Mensch mit Lager übersteht, hat **verloren**. Stirbt die Herde aus, ist die Partie wie bisher verloren.
+
+   | Stufe       | Futter                       | Jagd (Futter × Tiere, im Feuer +) | Wölfe        | Feuerverlust | Reif für die nächste Stufe                            |
+   | ----------- | ---------------------------- | --------------------------------- | ------------ | ------------ | ----------------------------------------------------- |
+   | 3. Wanderer | Wiese, Steppe                | –                                 | Feinde       | 0,2          | 2 neue Merkmale, darunter Spurenleser                 |
+   | 4. Jäger    | Wild; Busch, Wald (wenig)    | 4 × 2, +2                         | Konkurrenten | 0            | 2 neue Merkmale, darunter Feuerhüter                  |
+   | 5. Mensch   | Wild; Wiese, Steppe, Früchte | 3 × 1, +1                         | Konkurrenten | 0,1          | letzte Stufe; Lager: Wasser, Wiese, Wald im Umkreis 1 |
+
+   Jäger und Mensch brauchen ganzjährig Wasser und im Winter Schutz, ziehen 2 Felder und fressen im Umkreis 2.
+
+   | Wild (Platzhalter)         | Wert                                              |
+   | -------------------------- | ------------------------------------------------- |
+   | Lebensraum / frisst        | Wiese, Busch / Wiese, Steppe, Busch               |
+   | Futter je Tier und Monat   | 1                                                 |
+   | satt bis zum Wachsen       | 3 Monate                                          |
+   | hungrig bis zum Schrumpfen | 3 Monate                                          |
+   | einwandern (ab Wanderer)   | 10 % je Monat, ab 4 Feldern Lebensraum, Bestand 2 |
+   | Wolf reißt / wird satt um  | 1 Tier / 2                                        |
+
+   Spurenleser, Feuerhüter, Wetterfest und Erfahrene Jäger kommen mit H3b dazu. Die Reife aller Stufen verlangt
+   zusammen 9 Merkmale; damit die Herde nicht an schwer erreichbaren Merkmalen (Wachsamkeit, Feuerscheu) hängen
+   bleibt, gibt es mehr Merkmale als verlangt. Feuer ohne Verlust zählt im Umkreis der Herde jede frische
+   Brandfläche, auch durch den Blitz (anders als „Waldbrände überlebt“: für Jäger ist Feuer ein Werkzeug).
+   Wild frisst Gras, hält eine Wiese aber nicht offen – das tut nur die Herde.
+
+mit Wetterfeldern** (Phase H4): je Jahreszeit ein Feld; eine Wetterkarte dort wirkt jedes Jahr
+wieder in dieser Jahreszeit, bis sie ersetzt wird; höchstens ein Wechsel pro Jahr. Beispiele: nasser Frühling
+(Wiesen wachsen doppelt, Gehölz auch), Gewittersommer (Wasser überall, mehr Brände), milder Herbst (längeres
+Graswachstum, satte Wölfe), strenger Winter (Altwald stirbt, Rudel verhungern, Herde braucht mehr Schutz). 4. 💡 **Größere Insel mit Wegen und Gabelungen**, mehrere Szenarien (Inseltypen), Ereignisse (Dürrejahr, Seuche). 5. **Partielänge:** Ziel 20–30 Minuten; der Prototyp liegt bei 10–15 (Wildnis-Tempo anpassen).
 
 ## 10. Was bleibt vom bisherigen Projekt
 
@@ -165,6 +219,9 @@ von Konzept 0.4 (Geografien, Werte, Formen, Weltkarten) werden ersetzt; der Code
 
 ## Änderungsverlauf
 
+- **1.5 (10.11.2026):** Kurzspezifikation H3b: Wild als Spielobjekt, Wölfe fressen zuerst Wild, Stufe 4 Jäger (Jagd,
+  Feuer als Werkzeug, Wölfe als Konkurrenten), Stufe 5 Mensch (Lager, Rodung), Eiszeit als Prüfung unterwegs und
+  Sieg als Mensch mit Lager (8, 9.1, 9.2).
 - **1.4 (10.11.2026):** Korrekturen zu H3a: Für die Reife zählen nur Merkmale der aktuellen Stufe, frühere wirken
   weiter (9.2, in den Daten umschaltbar); das Angebot stellt Reife-Merkmale voran und rotiert, wenn es liegen bleibt
   (9.1); Feuer durch die Blitz-Karte zählt nicht als Erfahrung, „Brand“ heißt jetzt „Waldbrand“ (9.1).

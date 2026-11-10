@@ -124,9 +124,9 @@ describe('describeEvents', () => {
       { type: 'cardsDrawn', cards: ['seed', 'rain'] },
       { type: 'seasonBegan', season: 'summer', month: 3, year: 1 },
       { type: 'iceAgeBegan', months: 6 },
-      { type: 'iceAgeEnded', survivors: 7 },
+      { type: 'iceAgeEnded', survivors: 7, count: 1 },
       { type: 'gameWon', survivors: 7 },
-      { type: 'gameLost', month: 40 },
+      { type: 'gameLost', month: 40, cause: 'extinct' },
     ]);
     expect(notices.map((n) => n.text)).toEqual([
       '🌱 Wiese säen gelegt.',

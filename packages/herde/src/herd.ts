@@ -2,9 +2,21 @@
  * Die Herde (Konzept 5): Wahl des nächsten Felds (Absicht), Fressen und Vorrat, Durst, Kälte, Feuer, Nachwuchs.
  * Alle Bedürfnisse kommen aus der Stufe der Herde (stages.yaml).
  */
-import type { HerdeData } from './schema.ts';
+import type { HerdeData, Stage } from './schema.ts';
 import type { Emit, HerdeState, Pos, ReasonId } from './state.ts';
-import { around, cellAt, islandOf, near, needsNow, packsNear, reachable, samePos, stageOf } from './world.ts';
+import {
+  around,
+  cellAt,
+  freshBurnNear,
+  islandOf,
+  near,
+  needsNow,
+  packsNear,
+  preyNear,
+  reachable,
+  samePos,
+  stageOf,
+} from './world.ts';
 
 export interface Intent extends Pos {
   reason: ReasonId;
@@ -17,6 +29,13 @@ export function appetite(data: HerdeData, s: HerdeState): number {
   return Math.ceil(s.herd.size * stage.foodPerAnimal * stage.eatFactor);
 }
 
+/** Jagd von einem Feld aus: höchstens so viele Wild-Tiere (huntKill, + fireHunt bei frischer Brandfläche). */
+export function huntLimit(data: HerdeData, s: HerdeState, stage: Stage, p: Pos): { kill: number; fire: boolean } {
+  if (stage.preyFood <= 0) return { kill: 0, fire: false };
+  const fire = stage.fireHunt > 0 && freshBurnNear(data, s, p, stage.reach);
+  return { kill: stage.huntKill + (fire ? stage.fireHunt : 0), fire };
+}
+
 /**
  * Wohin will die Herde? Bewertet alle Felder, die sie in diesem Monat erreichen kann (Stufe: `move` Schritte über
  * begehbare, nicht gesperrte Felder; Stufe 1: das eigene und die 8 Nachbarfelder): Futter im Umkreis `reach`
@@ -26,6 +45,8 @@ export function appetite(data: HerdeData, s: HerdeState): number {
  */
 export function chooseMove(data: HerdeData, s: HerdeState): Intent {
   const h = s.herd;
+  // Sesshaft: Mit einem Lager zieht die Herde nicht mehr.
+  if (s.camp) return { x: h.x, y: h.y, score: 0, reason: 'settled' };
   const stage = stageOf(data, s);
   const island = islandOf(data, s);
   const w = stage.choice;
@@ -34,10 +55,14 @@ export function chooseMove(data: HerdeData, s: HerdeState): Intent {
   const needShelter = needsNow(data, s, 'shelter');
   let best: (Intent & { water: number; shelter: number; wolves: number }) | null = null;
   for (const p of reachable(data, s, h, stage.move)) {
-    const reach = around(island, p.x, p.y, stage.reach).reduce((a, q) => {
+    const plants = around(island, p.x, p.y, stage.reach).reduce((a, q) => {
       const c = cellAt(data, s, q.x, q.y);
       return stage.eats.includes(c.land) ? a + c.food : a;
     }, 0);
+    // Jagd: erlegbare Tiere im Umkreis × Futter je Tier (Stufen ohne Jagd: 0)
+    const kill = huntLimit(data, s, stage, p).kill;
+    const units = kill > 0 ? preyNear(s, p, stage.reach).reduce((a, q) => a + q.size, 0) : 0;
+    const reach = plants + Math.min(kill, units) * stage.preyFood;
     const food = Math.min(want, reach) * w.food;
     const water = needWater && near(data, s, p.x, p.y, stage.water, stage.reach) ? h.size * w.water : 0;
     const shelter = needShelter && near(data, s, p.x, p.y, stage.shelter, stage.reach) ? h.size * w.shelter : 0;
@@ -94,6 +119,23 @@ export function eat(data: HerdeData, s: HerdeState, emit: Emit): number {
       c.grazed = s.month;
     }
   }
+  // Jagd nach den Pflanzen: Wild im Umkreis, die größten Bestände zuerst (bei Gleichstand in Reihenfolge des Zustands).
+  const hunt = huntLimit(data, s, stage, h);
+  if (hunt.kill > 0 && eaten < want) {
+    let left = hunt.kill;
+    const targets = preyNear(s, h, stage.reach).sort((a, b) => b.size - a.size);
+    for (const q of targets) {
+      let killed = 0;
+      while (left > 0 && q.size > 0 && eaten < want) {
+        q.size--;
+        left--;
+        killed++;
+        eaten += Math.min(stage.preyFood, want - eaten);
+      }
+      if (killed > 0) emit({ type: 'preyHunted', prey: q.id, killed, size: q.size, fire: hunt.fire });
+    }
+    s.prey = s.prey.filter((q) => q.size > 0);
+  }
   let dead = 0;
   if (eaten >= need) h.fat = Math.min(h.size * stage.fatCap, h.fat + eaten - need);
   else {
@@ -137,6 +179,8 @@ export function needs(data: HerdeData, s: HerdeState, emit: Emit): number {
 export function herdInFire(data: HerdeData, s: HerdeState, burned: Pos[], emit: Emit): number {
   if (!burned.some((p) => samePos(p, s.herd))) return 0;
   const dead = Math.ceil(s.herd.size * stageOf(data, s).fireLoss);
+  // Ohne Feuerverlust (Jäger: Feuer ist Werkzeug) ist es kein Schaden: kein Ereignis.
+  if (dead <= 0) return 0;
   emit({ type: 'herdBurned', dead });
   return dead;
 }

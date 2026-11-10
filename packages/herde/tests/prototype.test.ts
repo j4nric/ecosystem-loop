@@ -1,6 +1,11 @@
 /**
  * Gleichheit mit dem Prototyp (prototypes/herde/index.html): Für feste Seeds und eine feste Zugfolge liefern
  * Engine und Prototyp-Logik nach jedem Schritt denselben Zustand (Herde, Felder, Rudel, Hand, Wildnis, Zufall).
+ *
+ * Ab Konzept 1.5 (H3b) ist die Eiszeit eine Prüfung unterwegs: Wo der Prototyp nach der ersten Eiszeit gewinnt, geht
+ * die Partie in der Engine weiter (Wildnis fällt zurück, eine neue Jahreszeit beginnt). Bis einschließlich dieses
+ * Monats ist der Verlauf gleich; im letzten Schritt unterscheiden sich nur Ende, Wildnis, Hand und Zufall (neue
+ * Jahreszeit: Karten ziehen). Wild gibt es in der Startphase nicht (prey.from), es ändert den Verlauf also nicht.
  */
 import { describe, expect, it } from 'vitest';
 import { legalPlays, newGame, step, view, type Action, type HerdeState } from '../src/index.ts';
@@ -65,24 +70,40 @@ function runBoth(seed: number, policy: 'none' | 'cards') {
     }
     // Die angezeigte Absicht ist das Feld, auf das der Monat die Herde führt (in Engine und Prototyp).
     const intent = view(data, s).intent!;
-    s = step(data, s, { type: 'advance' }).state;
+    const r = step(data, s, { type: 'advance' });
+    s = r.state;
     P.nextMonth(p);
     expect({ x: s.herd.x, y: s.herd.y }).toEqual({ x: intent.x, y: intent.y });
-    expect(snapshot(s)).toEqual(protoSnapshot(p));
     checked++;
+    if (p.over === 'won') {
+      // Erste Eiszeit überstanden: Der Prototyp endet mit Sieg, die Engine geht weiter.
+      const { over, wild, hand, rng, ...rest } = snapshot(s);
+      const { over: pOver, wild: pWild, hand: pHand, rng: pRng, ...pRest } = protoSnapshot(p);
+      expect(rest).toEqual(pRest);
+      expect([over, pOver, wild]).toEqual([null, 'won', data.params.ice.wildAfter]);
+      // Hand und Zufall: gleich, außer die Engine zieht zur neuen Jahreszeit Karten (dann kommen sie hinten dazu).
+      expect(hand.slice(0, pHand.length)).toEqual(pHand);
+      expect(rng === pRng).toBe(hand.length === pHand.length);
+      expect(r.events.filter((e) => e.type === 'iceAgeEnded')).toEqual([
+        { type: 'iceAgeEnded', survivors: s.herd.size, count: 1 },
+      ]);
+      expect(pWild).toBeGreaterThan(wild);
+      return { s, checked, proto: p };
+    }
+    expect(snapshot(s)).toEqual(protoSnapshot(p));
   }
-  return { s, checked };
+  return { s, checked, proto: p };
 }
 
 describe('Gleichheit mit dem Prototyp', () => {
   it.each([1, 7919, 15838])('ohne Karten, Seed %i: gleicher Verlauf bis zum Ende', (seed) => {
-    const { s, checked } = runBoth(seed, 'none');
+    const { checked, proto } = runBoth(seed, 'none');
     expect(checked).toBeGreaterThan(12);
-    expect(s.over).not.toBeNull();
+    expect(proto.over).not.toBeNull();
   });
 
   it.each([3, 42, 2024])('mit fester Kartenfolge, Seed %i: gleicher Verlauf bis zum Ende', (seed) => {
-    const { s } = runBoth(seed, 'cards');
-    expect(s.over).not.toBeNull();
+    const { proto } = runBoth(seed, 'cards');
+    expect(proto.over).not.toBeNull();
   });
 });

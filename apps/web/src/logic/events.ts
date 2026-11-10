@@ -153,11 +153,44 @@ export function describeEvents(
         break;
       case 'iceAgeEnded':
         say(t.evIceEnded(e.survivors), 'good');
+        // Prüfung unterwegs: Geht die Partie weiter, sagt das eine eigene Meldung.
+        if (!events.some((x) => x.type === 'gameWon' || x.type === 'gameLost')) say(t.evIceSurvived(e.count), 'info');
         break;
       case 'gameWon':
         break; // iceAgeEnded erzählt es schon
       case 'gameLost':
-        say(t.evLost, 'bad');
+        say(e.cause === 'lastIce' ? t.evLostLastIce : t.evLost, 'bad');
+        break;
+      // Wild und Lager (H3b): vorläufige, schlichte Meldungen; die eigentliche Oberfläche folgt.
+      case 'preyGrew':
+        say(t.evPreyGrew, 'info', false);
+        break;
+      case 'preyFounded':
+        say(t.evPreyFounded, 'info', false);
+        break;
+      case 'preyMoved':
+        break;
+      case 'preyStarved':
+        say(t.evPreyStarved(e.size <= 0), 'info', false);
+        break;
+      case 'preyGone':
+        say(t.evPreyGone, 'info', false);
+        break;
+      case 'preyImmigrated':
+        say(t.evPreyImmigrated, 'good');
+        break;
+      case 'preyHunted':
+        say(t.evPreyHunted(e.killed, e.fire), 'good', false);
+        break;
+      case 'packAtePrey':
+        say(t.evPackAtePrey, 'info', false);
+        break;
+      case 'campFounded':
+        say(t.evCampFounded, 'good');
+        break;
+      case 'fieldCleared':
+        say(t.evFieldCleared(land(e.from), land(e.to)), 'info');
+        fx.push({ type: 'change', x: e.x, y: e.y, to: e.to });
         break;
       // Entwicklung: Angebot (Hinweis an der Herde, Auswahl im Spiel), Wahl mit Wirkung, Reife, Sprung mit Effekt.
       case 'traitOffered':

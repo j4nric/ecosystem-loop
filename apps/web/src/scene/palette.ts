@@ -35,6 +35,11 @@ export const COLORS = {
   rain: '#a9d4f5',
   evolve: '#ffd66b',
   blocked: '#7a3040',
+  // Wild und Lager (H3b, vorläufige Marker)
+  preyBody: '#b07a45',
+  preyHead: '#6b4a2b',
+  camp: '#ffb347',
+  campSite: '#ffe9a8',
 } as const;
 
 /**
@@ -53,6 +58,8 @@ export const STAGE_LOOK: Record<string, StageLook> = {
   herd: { figure: 'grazer', body: COLORS.herdBody, head: COLORS.herdHead, icon: '🐑' },
   gatherer: { figure: 'upright', body: '#a8703f', head: '#5d4130', icon: '🫐' },
   wanderer: { figure: 'walker', body: '#c4583e', head: '#e2b88f', icon: '🚶' },
+  hunter: { figure: 'walker', body: '#8a5a2b', head: '#e2b88f', icon: '🏹' },
+  human: { figure: 'upright', body: '#4f6fa8', head: '#e2b88f', icon: '🏕' },
 };
 
 export const STAGE_FALLBACK: StageLook = { figure: 'upright', body: '#b98a5a', head: '#5d4130', icon: '✨' };

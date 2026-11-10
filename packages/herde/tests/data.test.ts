@@ -40,10 +40,19 @@ describe('Spieldaten', () => {
     expect(d.months).toHaveLength(12);
     expect(d.islands.get('start')).toMatchObject({ width: 7, height: 9, herd: { x: 1, y: 5 } });
     expect(d.stages.get('herd')!.water).toEqual(['river']);
-    expect([...d.stages.keys()]).toEqual(['herd', 'gatherer', 'wanderer']);
+    expect([...d.stages.keys()]).toEqual(['herd', 'gatherer', 'wanderer', 'hunter', 'human']);
     expect(d.stages.get('herd')).toMatchObject({ next: 'gatherer', move: 1, reach: 1, wolfGuard: 0, forage: {} });
     expect(d.stages.get('wanderer')).toMatchObject({ blocked: ['old'], move: 2 });
-    expect(d.stages.get('wanderer')!.next).toBeUndefined();
+    expect(d.stages.get('wanderer')).toMatchObject({ next: 'hunter', wolves: 'enemy', preyFood: 0 });
+    expect(d.stages.get('hunter')).toMatchObject({
+      next: 'human',
+      wolves: 'rival',
+      fireLoss: 0,
+      eats: ['bush', 'forest'],
+    });
+    expect(d.stages.get('human')!.next).toBeUndefined();
+    expect(d.stages.get('human')!.camp).toMatchObject({ radius: 1, near: [['river'], ['meadow'], ['forest', 'old']] });
+    expect(d.params.prey).toMatchObject({ from: 'wanderer', lands: ['meadow', 'bush'] });
     expect([...d.traits.keys()]).toEqual([
       'thick_fur',
       'vigilant',
@@ -52,6 +61,10 @@ describe('Spieldaten', () => {
       'forest_wise',
       'far_sight',
       'endurance',
+      'tracker',
+      'fire_keeper',
+      'weathered',
+      'seasoned_hunter',
     ]);
     expect(d.offerSize).toBe(3);
   });
@@ -74,17 +87,17 @@ describe('Spieldaten', () => {
     ['Monatsnamen', (r) => r.seasons.months.pop(), /11 Monatsnamen statt 12/],
     ['Jahreszeit doppelt', (r) => r.seasons.seasons.push(r.seasons.seasons[0]), /Jahreszeit doppelt/],
     ['Stufe mit unbekanntem Wasser', (r) => r.stages.stages[0].water.push('lake'), /Stufe herd → water/],
-    ['Startstufe', (r) => (r.params.herd.stage = 'human'), /unbekannte Stufe human/],
+    ['Startstufe', (r) => (r.params.herd.stage = 'robot'), /unbekannte Stufe robot/],
     ['Stufe: Hindernis unbekannt', (r) => stage(r, 'wanderer').blocked.push('lava'), /wanderer → blocked/],
     ['Stufe: Jahreszeit unbekannt', (r) => (stage(r, 'herd').needs.water = ['monsoon']), /needs.water: unbekannte/],
     ['Stufe: forage auf Unbekanntes', (r) => (stage(r, 'gatherer').forage.lava = { food: 1, grow: {} }), /forage/],
     ['Stufe: forage ohne Jahreszeit', (r) => delete stage(r, 'gatherer').forage.bush.grow.winter, /forage bush: grow/],
-    ['Stufe: next unbekannt', (r) => (stage(r, 'gatherer').next = 'hunter'), /next: unbekannte Stufe hunter/],
+    ['Stufe: next unbekannt', (r) => (stage(r, 'gatherer').next = 'robot'), /next: unbekannte Stufe robot/],
     ['Stufe: next ohne mature', (r) => delete stage(r, 'herd').mature, /next ohne mature/],
-    ['Stufe: mature ohne next', (r) => (stage(r, 'wanderer').mature = { traits: 1 }), /mature ohne next/],
+    ['Stufe: mature ohne next', (r) => (stage(r, 'human').mature = { traits: 1 }), /mature ohne next/],
     ['Stufe: oneOf unbekannt', (r) => stage(r, 'herd').mature.oneOf.push('wings'), /unbekanntes Merkmal wings/],
     ['Stufe: zu viele Merkmale', (r) => (stage(r, 'herd').mature.traits = 99), /mature.traits 99/],
-    ['Stufe: Kreis', (r) => Object.assign(stage(r, 'wanderer'), { next: 'herd', mature: { traits: 1 } }), /im Kreis/],
+    ['Stufe: Kreis', (r) => Object.assign(stage(r, 'human'), { next: 'herd', mature: { traits: 1 } }), /im Kreis/],
     ['Merkmal: Erfahrung unbekannt', (r) => (trait(r, 'vigilant').from = 'flight'), /unbekannte Erfahrung flight/],
     ['Merkmal: Wirkung ohne Zahl', (r) => (trait(r, 'vigilant').effects = [{ stat: 'coldLoss' }]), /mul oder add/],
     ['Merkmal: unbekannter Wert', (r) => (trait(r, 'vigilant').effects[0].stat = 'eats'), /traits.yaml: traits/],
@@ -110,6 +123,25 @@ describe('Spieldaten', () => {
     ['Rudel auf Steppe', (r) => (r.islands.islands[0].packs[0] = { x: 1, y: 0, size: 1 }), /nicht im Gehölz/],
     ['Rudel doppelt', (r) => r.islands.islands[0].packs.push({ x: 5, y: 2, size: 1 }), /zwei Rudel/],
     ['Rudel zu stark', (r) => (r.islands.islands[0].packs[0].size = 4), /stärker als/],
+    ['Stufe: Jagd halb', (r) => (stage(r, 'hunter').huntKill = 0), /preyFood und huntKill nur gemeinsam/],
+    ['Lager: Landschaft unbekannt', (r) => stage(r, 'human').camp.near[0].push('lava'), /camp.near.0: unbekannte/],
+    ['Rodung: Landschaft unbekannt', (r) => stage(r, 'human').camp.clear.lands.push('lava'), /camp.clear.lands/],
+    ['Rodung: Ziel unbekannt', (r) => (stage(r, 'human').camp.clear.to = 'lava'), /camp.clear.to: unbekannte/],
+    ['Rodung: Ziel unbegehbar', (r) => (stage(r, 'human').camp.clear.to = 'rock'), /rock ist nicht begehbar/],
+    ['Rodung: Ziel in lands', (r) => (stage(r, 'human').camp.clear.to = 'old'), /camp.clear.to old in/],
+    ['Rodung: Monat', (r) => (stage(r, 'human').camp.clear.month = 12), /camp.clear.month 12/],
+    ['Wolf-Haltung unbekannt', (r) => (stage(r, 'hunter').wolves = 'friend'), /stages.yaml: stages/],
+    [
+      'Erfahrung: Typ unbekannt',
+      (r) => (r.traits.experiences[0].when = { type: 'flight' }),
+      /traits.yaml: experiences/,
+    ],
+    ['Wild: Stufe nicht auf dem Weg', (r) => (r.params.prey.from = 'robot'), /prey.from: Stufe robot/],
+    ['Wild: Lebensraum unbekannt', (r) => r.params.prey.lands.push('lava'), /prey.lands: unbekannte Landschaft/],
+    ['Wild: Lebensraum unbegehbar', (r) => r.params.prey.lands.push('rock'), /prey.lands: rock ist nicht begehbar/],
+    ['Wild: Futter unbekannt', (r) => r.params.prey.eats.push('lava'), /prey.eats: unbekannte Landschaft/],
+    ['Wild: Einwandern zu groß', (r) => (r.params.prey.spawnSize = 9), /spawnSize > prey.maxSize/],
+    ['Wildnis nach der Eiszeit', (r) => (r.params.ice.wildAfter = 100), /wildAfter muss kleiner/],
     ['Insel doppelt', (r) => r.islands.islands.push(r.islands.islands[0]), /Id start doppelt/],
   ])('erkennt: %s', (_, fn, pattern) => {
     expect(problems(fn).join('\n')).toMatch(pattern);

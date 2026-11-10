@@ -4,7 +4,18 @@
  */
 import type { HerdeData } from './schema.ts';
 import type { Emit, HerdeEvent, HerdeState } from './state.ts';
-import { baseStageOf, cellAt, cheb, maxFood, near, needsNow, RuleError, stageOf } from './world.ts';
+import {
+  baseStageOf,
+  cellAt,
+  cheb,
+  freshBurnNear,
+  maxFood,
+  near,
+  needsNow,
+  preyNear,
+  RuleError,
+  stageOf,
+} from './world.ts';
 
 /** Merkmale, deren Erfahrung die Schwelle erreicht hat und die die Herde noch nicht hat (Reihenfolge der Daten). */
 export function availableTraits(data: HerdeData, s: HerdeState): string[] {
@@ -192,6 +203,14 @@ export function gainExperience(data: HerdeData, s: HerdeState, events: readonly 
       case 'moved':
         // AUSLEGUNG: Luftlinie (Felder nach Chebyshev zwischen Start und Ziel des Monats), nicht der gegangene Weg.
         gain = cheb(from, h);
+        break;
+      case 'prey':
+        gain = preyNear(s, h, stage.reach).length > 0 ? 1 : 0;
+        break;
+      case 'burnt':
+        // Anders als `fire` zählt auch der Blitz: Für Jäger ist Feuer ein Werkzeug (Konzept 9.2).
+        gain =
+          freshBurnNear(data, s, h, stage.reach) && !events.some((e) => e.type === 'herdBurned' && e.dead > 0) ? 1 : 0;
         break;
     }
     if (gain > 0) h.experience[exp.id] = (h.experience[exp.id] ?? 0) + gain;

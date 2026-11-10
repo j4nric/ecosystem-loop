@@ -18,6 +18,15 @@
 # coldLoss                 ohne Schutz in einer Schutz-Jahreszeit sterben Größe × coldLoss
 # fireLoss                 brennt das Feld der Herde, sterben Größe × fireLoss
 # wolfGuard                jedes reißende Rudel reißt so viele Tiere weniger (Standard 0)
+# wolves                   enemy (Standard): Wölfe reißen Tiere der Herde · rival: Wölfe greifen die Herde nicht an,
+#                          konkurrieren aber um dasselbe Wild
+# preyFood, huntKill       Jagd (Standard 0 = keine): nach den Pflanzen erlegt die Herde Wild im Umkreis reach, die
+#                          größten Bestände zuerst, höchstens huntKill Tiere je Monat, je Tier preyFood Futter
+# fireHunt                 so viele Tiere mehr, wenn im Umkreis eine frische Brandfläche liegt (Feuer als Werkzeug)
+# camp                     Lager (settle): gültig auf einem in diesem Monat erreichbaren Feld, in dessen Umkreis radius
+#                          je eine Landschaft jeder Gruppe aus near liegt; danach zieht die Herde nicht mehr.
+#                          clear: einmal im Jahr (Monat im Jahr, 0 = erster Frühlingsmonat) wird das erste Feld aus
+#                          lands (in Listen-Reihenfolge) im Umkreis radius des Lagers zu `to` gerodet
 # trail                    so viele zuletzt besuchte Felder meidet sie
 # choice                   Gewichte der Herdenwahl (Konzept 5): food × Futter in Reichweite (gedeckelt auf den
 #                          Fressbedarf); water, shelter, wolves (je Rudelstärke) und recent jeweils × Herdengröße;
@@ -108,5 +117,80 @@ stages:
       water: 0.6
       shelter: 0.6
       wolves: 0.8
+      recent: 0.3
+      stay: 0.01
+    next: hunter
+    mature: { traits: 2, oneOf: [tracker], scope: stage }
+
+  # Jäger und Sammler: Wild ist das Hauptfutter (dazu etwas aus Busch und Wald), Wasser ganzjährig. Wölfe sind
+  # Konkurrenten um das Wild, Feuer ist Werkzeug (kein Feuerverlust, Jagd im Feuer bringt mehr).
+  - id: hunter
+    name: { de: Jäger und Sammler, en: Hunter-gatherers }
+    eats: [bush, forest]
+    water: [river]
+    shelter: [bush, forest, old]
+    needs: { water: all, shelter: [winter] }
+    move: 2
+    reach: 2
+    foodPerAnimal: 1
+    eatFactor: 1.5
+    fatCap: 2
+    starveRate: 0.5
+    birthRate: 0.25
+    thirstAfter: 2
+    thirstLoss: 0.1
+    coldLoss: 0.1
+    fireLoss: 0
+    wolves: rival
+    preyFood: 4
+    huntKill: 2
+    fireHunt: 2
+    trail: 6
+    choice:
+      food: 1
+      water: 0.6
+      shelter: 0.6
+      wolves: 0
+      recent: 0.3
+      stay: 0.01
+    next: human
+    mature: { traits: 2, oneOf: [fire_keeper], scope: stage }
+
+  # Mensch: lässt sich an einem Lagerplatz mit Wasser, Wiese und Wald nieder (settle) und formt die Insel mit
+  # (Rodung). Isst aus dem Umkreis des Lagers: Wiese, Steppe, Früchte und Wild.
+  - id: human
+    name: { de: Mensch, en: Humans }
+    eats: [steppe, meadow, bush, forest]
+    water: [river]
+    shelter: [bush, forest, old]
+    needs: { water: all, shelter: [winter] }
+    forage:
+      bush: { food: 3, grow: { spring: 1, summer: 2, autumn: 2, winter: 0 } }
+      forest: { food: 4, grow: { spring: 1, summer: 2, autumn: 2, winter: 0 } }
+    move: 2
+    reach: 2
+    foodPerAnimal: 1
+    eatFactor: 1.5
+    fatCap: 2
+    starveRate: 0.5
+    birthRate: 0.25
+    thirstAfter: 2
+    thirstLoss: 0.1
+    coldLoss: 0.1
+    fireLoss: 0.1
+    wolves: rival
+    preyFood: 3
+    huntKill: 1
+    fireHunt: 1
+    camp:
+      radius: 1
+      near: [[river], [meadow], [forest, old]]
+      clear: { lands: [old, forest], to: meadow, month: 2 }
+    trail: 6
+    choice:
+      food: 1
+      water: 0.6
+      shelter: 0.6
+      wolves: 0
       recent: 0.3
       stay: 0.01
