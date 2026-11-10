@@ -1,5 +1,5 @@
 /**
- * Fassade der Engine v2: newGame, step, view, legalPlays, slotOptions, preview, describeEvent.
+ * Fassade der Engine v2: newGame, step, view, legalPlays, slotOptions, preview, describeEvent, validateState.
  * `step` ist rein: Der Eingangszustand wird nie verändert, Zufall läuft über den Seed im Zustand.
  */
 import type { Action, GameSetup, Locale, Preview, Targets } from './api.ts';
@@ -24,6 +24,7 @@ export { view } from './view.ts';
 export { describeEvent } from './describe.ts';
 export { runNature } from './nature.ts';
 export { canEndTurn, legalPlays } from './turn.ts';
+export { validateState } from './validate.ts';
 
 export interface StepResult {
   state: GameState;
@@ -157,6 +158,8 @@ export function step(data: GameData, state: GameState, action: Action): StepResu
       drawUpTo(next, data.config.turn.handSize, emit);
     }
   }
+  // Partie-Ende: einmal gemeldet, mit Endstand. Das Schöpfungsbuch trägt die Oberfläche ein (step bleibt rein).
+  if (next.phase === 'over') emit({ type: 'gameOver', round: next.round, score: next.score });
   return { state: next, events };
 }
 

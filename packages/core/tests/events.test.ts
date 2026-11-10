@@ -305,7 +305,7 @@ describe('Gegenkarten (Konzept 6.2, 8, 9)', () => {
       },
     ]);
     expect(card.text).toBe(
-      'Wähle: Abwenden (nächstes Ereignis entfällt) oder Verschieben (nächstes Ereignis 1 Runde später)',
+      'Wähle: Abwenden (nächstes Ereignis entfällt) oder Verschieben (nächstes Ereignis 1 Runde später).',
     );
     const averted = play(s, 'scout_eye', { mode: 'avert' });
     expect(averted.state.forecast).toBeNull();
