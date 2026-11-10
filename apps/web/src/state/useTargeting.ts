@@ -14,6 +14,7 @@ import {
   startTargets,
   type ChipOption,
 } from '../logic/targeting.ts';
+import { completesCard, zoneTints, type Toward } from '../logic/ideal.ts';
 
 interface Selection {
   uid: number;
@@ -57,6 +58,16 @@ export function useTargeting(client: GameClient, view: GameView, onComplete: (ui
     () => (editsZone ? new Set(options) : restartZones),
     [editsZone, options, restartZones],
   );
+
+  /**
+   * Einfärbung der wählbaren Zonen nach Wirkung auf die Idealform (grün näher, rot weiter weg). Nur, wenn die
+   * Wahl dieses Zonen-Slots den Zug vervollständigt – dann gibt es für jede Kandidatenzone eine Vorschau.
+   */
+  const tints = useMemo<Map<string, Toward>>(() => {
+    if (!active || !editSlot || !editsZone || !completesCard(active.card, editSlot.id)) return new Map();
+    const base = chosenWithout(active.targets, editSlot);
+    return zoneTints(options, (zone) => client.preview(active.card.uid, { ...base, [editSlot.id]: zone }));
+  }, [client, active, editSlot, editsZone, options]);
 
   const chipOptions = useMemo<ChipOption[]>(
     () => (active ? chipOptionsFor(editSlot, options, active.targets, view.zones, (id) => client.speciesName(id)) : []),
@@ -117,6 +128,7 @@ export function useTargeting(client: GameClient, view: GameView, onComplete: (ui
     editSlot,
     complete,
     validZones,
+    tints,
     chipOptions,
     /** true, wenn der aktuelle Slot über Chips gewählt wird. */
     chipSlot,

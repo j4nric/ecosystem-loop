@@ -1,0 +1,127 @@
+{
+  "title": "Balancing-Vorschläge: Vorher/Nachher",
+  "createdAt": "2026-11-10T12:00:00.000Z",
+  "model": "Engine v2 · Daten-Stand main@4fc4d33",
+  "bot": "gardener, evolver, greedy",
+  "runs": 4500,
+  "scenario": "all",
+  "metrics": [
+    {
+      "label": "Basis+Arten · gardener: Runden (Median) vorher → nachher",
+      "value": "100.5 → 68",
+      "unit": " Rd."
+    },
+    {
+      "label": "Basis+Arten · evolver: Runden (Median) vorher → nachher",
+      "value": "79 → 59",
+      "unit": " Rd."
+    },
+    {
+      "label": "Basis+Ereignisse · gardener: Runden (Median) vorher → nachher",
+      "value": "100.5 → 145",
+      "unit": " Rd."
+    },
+    {
+      "label": "Basis+Ereignisse · evolver: Runden (Median) vorher → nachher",
+      "value": "79 → 99",
+      "unit": " Rd."
+    },
+    {
+      "label": "Paket · gardener: Runden (Median) vorher → nachher",
+      "value": "100.5 → 62.5",
+      "unit": " Rd."
+    },
+    {
+      "label": "Paket · evolver: Runden (Median) vorher → nachher",
+      "value": "79 → 52",
+      "unit": " Rd."
+    },
+    {
+      "label": "Paket-mild · gardener: Runden (Median) vorher → nachher",
+      "value": "100.5 → 83.5",
+      "unit": " Rd."
+    },
+    {
+      "label": "Paket-mild · evolver: Runden (Median) vorher → nachher",
+      "value": "79 → 64",
+      "unit": " Rd."
+    }
+  ],
+  "charts": [
+    {
+      "title": "Runden (Median) je Variante",
+      "xLabel": "Variante",
+      "yFormat": "num",
+      "x": [
+        "vorher",
+        "Eskalation",
+        "Nahrungskette",
+        "Idealformen",
+        "Seuche",
+        "Hunger",
+        "Kombi",
+        "Kombi+Stufe",
+        "Basis",
+        "Basis+Abstand",
+        "Basis+Ideal5",
+        "Basis+Arten",
+        "Basis+Ereignisse",
+        "Paket",
+        "Paket-mild"
+      ],
+      "series": [
+        {
+          "name": "gardener",
+          "values": [100.5, 99, 129.5, 200, 101, 134, 117.5, 111.5, 131, 116, 133, 68, 145, 62.5, 83.5]
+        },
+        {
+          "name": "evolver",
+          "values": [79, 82.5, 91, 150.5, 83.5, 122.5, 89, 87, 98, 83, 91, 59, 99, 52, 64]
+        }
+      ],
+      "caption": "Gleiche Seeds und Szenarien je Variante. Ziel: 30–60 Runden."
+    },
+    {
+      "title": "Hohes Leben je Variante",
+      "xLabel": "Variante",
+      "yFormat": "pct",
+      "x": [
+        "vorher",
+        "Eskalation",
+        "Nahrungskette",
+        "Idealformen",
+        "Seuche",
+        "Hunger",
+        "Kombi",
+        "Kombi+Stufe",
+        "Basis",
+        "Basis+Abstand",
+        "Basis+Ideal5",
+        "Basis+Arten",
+        "Basis+Ereignisse",
+        "Paket",
+        "Paket-mild"
+      ],
+      "series": [
+        {
+          "name": "gardener: Stufe 5",
+          "values": [0, 0, 0, 0, 0.01, 0, 0.05, 0.15, 0.17, 0.57, 0.35, 0.15, 0.16, 0.53, 0.6]
+        },
+        {
+          "name": "gardener: Stufe 6",
+          "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.06, 0.02, 0, 0, 0.02, 0.09]
+        },
+        {
+          "name": "evolver: Stufe 5",
+          "values": [0, 0, 0.12, 0, 0.02, 0, 0.12, 0.24, 0.26, 0.61, 0.38, 0.25, 0.14, 0.68, 0.66]
+        },
+        {
+          "name": "evolver: Stufe 6",
+          "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.08, 0.05, 0, 0, 0.07, 0.11]
+        }
+      ],
+      "caption": "Anteil der Partien, in denen eine Art der Stufe 5 bzw. 6 gelebt hat."
+    }
+  ],
+  "notes": "Erst das Gesamtpaket bringt die Partielänge ins Ziel (Median 52–62 Runden statt 79–100), Stufe 6 bleibt aber selten (2–11 %, Jahr 8–15) und der Mensch entsteht nie."
+}

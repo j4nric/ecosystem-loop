@@ -32,6 +32,12 @@ export function DragOverlay({ drag, zones, preview, ghostRef }: Props) {
               <b>{zone.geographyName}</b>
               <span className={`kind kind--${zone.form.kind}`}>{t.formKind[zone.form.kind]}</span>
               <span className="muted">{zone.form.name}</span>
+              {zone.ideal && (
+                <span className="drag-panel__goal">
+                  {t.idealGoal(zone.ideal.name)} ·{' '}
+                  {zone.ideal.distance <= 0 ? `✓ ${t.idealReached}` : t.idealSteps(zone.ideal.distance)}
+                </span>
+              )}
             </header>
             {preview ? (
               <PreviewList preview={preview} shownZone={zone.id} />

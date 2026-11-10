@@ -8,12 +8,14 @@ import { lifeParams } from './population.ts';
 import { breathParams } from './rules/breath.ts';
 import { evolutionParams } from './rules/evolution.ts';
 import { RULES } from './rules/index.ts';
+import { idealTargetOf, rangesOf, type StatRange } from './targets.ts';
 import {
   CardsFile,
   Config,
   CouplingsFile,
   EventsFile,
   GeographiesFile,
+  type Geography,
   HarmonyFile,
   MapFile,
   MetaFile,
@@ -133,7 +135,12 @@ export function buildGameData(raw: RawData): GameData {
     scenarios: indexById('Szenario', scenarios.scenarios, problems),
     events: indexById('Ereignis', events.events, problems),
     meta,
+    ideals: new Map(),
   };
+  for (const g of geo.geographies) {
+    const ideal = idealTargetOf(g, config.scale);
+    if (ideal) data.ideals.set(g.id, ideal);
+  }
   indexById('Jahreszeit', seasons.seasons, problems);
   indexById('Kopplung', couplings.couplings, problems);
   indexById('Zone', map.zones, problems);
@@ -215,6 +222,9 @@ function checkReferences(d: GameData, p: string[]): void {
       for (const c of f.when)
         if ('stat' in c && !own.has(c.stat)) p.push(`${where} Form ${f.id}: Wert ${c.stat} gibt es hier nicht`);
     }
+    const ideals = g.forms.filter((f) => f.kind === 'ideal').length;
+    if (ideals !== 1) p.push(`${where}: genau eine Idealform nötig (gefunden ${ideals})`);
+    else checkIdealReachable(g, d.config.scale, p);
     if (g.forms[g.forms.length - 1]!.when.length > 0)
       p.push(`${where}: letzte Form muss ohne Bedingungen sein („sonst“)`);
   }
@@ -411,5 +421,25 @@ function checkSpecies(d: GameData, p: string[], checkCond: (where: string, cs: r
     for (const c of sp.gift) if (!d.cards.has(c)) p.push(`${where}: unbekannte Gabe ${c}`);
     for (const h of sp.hunts) if (!d.species.has(h)) p.push(`${where}: jagt unbekannte Art ${h}`);
     checkCond(where, sp.evolve);
+  }
+}
+
+/**
+ * Der Zielbereich der Idealform muss auch wirklich die Idealform ergeben: Keine frühere Form mit reinen
+ * Wertbedingungen darf einen Teil davon abdecken (`formFor` nimmt die erste passende Form). Sonst zeigte die
+ * Oberfläche „Abstand 0“, obwohl die Zone eine andere Form hat. Formen mit anderen Bedingungen werden übersprungen.
+ */
+function checkIdealReachable(g: Geography, scale: StatRange, p: string[]): void {
+  const idx = g.forms.findIndex((f) => f.kind === 'ideal');
+  const ideal = rangesOf(g.forms[idx]!.when, scale);
+  for (const f of g.forms.slice(0, idx)) {
+    if (f.when.length === 0 || !f.when.every((c) => 'stat' in c)) continue;
+    const own = rangesOf(f.when, scale);
+    const overlaps = Object.entries(own).every(([s, r]) => {
+      const t = ideal[s] ?? scale;
+      return Math.max(r.min, t.min) <= Math.min(r.max, t.max);
+    });
+    if (overlaps)
+      p.push(`Geografie ${g.id}: Form ${f.id} steht vor der Idealform und überdeckt einen Teil ihres Zielbereichs`);
   }
 }

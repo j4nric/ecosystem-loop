@@ -2,6 +2,10 @@ import type { ReactNode } from 'react';
 import type { CardView } from '@core/api';
 import type { PreviewView } from '../client/index.ts';
 import { t } from '../i18n/index.ts';
+import { towardFromDistance, type Toward } from '../logic/ideal.ts';
+
+/** Symbol zur Richtung (Farbe allein reicht nicht). */
+export const TOWARD_ARROW: Record<Toward, string> = { better: '▲', worse: '▼', neutral: '=' };
 
 interface Props {
   card: CardView;
@@ -75,12 +79,27 @@ export function PreviewList({ preview, shownZone }: { preview: PreviewView; show
           {t.previewForm(f.zoneName, f.from, f.to)}
         </li>
       ))}
-      {preview.changes.map((c) => (
-        <li key={`c-${c.zone}-${c.stat}`}>
-          {c.zone === shownZone ? '' : `${c.zoneName} · `}
-          {c.statName} {c.from} → <b>{c.to}</b>
-        </li>
-      ))}
+      {(preview.idealDistance ?? [])
+        .filter((d) => d.before !== d.after)
+        .map((d) => {
+          const toward = towardFromDistance(d.before, d.after);
+          const name = preview.changes.find((c) => c.zone === d.zone)?.zoneName ?? d.zone;
+          return (
+            <li key={`i-${d.zone}`} className={`is-${toward} play-preview__ideal`}>
+              <span aria-hidden>{TOWARD_ARROW[toward]}</span> {t.previewIdeal(name, d.before, d.after)}
+            </li>
+          );
+        })}
+      {preview.changes.map((c) => {
+        const toward = c.toward ?? 'neutral';
+        return (
+          <li key={`c-${c.zone}-${c.stat}`} className={toward === 'neutral' ? '' : `is-${toward}`}>
+            <span aria-hidden>{c.to > c.from ? '↑' : '↓'}</span> {c.zone === shownZone ? '' : `${c.zoneName} · `}
+            {c.statName} {c.from} → <b>{c.to}</b>
+            {toward !== 'neutral' && <small className="play-preview__toward"> · {t.toward[toward]}</small>}
+          </li>
+        );
+      })}
       {preview.populationChanges.map((p) => (
         <li key={`p-${p.zone}-${p.species}`} className={p.to < p.from ? 'is-bad' : 'is-good'}>
           {t.previewPopulation(p.zoneName, p.speciesName, p.from, p.to)}

@@ -6,6 +6,7 @@ import { GEO } from './geometries.ts';
 import { COLORS, topColor } from './palette.ts';
 import { TOP_Y } from './layout.ts';
 import type { SceneRegistry } from './registry.ts';
+import type { Toward } from '../logic/ideal.ts';
 
 interface Props {
   zone: ZoneView;
@@ -15,6 +16,8 @@ interface Props {
   targetable: boolean;
   /** true: Zielwahl läuft, aber diese Zone ist kein gültiges Ziel. */
   dimmed: boolean;
+  /** Wirkung dieser Zone als Ziel auf ihre Idealform: färbt den Zielring grün, rot oder gelb. */
+  tint: Toward | null;
   reducedMotion: boolean;
   registry: SceneRegistry;
   onTap: (zoneId: string) => void;
@@ -26,7 +29,17 @@ const LABEL_HEIGHT: Record<string, number> = { mountains: 1.95 };
 const BLACK = new Color('#000000');
 const stat = (zone: ZoneView, index: number) => zone.stats[index]?.value ?? 0;
 
-export function ZoneTile({ zone, position, selected, targetable, dimmed, reducedMotion, registry, onTap }: Props) {
+export function ZoneTile({
+  zone,
+  position,
+  selected,
+  targetable,
+  dimmed,
+  tint,
+  reducedMotion,
+  registry,
+  onTap,
+}: Props) {
   const group = useRef<Group>(null);
   const ring = useRef<Mesh>(null);
   const topMaterial = useRef<MeshLambertMaterial>(null);
@@ -98,7 +111,19 @@ export function ZoneTile({ zone, position, selected, targetable, dimmed, reduced
 
         {(selected || targetable) && (
           <mesh ref={ring} geometry={GEO.ring} position={[0, TOP_Y + 0.02, 0]}>
-            <meshBasicMaterial color={targetable ? COLORS.target : COLORS.select} transparent depthWrite={false} />
+            <meshBasicMaterial
+              color={
+                targetable
+                  ? tint === 'better'
+                    ? COLORS.better
+                    : tint === 'worse'
+                      ? COLORS.worse
+                      : COLORS.target
+                  : COLORS.select
+              }
+              transparent
+              depthWrite={false}
+            />
           </mesh>
         )}
 

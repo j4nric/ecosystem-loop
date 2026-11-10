@@ -40,7 +40,13 @@ describe('view', () => {
     });
     expect(v.zones.find((z) => z.id === 'mountains')!.populations).toEqual([]);
     expect(forest.stats.map((x) => x.id)).toEqual(['light', 'moisture', 'vegetation', 'deadwood']);
-    expect(forest.stats[3]).toEqual({ id: 'deadwood', name: 'Totholz', value: 2, max: 5 });
+    expect(forest.stats[3]).toEqual({
+      id: 'deadwood',
+      name: 'Totholz',
+      value: 2,
+      max: 5,
+      target: { min: 2, max: 3, status: 'ok' },
+    });
     expect(forest.neighbors).toEqual(['mountains', 'river', 'plains']);
     expect(v.hand.map((c) => [c.card, c.category, c.cost, c.playable])).toEqual([
       ['thunderstorm', 'force', 0, true],
@@ -164,10 +170,21 @@ describe('preview', () => {
     expect(p.affordable).toBe(true);
     expect(p.triggers).toEqual([{ zone: 'forest', trigger: 'fire', name: 'Fire', icon: '🔥', zoneName: 'Forest' }]);
     expect(p.changes).toEqual([
-      { zone: 'forest', stat: 'moisture', from: 1, to: 3, zoneName: 'Forest', statName: 'Moisture' },
-      { zone: 'forest', stat: 'vegetation', from: 4, to: 0, zoneName: 'Forest', statName: 'Vegetation' },
-      { zone: 'forest', stat: 'deadwood', from: 1, to: 4, zoneName: 'Forest', statName: 'Deadwood' },
+      { zone: 'forest', stat: 'moisture', from: 1, to: 3, zoneName: 'Forest', statName: 'Moisture', toward: 'better' },
+      {
+        zone: 'forest',
+        stat: 'vegetation',
+        from: 4,
+        to: 0,
+        zoneName: 'Forest',
+        statName: 'Vegetation',
+        toward: 'worse',
+      },
+      // Totholz springt über den Zielbereich 2–3 hinweg: vorher 1 zu wenig, nachher 1 zu viel.
+      { zone: 'forest', stat: 'deadwood', from: 1, to: 4, zoneName: 'Forest', statName: 'Deadwood', toward: 'neutral' },
     ]);
+    // Urwald: Vegetation =5, Feuchte ≥4, Totholz 2–3 → vorher 1+3+1, nachher 5+1+1.
+    expect(p.idealDistance).toEqual([{ zone: 'forest', before: 5, after: 7 }]);
     expect(p.populationChanges).toEqual([]);
     expect(p.eventChanges).toEqual([]);
     expect(p.formChanges).toEqual([
@@ -189,7 +206,9 @@ describe('preview', () => {
     const p = preview(data, s, { uid: uidOf(s, 'healing'), targets: { zone: 'coast' } });
     expect(p.affordable).toBe(false);
     expect(p.cost).toBe(4);
-    expect(p.changes).toEqual([{ zone: 'coast', stat: 'salt', from: 5, to: 3, zoneName: 'Küste', statName: 'Salz' }]);
+    expect(p.changes).toEqual([
+      { zone: 'coast', stat: 'salt', from: 5, to: 3, zoneName: 'Küste', statName: 'Salz', toward: 'better' },
+    ]);
     expect(() => preview(data, s, { uid: 42, targets: {} })).toThrow(/nicht auf der Hand/);
   });
 });

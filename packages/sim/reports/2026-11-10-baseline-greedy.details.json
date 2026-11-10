@@ -1,0 +1,341 @@
+{
+  "bot": "greedy",
+  "scenario": "all",
+  "runs": 200,
+  "errors": [],
+  "survived": 0,
+  "rounds": {
+    "median": 55,
+    "p10": 41,
+    "p90": 80.1,
+    "mean": 58.12
+  },
+  "score": {
+    "median": 185.5,
+    "p10": 105.9,
+    "p90": 326.7
+  },
+  "collapseCauses": {
+    "disturbance": 0.48,
+    "extinction": 0.38,
+    "form:degraded": 0.095,
+    "hunger": 0.045
+  },
+  "harmonyPerRound": {
+    "species": 1.25,
+    "form:ideal": 0.46,
+    "hunger": -0.98,
+    "disturbance": -0.93,
+    "form:degraded": -0.28,
+    "extinction": -0.52
+  },
+  "highestTier": {
+    "2": 0.715,
+    "3": 0.255,
+    "4": 0.03
+  },
+  "tiers": {
+    "1": {
+      "share": 1,
+      "medianYear": 1,
+      "p10Year": 1,
+      "p90Year": 1
+    },
+    "2": {
+      "share": 1,
+      "medianYear": 1,
+      "p10Year": 1,
+      "p90Year": 2
+    },
+    "3": {
+      "share": 0.285,
+      "medianYear": 4,
+      "p10Year": 3,
+      "p90Year": 10.4
+    },
+    "4": {
+      "share": 0.03,
+      "medianYear": 10.5,
+      "p10Year": 9,
+      "p90Year": 11.5
+    },
+    "5": {
+      "share": 0,
+      "medianYear": null,
+      "p10Year": null,
+      "p90Year": null
+    },
+    "6": {
+      "share": 0,
+      "medianYear": null,
+      "p10Year": null,
+      "p90Year": null
+    },
+    "7": {
+      "share": 0,
+      "medianYear": null,
+      "p10Year": null,
+      "p90Year": null
+    }
+  },
+  "tier6YearAll": null,
+  "humanShare": 0,
+  "extinctionShare": {
+    "plankton": 0.855,
+    "fish": 0.84,
+    "beetle": 0.66,
+    "bee": 0.195,
+    "lizard": 0.03,
+    "frog": 0.25
+  },
+  "speciesShare": {
+    "plankton": 1,
+    "beetle": 1,
+    "fish": 1,
+    "bee": 0.195,
+    "frog": 0.285,
+    "lizard": 0.03
+  },
+  "formKinds": {
+    "normal": 0.935,
+    "ideal": 0.046,
+    "degraded": 0.019,
+    "disturbance": 0.001
+  },
+  "topForms": [
+    ["stream", 0.19],
+    ["rock", 0.17],
+    ["beach", 0.16],
+    ["mixed_forest", 0.14],
+    ["meadow", 0.08],
+    ["bog", 0.05],
+    ["dry_forest", 0.04],
+    ["steppe", 0.04],
+    ["reef", 0.03],
+    ["flower_meadow", 0.02]
+  ],
+  "maxLevel": {
+    "mountains": 1.15,
+    "forest": 2.91,
+    "plains": 1.94,
+    "river": 2.98,
+    "coast": 2.89
+  },
+  "breath": {
+    "unusedPerRound": 5.41,
+    "wastedPerRound": 0.6,
+    "capShare": 0.39,
+    "spentPerRound": 1.79
+  },
+  "topCards": [
+    ["seeds", 10.13],
+    ["rain", 9.91],
+    ["fertilizer", 9.89],
+    ["storm", 9.71],
+    ["healing", 9.61],
+    ["decomposition", 9.56],
+    ["frost", 9.49],
+    ["thunderstorm", 9.36],
+    ["drought", 9.12],
+    ["sun", 8.31]
+  ],
+  "playsPerRound": 1.94,
+  "eventsPerGame": {
+    "occurred": 44.1,
+    "cancelled": 0
+  },
+  "funnel": {
+    "fish": {
+      "ancestor": 0.273,
+      "special": 0.273,
+      "habitat": 0.253,
+      "level": 0.253,
+      "pressure": 0.253
+    },
+    "bee": {
+      "ancestor": 0.458,
+      "special": 0.458,
+      "habitat": 0.096,
+      "level": 0.096,
+      "pressure": 0.096
+    },
+    "frog": {
+      "ancestor": 0.309,
+      "special": 0.309,
+      "habitat": 0.076,
+      "level": 0.076,
+      "pressure": 0.076
+    },
+    "lizard": {
+      "ancestor": 0.022,
+      "special": 0.022,
+      "habitat": 0.017,
+      "level": 0.005,
+      "pressure": 0.003
+    },
+    "small_mammal": {
+      "ancestor": 0,
+      "special": 0,
+      "habitat": 0,
+      "level": 0,
+      "pressure": 0
+    },
+    "bird": {
+      "ancestor": 0,
+      "special": 0,
+      "habitat": 0,
+      "level": 0,
+      "pressure": 0
+    },
+    "deer": {
+      "ancestor": 0,
+      "special": 0,
+      "habitat": 0,
+      "level": 0,
+      "pressure": 0
+    },
+    "wolf": {
+      "ancestor": 0,
+      "special": 0,
+      "habitat": 0,
+      "level": 0,
+      "pressure": 0
+    },
+    "raptor": {
+      "ancestor": 0,
+      "special": 0,
+      "habitat": 0,
+      "level": 0,
+      "pressure": 0
+    },
+    "primate": {
+      "ancestor": 0,
+      "special": 0,
+      "habitat": 0,
+      "level": 0,
+      "pressure": 0
+    },
+    "human": {
+      "ancestor": 0,
+      "special": 0,
+      "habitat": 0,
+      "level": 0,
+      "pressure": 0
+    }
+  },
+  "byYear": {
+    "years": [
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+      32
+    ],
+    "alive": [
+      1, 1, 1, 1, 1, 1, 0.995, 0.99, 0.96, 0.91, 0.825, 0.69, 0.56, 0.47, 0.395, 0.295, 0.215, 0.155, 0.115, 0.1, 0.055,
+      0.04, 0.02, 0.015, 0.015, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0
+    ],
+    "harmonyP10": [
+      44.95,
+      50,
+      49.5,
+      44.5,
+      42,
+      38.8,
+      33.95,
+      22.35,
+      15.65,
+      9,
+      6.8,
+      2.25,
+      1.6,
+      3.8,
+      2,
+      1.5,
+      2.2,
+      2,
+      1.8,
+      1,
+      2.5,
+      1.9,
+      5.8,
+      27.7,
+      8.6,
+      21.55,
+      19.55,
+      15.05,
+      13.25,
+      8.25,
+      2.35,
+      null
+    ],
+    "harmonyMedian": [
+      62.5,
+      67.5,
+      67.5,
+      64,
+      61.5,
+      58.5,
+      54,
+      48.25,
+      39,
+      35,
+      29.5,
+      24,
+      22,
+      24,
+      18.25,
+      18,
+      18.5,
+      17,
+      16.5,
+      7,
+      16.5,
+      18,
+      26.5,
+      48.5,
+      19,
+      27.75,
+      25.75,
+      19.25,
+      18.25,
+      13.25,
+      7.75,
+      null
+    ],
+    "harmonyP90": [
+      67.5,
+      76,
+      78.6,
+      77.55,
+      77.05,
+      78.05,
+      74.55,
+      72,
+      64.5,
+      63.5,
+      56,
+      54.25,
+      53.3,
+      53.7,
+      50.6,
+      45.2,
+      42.6,
+      40.9,
+      43.1,
+      40.5,
+      51.5,
+      55.8,
+      55.5,
+      50.9,
+      39.4,
+      33.95,
+      31.95,
+      23.45,
+      23.25,
+      18.25,
+      13.15,
+      null
+    ],
+    "tier6": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "tier5": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "human": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  }
+}

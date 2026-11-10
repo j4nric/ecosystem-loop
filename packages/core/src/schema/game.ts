@@ -4,6 +4,7 @@ import type { Card, CardCategory } from './cards.ts';
 import type { SpeciesDef } from './life.ts';
 import type { EventDef, MetaData } from './events.ts';
 import { FORM_KINDS, Id, Text, type FormKindSchema } from './common.ts';
+import type { IdealTarget } from '../targets.ts';
 import type { Coupling, FormDef, Geography, MapZone, Season, StatDef } from './world.ts';
 
 export const Config = z.strictObject({
@@ -109,4 +110,6 @@ export interface GameData {
   events: Map<string, EventDef>;
   /** Meta-Progression: Grundpool und Meilensteine (Konzept 10). */
   meta: MetaData;
+  /** Geografie-Id → Zielbereiche ihrer Idealform (abgeleitet beim Datenaufbau, siehe targets.ts). */
+  ideals: Map<string, IdealTarget>;
 }

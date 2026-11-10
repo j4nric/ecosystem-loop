@@ -29,7 +29,8 @@ export function useGame(client: GameClient) {
     const timers = new Set<number>();
     const unsubscribe = client.subscribeNotices((all) => {
       if (all.some((n) => n.type === 'incompatible')) setIncompatible(true);
-      const notices = all.filter((n) => n.type !== 'incompatible');
+      // Wertänderungen zeigt die Effekt-Schicht als aufsteigende Zahlen über der Zone, nicht als Meldung.
+      const notices = all.filter((n): n is ToastNotice => n.type !== 'incompatible' && n.type !== 'statShift');
       if (notices.length === 0) return;
       const fresh = notices.map((n) => ({ id: nextId.current++, ...noticeToast(n) }));
       // Ein großer Schritt (Rundenende) verdrängt ältere Meldungen; seine wichtigsten stehen vorn.
@@ -67,7 +68,9 @@ export function useGame(client: GameClient) {
 const deltas = (list: { species: string; delta: number }[]) =>
   list.map((x) => t.popDelta(x.species, x.delta)).join(', ');
 
-function noticeToast(n: Exclude<Notice, { type: 'incompatible' }>): Omit<Toast, 'id'> {
+type ToastNotice = Exclude<Notice, { type: 'incompatible' } | { type: 'statShift' }>;
+
+function noticeToast(n: ToastNotice): Omit<Toast, 'id'> {
   switch (n.type) {
     case 'overgrazed':
       return { text: t.toastOvergrazed(n.zone, n.foods.join(', ')), tone: 'bad' };

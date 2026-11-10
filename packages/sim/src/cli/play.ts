@@ -1,5 +1,6 @@
 /**
- * Interaktive Konsolen-Partie (deutsch). Spricht mit der Engine nur über newGame, view, legalPlays und step.
+ * Interaktive Konsolen-Partie (deutsch). Werte mit Zielbereich der Idealform erscheinen als „F 4 [≥4 ✓]“
+ * (✓ im Bereich, ↑ zu niedrig, ↓ zu hoch). Spricht mit der Engine nur über newGame, view, legalPlays und step.
  *
  *   npm run play -- [--seed X] [--scenario standard|drought|wet|fragile]
  */
@@ -55,12 +56,14 @@ function render(v: GameView): void {
       ` · Stapel ${v.drawPile} · Ablage ${v.discardPile} · Punkte ${v.score}`,
   );
   v.zones.forEach((z, i) => {
-    const stats = z.stats.map((s) => `${short(s.id)}${s.value}`).join(' ');
+    const stats = z.stats.map((s) => `${short(s.id)} ${s.value}${s.target ? ` [${target(s.target)}]` : ''}`).join(' ');
     const warn = [...new Set(z.warnings.map((w) => w.icon))].join('');
     console.log(
       `  ${i + 1}) ${z.geographyName.padEnd(10)} ${z.form.name.padEnd(20)} ${KIND[z.form.kind].padEnd(10)} ` +
-        `Stufe ${z.level} ${bar(z.levelProgress)}  ${stats.padEnd(16)} ${warn}`,
+        `Stufe ${z.level} ${bar(z.levelProgress)}  ${warn}`,
     );
+    const ideal = z.ideal ? `  → ${z.ideal.name}${z.ideal.distance ? ` (Abstand ${z.ideal.distance})` : ' ✓'}` : '';
+    console.log(`       ${stats}${ideal}`);
     if (z.populations.length > 0) console.log(`       ${z.populations.map((p) => `${p.name} ${p.count}`).join(' · ')}`);
   });
   if (v.forecast) {
@@ -73,6 +76,16 @@ function render(v: GameView): void {
     const mark = c.playable ? ' ' : '·';
     console.log(`   ${mark}${i + 1}) ${c.name.padEnd(12)} [${c.cost} Odem] ${c.text}`);
   });
+}
+
+const STATUS = { low: '↑', ok: '✓', high: '↓' };
+
+/** Zielbereich knapp: „=3“, „≥4“, „≤1“ oder „2–3“, dazu die Lage des Werts. */
+function target(t: NonNullable<GameView['zones'][number]['stats'][number]['target']>): string {
+  const { min, max } = data.config.scale;
+  const range =
+    t.min === t.max ? `=${t.min}` : t.max === max ? `≥${t.min}` : t.min === min ? `≤${t.max}` : `${t.min}–${t.max}`;
+  return `${range} ${STATUS[t.status]}`;
 }
 
 const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
