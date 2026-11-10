@@ -30,7 +30,7 @@ lässt den Reviewer prüfen und merged den PR.
 | `test-engineer` | `packages/*/tests`         | Regeln testgetrieben belegen                    |
 | `docs-cockpit`  | `docs/`, Cockpit-Datenbank | Antworten/Feedback lesen, Fortschritt eintragen |
 | `reviewer`      | nur lesend                 | vor jedem Merge eines größeren PRs              |
-| `app-dev`       | `apps/web`              | ab Phase 4                                      |
+| `app-dev`       | `apps/web`                 | ab Phase 4                                      |
 | `sim-analyst`   | `packages/sim`             | ab Phase 6 oder auf Wunsch                      |
 
 Regeln für parallele Läufe:

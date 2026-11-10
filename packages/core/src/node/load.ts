@@ -3,18 +3,20 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import { buildGameData } from '../data.ts';
-import type { GameData } from '../schema.ts';
+import { buildGameData, DATA_FILES, type RawData } from '../data.ts';
+import type { GameData } from '../schema/index.ts';
 
 export const DEFAULT_DATA_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../data');
 
+/** Liest alle YAML-Dateien als Rohdaten (ungeprüft). */
+export function readRawData(dir: string = DEFAULT_DATA_DIR): RawData {
+  const entries = Object.entries(DATA_FILES).map(([key, file]) => [
+    key,
+    parse(readFileSync(join(dir, file), 'utf8')) as unknown,
+  ]);
+  return Object.fromEntries(entries) as unknown as RawData;
+}
+
 export function loadGameData(dir: string = DEFAULT_DATA_DIR): GameData {
-  const read = (f: string) => parse(readFileSync(join(dir, f), 'utf8')) as unknown;
-  return buildGameData({
-    config: read('config.yaml'),
-    cards: read('cards.yaml'),
-    animals: read('animals.yaml'),
-    zones: read('zones.yaml'),
-    scenarios: read('scenarios.yaml'),
-  });
+  return buildGameData(readRawData(dir));
 }

@@ -41,3 +41,20 @@ export function seedFrom(seed: string | number): number {
   }
   return h | 0;
 }
+
+/** Bequemer Zugriff auf den Zufall eines Halters (z. B. des Spielzustands). */
+export interface Rng {
+  float(): number;
+  int(maxExclusive: number): number;
+  pick<T>(items: readonly T[]): T;
+  shuffle<T>(items: T[]): T[];
+}
+
+export function rngOf(h: RngHolder): Rng {
+  return {
+    float: () => nextFloat(h),
+    int: (n) => nextInt(h, n),
+    pick: (items) => pick(h, items),
+    shuffle: (items) => shuffle(h, items),
+  };
+}

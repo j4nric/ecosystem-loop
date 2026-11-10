@@ -1,70 +1,75 @@
 /**
- * Spielzustand einer Expedition. Reine Daten (JSON-serialisierbar, per structuredClone klonbar).
+ * Spielzustand der Engine v2. Reine Daten (JSON-serialisierbar, per structuredClone klonbar).
+ * Oberflächen lesen den Zustand nie direkt, sondern über `view()`.
  */
-import type { Stat, Values } from './schema.ts';
+import type { Targets } from './api.ts';
 
 export interface CardInstance {
   uid: number;
   card: string;
 }
 
-export interface AnimalPresence {
-  id: string;
-  arrivedTurn: number;
-  /** Aufeinanderfolgende Zugenden, an denen ein Fresser dieser Art in derselben Zone war. */
-  withPredatorTurns: number;
-}
-
 export interface ZoneState {
   id: string;
-  type: string;
-  values: Values;
+  geography: string;
+  /** Wert-Id → Wert. Enthält genau die gemeinsamen Werte und den Sonderwert der Geografie. */
+  stats: Record<string, number>;
   neighbors: string[];
   tags: string[];
-  animals: AnimalPresence[];
-  /** Zug der letzten Störung in dieser Zone (0 = Expeditionsbeginn). */
-  lastDisturbanceTurn: number;
-  /** Tier-Id → Anzahl Zugenden in Folge, an denen seine Bedingungen erfüllt waren (für Einzugsverzögerung). */
-  pending: Record<string, number>;
+  /** Aktuelle Form (wird in der Natur-Phase bestimmt). */
+  form: string;
+  /** Runde, in der die aktuelle Form begonnen hat (0 = Spielbeginn). */
+  formSince: number;
+  /** Zonenstufe und Runden in Folge, die zum nächsten Aufstieg zählen. */
+  level: number;
+  levelProgress: number;
+  /** Runde der letzten Störung (Feuer, Flut, Baumsturz, Hochwasser …), null = nie. */
+  lastDisturbance: number | null;
+  /** Art-Id → Bestand (ab Phase 2). */
+  populations: Record<string, number>;
 }
 
-export type EndReason = 'voluntary' | 'deckEmpty' | 'maxTurns';
-
-export interface ExpeditionState {
+export interface GameState {
+  version: 2;
   rng: number;
   scenario: string;
-  turn: number;
-  phase: 'play' | 'ended';
-  endReason: EndReason | null;
+  round: number;
+  phase: 'play' | 'over';
+  harmony: number;
+  /** Veränderung der Harmonie in der letzten Bilanz. */
+  harmonyTrend: number;
+  breath: number;
   zones: ZoneState[];
   hand: CardInstance[];
   drawPile: CardInstance[];
   discardPile: CardInstance[];
   nextUid: number;
   playsThisTurn: number;
-  /** Karten-Id → wie oft in dieser Expedition gespielt. */
+  /** Karten-Id → wie oft in dieser Partie gespielt. */
   cardPlays: Record<string, number>;
-  /** Arten, die in dieser Expedition mindestens einmal eingezogen sind. */
-  arrivedSpecies: string[];
-  log: GameEvent[];
 }
 
-/** Gewählte Ziele einer Karte: Slot-Id → Zonen-Id, Tier-Id oder Karten-uid (als Text). */
-export type Choices = Record<string, string>;
-
+/** Ereignisse eines Schritts. Texte entstehen erst in der Oberfläche. */
 export type GameEvent =
-  | { type: 'turnStarted'; turn: number }
-  | { type: 'cardDrawn'; card: string }
-  | { type: 'cardPlayed'; card: string; choices: Choices }
+  | { type: 'roundStarted'; round: number; season: string }
+  | { type: 'cardDrawn'; uid: number; card: string }
+  | { type: 'deckReshuffled'; cards: number }
+  | { type: 'cardPlayed'; uid: number; card: string; targets: Targets; cost: number }
   | { type: 'triggered'; card: string; trigger: string; zone: string; disturbance: boolean }
-  | { type: 'valueChanged'; zone: string; stat: Stat; from: number; to: number }
-  | { type: 'tagAdded'; zone: string; tag: string }
-  | { type: 'tagRemoved'; zone: string; tag: string }
-  | { type: 'zonesConnected'; a: string; b: string }
-  | { type: 'animalMoved'; animal: string; from: string; to: string }
-  | { type: 'cardDiscarded'; card: string }
-  | { type: 'zoneTypeChanged'; zone: string; from: string; to: string }
-  | { type: 'animalEaten'; prey: string; predators: string[]; zone: string }
-  | { type: 'animalLeft'; animal: string; zone: string }
-  | { type: 'animalArrived'; animal: string; zone: string; cardAdded: string | null }
-  | { type: 'expeditionEnded'; reason: EndReason };
+  | { type: 'disturbance'; zone: string; cause: string }
+  | { type: 'statChanged'; zone: string; stat: string; from: number; to: number; cause: string }
+  | { type: 'breathChanged'; from: number; to: number; cause: string }
+  | { type: 'turnEnded'; round: number }
+  | { type: 'seasonApplied'; season: string }
+  | { type: 'couplingApplied'; coupling: string; from: string; to: string }
+  | { type: 'formChanged'; zone: string; from: string; to: string }
+  | { type: 'levelChanged'; zone: string; from: number; to: number; reason: LevelReason }
+  | {
+      type: 'harmonyChanged';
+      from: number;
+      to: number;
+      parts: { source: string; zone: string | null; amount: number }[];
+    }
+  | { type: 'collapsed'; round: number };
+
+export type LevelReason = 'rise' | 'disturbance' | 'degraded' | 'formChanged';
