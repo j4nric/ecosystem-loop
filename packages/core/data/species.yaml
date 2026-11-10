@@ -1,5 +1,6 @@
 # Arten und Stammbaum (Konzept 5.3). Reihenfolge = Stufe aufsteigend; sie bestimmt auch, wer zuerst frisst.
 #
+# group     – Gruppe für die Darstellung: water, insect, amphibian, reptile, bird, mammal, human
 # tier      – Entwicklungsstufe (Evolution: Zonenstufe ≥ tier − 2; Wertung: Punkte je Runde)
 # ancestor  – Vorfahr (null = Startleben)
 # habitat   – Formen, in denen die Art wachsen kann (Konzept 4.2 „Lebensraum für“)
@@ -14,6 +15,7 @@
 species:
   - id: plankton
     name: { de: Plankton, en: Plankton }
+    group: water
     tier: 1
     habitat: [brook, stream, reef, mudflat]
     diet: [light]
@@ -21,6 +23,7 @@ species:
 
   - id: beetle
     name: { de: Käfer, en: Beetle }
+    group: insect
     tier: 1
     habitat: [burnt_land, primeval_forest, mixed_forest, bog, meadow]
     # AUSLEGUNG: Käfer fressen Totholz; wo es keins gibt (Flachland), Pflanzenreste (Vegetation).
@@ -29,6 +32,7 @@ species:
 
   - id: fish
     name: { de: Fisch, en: Fish }
+    group: water
     tier: 2
     ancestor: plankton
     habitat: [floodplain, stream, mangrove, reef]
@@ -37,6 +41,7 @@ species:
 
   - id: bee
     name: { de: Biene, en: Bee }
+    group: insect
     tier: 2
     ancestor: beetle
     habitat: [alpine_meadow, primeval_forest, open_forest, flower_meadow]
@@ -45,6 +50,7 @@ species:
 
   - id: frog
     name: { de: Frosch, en: Frog }
+    group: amphibian
     tier: 3
     ancestor: fish
     habitat: [bog, brook, floodplain, mangrove]
@@ -53,6 +59,7 @@ species:
 
   - id: lizard
     name: { de: Echse, en: Lizard }
+    group: reptile
     tier: 4
     ancestor: frog
     habitat: [rock, dry_forest, primeval_forest, steppe, beach]
@@ -61,6 +68,7 @@ species:
 
   - id: small_mammal
     name: { de: Kleinsäuger, en: Small mammal }
+    group: mammal
     tier: 5
     ancestor: lizard
     habitat: [alpine_meadow, primeval_forest, mixed_forest, flower_meadow, steppe, shrubland, meadow]
@@ -69,6 +77,7 @@ species:
 
   - id: bird
     name: { de: Vogel, en: Bird }
+    group: bird
     tier: 5
     ancestor: lizard
     habitat: [mountain_forest, primeval_forest, open_forest, shrubland, floodplain, mangrove, mudflat]
@@ -77,6 +86,7 @@ species:
 
   - id: deer
     name: { de: Hirsch, en: Deer }
+    group: mammal
     tier: 6
     ancestor: small_mammal
     habitat: [alpine_meadow, primeval_forest, open_forest, flower_meadow, meadow]
@@ -85,6 +95,7 @@ species:
 
   - id: wolf
     name: { de: Wolf, en: Wolf }
+    group: mammal
     tier: 6
     ancestor: small_mammal
     habitat: [mountain_forest, primeval_forest, mixed_forest, steppe]
@@ -94,6 +105,7 @@ species:
 
   - id: raptor
     name: { de: Greifvogel, en: Bird of prey }
+    group: bird
     tier: 6
     ancestor: bird
     habitat: [mountain_forest, rock]
@@ -102,6 +114,7 @@ species:
 
   - id: primate
     name: { de: Primat, en: Primate }
+    group: mammal
     tier: 6
     ancestor: small_mammal
     habitat: [primeval_forest]
@@ -111,6 +124,7 @@ species:
 
   - id: human
     name: { de: Mensch, en: Human }
+    group: human
     tier: 7
     ancestor: primate
     habitat: [flower_meadow, meadow, floodplain]

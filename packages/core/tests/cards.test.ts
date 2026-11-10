@@ -276,7 +276,7 @@ describe('Gaben der Arten und Menschenkarten (Konzept 5.3, 5.4)', () => {
       { id: 'zone', kind: 'zone', label: 'Zone' },
       { id: 'prey', kind: 'species', label: 'Pflanzenfresser', of: 'zone' },
     ]);
-    expect(v.text).toBe('Bestand Pflanzenfresser −2');
+    expect(v.text).toBe('Bestand Pflanzenfresser −2.');
   });
 
   it('Art-Slot mit Nahrungsfilter (eats)', () => {
@@ -287,7 +287,7 @@ describe('Gaben der Arten und Menschenkarten (Konzept 5.3, 5.4)', () => {
     const s = game({ hand: ['hunt'], breath: 5, life: false, d });
     setPops(s, 'river', { plankton: 3, fish: 2 });
     expect(targetsOf(s, 'hunt', d)).toEqual([{ zone: 'river', prey: 'fish' }]);
-    expect(cardText(d, d.cards.get('hunt')!, 'en')).toBe('Species population −2');
+    expect(cardText(d, d.cards.get('hunt')!, 'en')).toBe('Species population −2.');
   });
 
   it('Laichzug: 1 Fisch wandert in eine Nachbarzone mit Wasser', () => {
@@ -299,7 +299,7 @@ describe('Gaben der Arten und Menschenkarten (Konzept 5.3, 5.4)', () => {
     expect(zone(state, 'coast').populations.fish).toBe(1);
     expect(events).toContainEqual({ type: 'migrated', species: 'fish', from: 'river', to: 'coast', count: 1 });
     expect(cardText(data, data.cards.get('spawning_run')!, 'de')).toBe(
-      'Nur Fisch ≥ 1 und (Zone mit Wasserstand oder Zone mit Salz): 1 Fisch wandert (Wohin)',
+      '1 Fisch wandert nebenan. Nur wo Fisch lebt, neben Fluss oder Küste.',
     );
   });
 

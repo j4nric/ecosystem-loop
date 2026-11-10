@@ -7,6 +7,12 @@
  * - `step` ist rein: gleicher Zustand + gleiche Aktion ⇒ gleiches Ergebnis (Zufall über den Seed im Zustand).
  * - Alle Texte kommen lokalisiert aus den Daten (`Text`), die Engine liefert IDs und Ereignisse.
  *
+ * - Partie-Ende: Der Schritt, der zum Kollaps führt, liefert `collapsed` und als letztes Ereignis
+ *   `gameOver` (Runde, Endpunkte); danach ist `view().phase === 'over'` und `step` wirft. Oberflächen rufen
+ *   nach diesem Schritt genau einmal `recordGame(data, book, state)` auf – `step` selbst kennt kein
+ *   Schöpfungsbuch und bleibt rein. Ein geladener Zustand mit `phase: 'over'` ist schon eingetragen.
+ * - Gespeicherte Zustände vor dem Laden mit `validateState(data, state)` prüfen (Version, Ids, Wertebereiche).
+ *
  * Änderungen an diesen Typen sind Schnittstellenänderungen: App und Konsole müssen mitgezogen werden.
  */
 
@@ -46,6 +52,9 @@ export interface Play {
 
 export type FormKind = 'ideal' | 'normal' | 'degraded' | 'disturbance';
 
+/** Gruppe einer Art (species.yaml → group), nur für die Darstellung. */
+export type SpeciesGroup = 'water' | 'insect' | 'amphibian' | 'reptile' | 'bird' | 'mammal' | 'human';
+
 export interface StatView {
   id: string;
   name: string;
@@ -66,7 +75,7 @@ export interface ZoneView {
   neighbors: string[];
   tags: string[];
   /** Bestände der Arten in dieser Zone (ab Phase 2). */
-  populations: { species: string; name: string; tier: number; count: number }[];
+  populations: { species: string; name: string; tier: number; count: number; group?: SpeciesGroup }[];
   /** Sichtbare Gefahren: Schwellen von Handkarten, die hier auslösen würden (z. B. 🔥). */
   warnings: { card: string; trigger: string; name: string; icon: string }[];
 }
@@ -78,8 +87,10 @@ export interface CardView {
   /** Kategorie aus den Daten, z. B. "force", "gift", "miracle", "species", "human". */
   category: string;
   cost: number;
-  /** Lesbarer Kartentext in der gewählten Sprache. */
+  /** Lesbarer Kartentext in der gewählten Sprache: Wirkungen, Schwellen, dann Bedingung als kurzer Zusatz. */
   text: string;
+  /** Kurztext für die Handkarte (höchstens ~40 Zeichen): nur die Hauptwirkung und Symbole der Schwellen. */
+  short?: string;
   playable: boolean;
   /**
    * Ziel-Slots in Reihenfolge, damit die Oberfläche die Auswahl führen kann.
@@ -193,6 +204,9 @@ export interface BookUpdate {
   /** Neue Bestwerte. */
   records: ('score' | 'rounds' | 'tier')[];
 }
+
+/** Ergebnis von `validateState`: passt ein gespeicherter Zustand zu den aktuellen Daten? */
+export type StateCheck = { ok: true } | { ok: false; reason: string };
 
 /** Problem eines Startdecks (leer = gültig). */
 export type DeckIssue =
