@@ -1,7 +1,15 @@
 import type { HerdeData, HerdeView } from '@being-god/herde';
-import { t } from '../i18n/index.ts';
+import { locale, t } from '../i18n/index.ts';
+import { stageName, traitName } from '../logic/format.ts';
+import { endSummary } from '../logic/hunt.ts';
+import { stageLook } from '../scene/palette.ts';
 
-/** Ende-Bildschirm: Sieg (Eiszeit überstanden) oder Niederlage (Herde ausgestorben). */
+const ICON = { won: '🌅', extinct: '🕯', lastIce: '❄️' } as const;
+
+/**
+ * Ende-Bildschirm: Sieg (als Mensch mit Lager die letzte Eiszeit überstanden), ausgestorben oder die letzte Eiszeit
+ * überstanden, aber nicht als Mensch mit Lager. Dazu eine kleine Bilanz.
+ */
 export function GameOver({
   data,
   view,
@@ -13,28 +21,58 @@ export function GameOver({
   onNewGame: () => void;
   onViewIsland: () => void;
 }) {
-  const won = view.over === 'won';
-  const year = data.months.length;
+  const end = endSummary(data, view);
+  if (!end) return null;
+  const stage = stageName(data, locale, end.stage);
+  const title = end.kind === 'won' ? t.wonTitle : end.kind === 'lastIce' ? t.lostIceTitle : t.lostTitle;
+  const text =
+    end.kind === 'won'
+      ? t.wonText(end.survivors)
+      : end.kind === 'lastIce'
+        ? t.lostIceText(end.lastStage, stage)
+        : t.lostText;
+  const icons = end.traits.map((id) => data.traits.get(id)?.icon ?? '✨').join('');
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
-      <div className={`overlay__panel game-over game-over--${won ? 'won' : 'lost'}`}>
+      <div className={`overlay__panel game-over game-over--${end.kind === 'won' ? 'won' : 'lost'}`}>
         <div className="game-over__icon" aria-hidden>
-          {won ? '🌅' : '🕯'}
+          {ICON[end.kind]}
         </div>
-        <h2 id="game-over-title">{won ? t.wonTitle : t.lostTitle}</h2>
-        <p>{won ? t.wonText(view.herd.size) : t.lostText}</p>
-        <dl className="summary">
+        <h2 id="game-over-title">{title}</h2>
+        <p>{text}</p>
+        <dl className="summary summary--end">
           <div>
             <dt>{t.survivors}</dt>
-            <dd>{view.herd.size}</dd>
+            <dd>{end.survivors}</dd>
           </div>
           <div>
             <dt>{t.duration}</dt>
-            <dd>{t.durationValue(Math.floor(view.month / year), view.month % year)}</dd>
+            <dd>{t.durationValue(end.years, end.months)}</dd>
           </div>
           <div>
-            <dt>{t.wildReached}</dt>
-            <dd>{Math.floor(view.wild.value)}</dd>
+            <dt>{t.iceAgesLabel}</dt>
+            <dd>{t.iceAgesValue(end.iceAges.survived, end.iceAges.max)}</dd>
+          </div>
+          <div className="summary__wide">
+            <dt>{t.stageReached}</dt>
+            <dd>
+              <span aria-hidden>{stageLook(end.stage).icon}</span> {stage}
+            </dd>
+          </div>
+          <div
+            className="summary__wide"
+            aria-label={`${t.traitsCount}: ${end.traits.map((id) => traitName(data, locale, id)).join(', ')}`}
+          >
+            <dt>{t.traitsCount}</dt>
+            <dd>
+              {end.traits.length}
+              {icons && (
+                <small className="summary__icons" aria-hidden>
+                  {' '}
+                  {icons}
+                </small>
+              )}
+            </dd>
           </div>
         </dl>
         <div className="overlay__actions">

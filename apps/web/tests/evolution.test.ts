@@ -57,7 +57,7 @@ describe('Zählen aus der View', () => {
   it('Bedürfnisse der aktuellen Stufe mit Feldern auf der Insel', () => {
     const v = viewOf(constructed({ '1,1': 'bush', '2,2': 'river' }));
     const rows = needRows(de, data, 'de', v, v.evolution.stage);
-    expect(rows.map((r) => r.kind)).toEqual(['food', 'water', 'shelter', 'move']);
+    expect(rows.map((r) => r.kind)).toEqual(['food', 'water', 'shelter', 'wolves', 'move']);
     const food = rows.find((r) => r.kind === 'food')!;
     const steppe = v.cells.filter((c) => c.land === 'steppe').length;
     expect(food.count).toBe(steppe + 1);

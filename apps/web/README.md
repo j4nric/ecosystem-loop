@@ -40,27 +40,29 @@ Der Spielstand liegt auch in der App in `localStorage`; für dauerhafte Speicher
 src/client/   GameClient (Schnittstelle), HerdeClient, SaveStore, gameData.ts (YAML → buildData), index.ts
 src/logic/    events (Ereignisse → Meldungen und Effekte), preview (Vorschau über step + view), format (Texte,
               Prognose, Pfeile, Regelzahlen der Stufe), evolution (Bedürfnisse mit Feldern auf der Insel, Merkmale,
-              Erfahrung, Reife, Hinweis, Aktionen) – reine Funktionen ohne DOM
+              Erfahrung, Reife, Hinweis, Aktionen; Beute, Wölfe, Lager), hunt (Wild, Lagerplätze und Vorschau,
+              Eiszeit-Nummer, Bilanz am Ende, Regeln für die Hilfe) – reine Funktionen ohne DOM
 src/state/    useGame (View, Protokoll, Meldungen), monthRunner (schrittweises Ablaufen der Monate), motion,
               tutorialStore
 src/scene/    IslandScene (Kamera, Licht, Insel, Pfeile, Hervorhebungen), islandModel (Instanzen aus der View, rein),
-              Figures (Herde und Rudel), FxLayer (Effekte), Instanced, geometries, palette
+              Figures (Herde, Rudel, Wild), FxLayer (Effekte), Instanced, geometries, palette
 src/ui/       StatusBar (Statusleiste, Jahreskreis, Absicht), Hand, Sheets (Karte/Vorschau, Feld-Info, Geschehen),
               Evolution (Knopf, Hinweis, Panel „Herde und Entwicklung“, Merkmal-Angebot, Sprung-Dialog, Einblendung),
-              GameOver, Help, Tutorial, Toasts
+              Camp (Hinweis, Vorschau, Bestätigung), GameOver, Help, Tutorial, Toasts
 src/i18n/     de.ts, en.ts, locale.ts – UI-Texte; Namen (Landschaften, Karten, Jahreszeiten, Monate) aus den Daten,
               Regelzahlen (Geburtsmonat, Wildnis-Grenze, Eiszeit, Handgröße) aus `data.params`, Schritte, Umkreis,
               Wasser- und Schutzzeiten aus `view.evolution.stage` über `ruleNumbers`
 tests/        HerdeClient, SaveStore, logic (Meldungen, Texte, Regelzahlen, Prognose, Vorschau, Inselmodell),
               evolution (Zählen aus der View, Texte je Stufe, Aktionen, Meldungen, Stand der Version 1),
-              monthRunner (Fake-Timer), locale
+              hunt (Wild, Lager, Panel-Zeilen, Bilanz, Texte), monthRunner (Fake-Timer), locale
 ```
 
 ### Client
 
 `HerdeClient` hält den Engine-Zustand, führt Aktionen mit `step` aus und übersetzt die Ereignisse eines Schritts
 (`logic/events.ts`) in Meldungen (Toast und/oder Geschehen-Protokoll) und kurze Effekte für die Szene
-(Feuer, Feldwechsel, Wölfe reißen, Nachwuchs, Verluste, Regen). Die YAML-Dateien aus `packages/herde/data` werden zur
+(Feuer, Feldwechsel, Wölfe reißen, Nachwuchs, Verluste, Regen, Jagd mit und ohne Feuer, Rudel reißt Wild, Wild
+wandert ein, Lager gegründet, Rodung). Die YAML-Dateien aus `packages/herde/data` werden zur
 Build-Zeit als Text eingebunden und im Browser mit `buildData` geprüft. Jede Partie hat einen eigenen Seed.
 
 Spielstand: `localStorage` unter `being-god.herde.save.v1` (Zustand, Seed, Protokoll). Beim Start prüft
@@ -79,14 +81,17 @@ URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
 
 ## Bedienung (Hochformat)
 
-- **Oben:** Statusleiste (Herde, Vorrat, Wölfe, Wildnis mit Balken; in der Eiszeit Restmonate), Menü (Hilfe, Neue
-  Partie, Einführung), Jahreskreis mit 12 Monaten und Hinweis zur Jahreszeit, Absichtszeile („Die Herde sucht
-  Wasser ↘“).
+- **Oben:** Statusleiste (Herde, Vorrat, Wölfe, Wild – Zahl der Tiere, ab der Stufe, mit der Wild einwandert, oder
+  sobald Wild da ist –, Wildnis mit Balken; in der Eiszeit Restmonate), Menü (Hilfe, Neue Partie, Einführung),
+  Jahreskreis mit 12 Monaten, Nummer der Eiszeit („❄ 1/3“, in der Eiszeit „Eiszeit 1 von 3“) und Hinweis zur
+  Jahreszeit, Absichtszeile („Die Herde sucht Wasser ↘“).
 - **Insel:** ein Plättchen je Feld; Höhe, Farbe und Bewuchs je Landschaft (Gras, Büsche, Bäume, dichter dunkler
   Altwald, Stümpfe auf Brandfläche, Felsbrocken, Wasser, abgesenktes Meer). Grashalme zeigen das Futter (Zahl =
   Futter, Höhe und Sättigung = Anteil am Maximum). Im Winter liegt Schnee, in der Eiszeit mehr. Herde und Rudel sind
   Tierfiguren (Herde: bis 20 Figuren, größere Herden größer; Rudel: eine Figur je Stärke, Raute darüber, rot =
-  hungrig). Der weiße Pfeil ist die Absicht für den nächsten Monat. Ziehen dreht die Insel ein wenig.
+  hungrig). Wild sind Rehe, eines je Tier des Bestands (1–3; hungrig blasser; auf dem Feld der Herde in einer Ecke).
+  Jäger tragen Speere, Menschen ein Gewand; das Lager ist ein kleines Modell aus Zelten und Feuerstelle. Der weiße
+  Pfeil ist die Absicht für den nächsten Monat (am Lager entfällt er). Ziehen dreht die Insel ein wenig.
 - **Karte legen:** Karte antippen → gültige Felder leuchten (aus `view().hand[].targets`), der Rest wird dunkler →
   Feld antippen → Vorschau (Feld vorher/nachher, Futter, Feuer, vertriebenes Rudel und – falls sie sich ändert – die
   neue Absicht als oranger Pfeil) → „Legen“. Regen: antippen, betroffene Felder leuchten grün, „Ausspielen“.
@@ -97,15 +102,23 @@ URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
   sichtbar zum nächsten Feld, Effekte und Meldungen je Monat), „Anhalten“ bricht ab; „1 Monat“ geht einen Schritt.
 - **Feld antippen:** Landschaft, Futter, Prognose („wird in N Monaten zu Busch“ erst ab ≤ 3 Monaten, sonst „bleibt
   Wiese, solange die Herde hier grast“), Feuer, Wasser und Schutz der aktuellen Stufe mit Jahreszeiten, Wölfe,
-  „für diese Stufe unpassierbar“ (`CellView.blocked`), „kein Futter für die Stufe“, Herde, Rudel.
+  „für diese Stufe unpassierbar“ (`CellView.blocked`), „kein Futter für die Stufe“, Herde, Lager, Wild (Größe,
+  hungrig, in Jagdweite) bzw. Lebensraum des Wilds, Rudel.
+- **Lager gründen** (Stufe mit `camp`, solange `view.campSites` nicht leer ist): Hinweis „⛺ Lagerplatz wählen“, die
+  Plätze leuchten mit Fahne. Antippen (Hinweis oder Platz) öffnet eine kompakte Vorschau im Dock (Fluss, Wiese,
+  Wald im Umkreis des Lagers; Futter, Schutz, Wild im Umkreis der Stufe; ein Satz zu Sesshaftigkeit und Rodung aus
+  den Daten), die Hand ruht. „⛺ Lager gründen“ → Bestätigung im Spiel mit den Folgen → `settle`. In der Eiszeit
+  sagt ein Hinweis, dass kein Lager gegründet wird; ohne Platz in Zugweite, was gesucht ist.
 - **Herde und Entwicklung** (Knopf mit dem Symbol der Stufe neben 📜; Punkt mit Zahl bei einem Angebot, ⬆ bei
   Reife; dazu ein goldener bzw. grüner Hinweis unter der Absicht): aktuelle Stufe mit Bedürfnissen (Futter mit
-  Maximum, Wasser und Schutz mit Jahreszeiten, Hindernis, Schritte und Umkreis) und der Zahl passender Felder auf der
+  Maximum, Beute mit Futter je Wild, Tieren je Monat und Bonus im Feuer, Wasser und Schutz mit Jahreszeiten, Wölfe als
+  Feinde oder Konkurrenten, Hindernis, Lager, Schritte und Umkreis) und der Zahl passender Felder auf der
   Insel, gewählte Merkmale mit Wirkung (markiert: „zählt für die Reife“ bzw. „frühere Stufe – wirkt, zählt nicht“,
   aus `evolution.counted`), Erfahrungen mit Balken bis zur Schwelle und dem Merkmal, das dann kommt (Reife-Merkmale
   zuerst, gold; erreichte Merkmale „im Angebot“ bzw. „kommt in einem späteren Angebot“), was zur Reife auf dieser
   Stufe fehlt (gewählt x von y), und die **Vorschau der nächsten Stufe**: was sie braucht, wie
-  viele Felder die Insel heute bietet, was nicht mehr als Futter zählt, was unpassierbar wird, und was ganz fehlt.
+  viele Felder die Insel heute bietet, was nicht mehr als Futter zählt, was unpassierbar wird, wie viel Wild es gibt
+  bzw. wann es einwandert, wie viele Lagerplätze die Insel hätte, und was ganz fehlt.
   Alles wird aus `view.evolution` gelesen und aus `view.cells` gezählt, keine Regel nachgebaut.
 - **Merkmal-Angebot:** 1–3 Karten (Symbol, Name, Wirkung, Erfahrung und Schwelle, „hilft zur Reife“), wählen, dann
   „Merkmal annehmen“ (`pickTrait`); „Später“ lässt das Angebot liegen (zur nächsten Jahreszeit rotiert es weiter, Reife-Merkmale bleiben vorn).
@@ -116,8 +129,9 @@ URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
   unpassierbare Felder haben einen dezenten dunkelroten Rahmen.
 - **📜 Geschehen:** Protokoll aller Meldungen mit Monat (auch Zug der Herde und wandernde Rudel, die nicht als Toast
   erscheinen).
-- **Ende:** Sieg (Eiszeit überstanden) oder Niederlage mit Überlebenden, Dauer und Wildnis; „Insel ansehen“ oder
-  „Neue Partie“.
+- **Ende:** Sieg (als Mensch mit Lager die letzte Eiszeit überstanden), ausgestorben oder letzte Eiszeit
+  überstanden, aber nicht als Mensch mit Lager (aus der View abgeleitet: lebende Herde bei verlorener Partie); Bilanz
+  mit Überlebenden, Dauer, Eiszeiten, erreichter Stufe und Merkmalen; „Insel ansehen“ oder „Neue Partie“.
 - Einführung (6 Karten, darunter „Die Herde entwickelt sich“) beim ersten Start, erneut über das Menü oder die Hilfe. `prefers-reduced-motion` kürzt
   Animationen und die Pausen zwischen den Monaten, lässt Schweben, Pulsieren, Hüpfen, flackernde Flammen und
   fallenden Regen weg (stattdessen färben sich die betroffenen Felder kurz und ruhig ein) und zeichnet die Szene

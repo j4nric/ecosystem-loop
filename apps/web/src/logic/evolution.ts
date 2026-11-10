@@ -7,12 +7,13 @@ import type { EvolutionView, HerdeData, HerdeView, StageNeedsView } from '@being
 import type { Strings } from '../i18n/de.ts';
 import type { Locale } from '../i18n/locale.ts';
 import { landName, seasonSet, stageName, textOf, traitName } from './format.ts';
+import { campGroupNames, campSpotsOnIsland, preyAnimals } from './hunt.ts';
 
 /** Wie eine Zeile zu lesen ist: vorhanden, fehlt, Warnung (z. B. Hindernis auf der Insel) oder nur Hinweis. */
 export type NeedTone = 'ok' | 'missing' | 'warn' | 'info';
 
 export interface NeedRow {
-  kind: 'food' | 'water' | 'shelter' | 'blocked' | 'move' | 'lost';
+  kind: 'food' | 'prey' | 'water' | 'shelter' | 'wolves' | 'blocked' | 'lost' | 'camp' | 'move';
   label: string;
   /** Landschaften (und Jahreszeiten) bzw. Schrittweite */
   text: string;
@@ -37,15 +38,21 @@ export const countLands = (counts: ReadonlyMap<string, number>, lands: readonly 
 const names = (data: HerdeData, locale: Locale, lands: readonly string[]) =>
   lands.map((id) => landName(data, locale, id)).join(', ');
 
+/** Was `needRows` aus der View liest; Wild, Rudel und Lager sind optional (ältere Test-Literale). */
+export type NeedsSource = Pick<HerdeView, 'cells'> &
+  Partial<Pick<HerdeView, 'prey' | 'packs' | 'camp' | 'campSites' | 'width' | 'height'>>;
+
 /**
- * Bedürfnisse einer Stufe als Zeilen mit der Zahl passender Felder auf der Insel. Mit `from` (der aktuellen Stufe)
- * kommt eine Zeile dazu, welche bisherigen Futter-Landschaften nicht mehr zählen – für die Vorschau.
+ * Bedürfnisse einer Stufe als Zeilen mit dem, was die Insel heute bietet: Futter, Beute (Wild), Wasser, Schutz,
+ * Wölfe (Feinde oder Konkurrenten), Hindernis, Lager, Wege. Mit `from` (der aktuellen Stufe) ist es die Vorschau der
+ * nächsten Stufe: Dazu kommt, welche bisherigen Futter-Landschaften nicht mehr zählen, und beim Lager zählen die
+ * möglichen Plätze auf der ganzen Insel (die Engine liefert Plätze nur für die aktuelle Stufe).
  */
 export function needRows(
   t: Strings,
   data: HerdeData,
   locale: Locale,
-  view: Pick<HerdeView, 'cells'>,
+  view: NeedsSource,
   needs: StageNeedsView,
   from?: StageNeedsView,
 ): NeedRow[] {
@@ -62,8 +69,19 @@ export function needRows(
         : needs.eats.map((id) => `${landName(data, locale, id)} (${needs.food[id] ?? 0})`).join(', '),
     count: food,
     island: t.onIsland(food),
-    tone: food > 0 ? 'ok' : 'missing',
+    tone: food > 0 || needs.prey !== null ? 'ok' : 'missing',
   });
+  if (needs.prey) {
+    const prey = view.prey ?? [];
+    rows.push({
+      kind: 'prey',
+      label: t.needPrey,
+      text: t.needPreyText(needs.prey.food, needs.prey.kill, needs.prey.fire),
+      count: prey.length,
+      island: t.preyOnIsland(prey.length, preyAnimals({ prey })),
+      tone: prey.length > 0 ? 'ok' : 'missing',
+    });
+  }
   const water = have(needs.water);
   rows.push({
     kind: 'water',
@@ -81,6 +99,15 @@ export function needRows(
     count: shelter,
     island: t.onIsland(shelter),
     tone: shelter > 0 || needs.shelterSeasons.length === 0 ? 'ok' : 'missing',
+  });
+  const packs = view.packs ?? [];
+  rows.push({
+    kind: 'wolves',
+    label: t.needWolves,
+    text: needs.wolves === 'rival' ? t.wolvesRival : t.wolvesEnemy,
+    count: packs.length,
+    island: t.packsOnIsland(packs.length),
+    tone: needs.wolves === 'enemy' && packs.length > 0 ? 'warn' : 'info',
   });
   if (needs.blocked.length > 0) {
     const blocked = have(needs.blocked);
@@ -104,6 +131,35 @@ export function needRows(
         count: n,
         island: t.onIsland(n),
         tone: n > 0 ? 'warn' : 'info',
+      });
+    }
+  }
+  if (needs.camp) {
+    const text = t.needCampText(campGroupNames(data, locale, needs.camp), needs.camp.radius);
+    if (!from && view.camp) {
+      rows.push({ kind: 'camp', label: t.needCamp, text, count: 1, island: t.campStanding, tone: 'ok' });
+    } else if (!from) {
+      const n = view.campSites?.length ?? 0;
+      rows.push({
+        kind: 'camp',
+        label: t.needCamp,
+        text,
+        count: n,
+        island: t.campSitesInReach(n),
+        tone: n > 0 ? 'ok' : 'warn',
+      });
+    } else {
+      const n =
+        view.width !== undefined && view.height !== undefined
+          ? campSpotsOnIsland({ cells: view.cells, width: view.width, height: view.height }, needs.camp)
+          : 0;
+      rows.push({
+        kind: 'camp',
+        label: t.needCamp,
+        text,
+        count: n,
+        island: t.campSpotsOnIsland(n),
+        tone: n > 0 ? 'ok' : 'missing',
       });
     }
   }

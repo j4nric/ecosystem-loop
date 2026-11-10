@@ -13,6 +13,7 @@ import {
   type NeedRow,
 } from '../logic/evolution.ts';
 import { stageName } from '../logic/format.ts';
+import { preyHint } from '../logic/hunt.ts';
 import { stageLook } from '../scene/palette.ts';
 import { useEscape } from './useEscape.ts';
 
@@ -119,6 +120,7 @@ export function EvolutionPanel({
   const lacking = missingOnIsland(nextRows);
   const maturity = missingText(t, data, locale, evo);
   const counted = countedText(t, evo);
+  const nextPrey = evo.next ? preyHint(t, data, locale, view, evo.next) : null;
   return (
     <div
       className="overlay overlay--sheet"
@@ -191,6 +193,7 @@ export function EvolutionPanel({
               <StageHead data={data} id={evo.next.id} sub={t.evoNextLabel} />
               <p className="muted">{t.evoNextIntro}</p>
               <NeedList rows={nextRows} />
+              {nextPrey && <p className={view.prey.length > 0 ? 'is-good' : 'is-bad'}>{nextPrey}</p>}
               <p className={lacking.length > 0 ? 'is-bad' : 'is-good'}>
                 {lacking.length > 0 ? t.evoNextMissing(lacking) : t.evoNextReady}
               </p>
@@ -302,6 +305,7 @@ export function EvolveDialog({
   useEscape(onCancel);
   const name = stageName(data, locale, next.id);
   const rows = needRows(t, data, locale, view, next, view.evolution.stage);
+  const prey = preyHint(t, data, locale, view, next);
   return (
     <div className="overlay" role="alertdialog" aria-modal="true" aria-labelledby="evolve-title">
       <div className="overlay__panel evolve">
@@ -313,6 +317,7 @@ export function EvolveDialog({
         <h2 id="evolve-title">{t.evolveTitle(name)}</h2>
         <p>{t.evolveIntro}</p>
         <NeedList rows={rows} />
+        {prey && <p className={view.prey.length > 0 ? 'is-good' : 'is-bad'}>{prey}</p>}
         <p className="evolve__warning" role="note">
           {t.evolveWarning}
         </p>

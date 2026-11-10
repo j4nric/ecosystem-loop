@@ -3,6 +3,7 @@ import type { Action, Pos } from '@being-god/herde';
 import type { GameClient, StartupNotice } from './client/index.ts';
 import { t } from './i18n/index.ts';
 import { isPlayable, monthsToNextSeason } from './logic/format.ts';
+import { firstCampSite, isCampSite } from './logic/hunt.ts';
 import { IslandScene } from './scene/IslandScene.tsx';
 import { haptic, useReducedMotion } from './state/motion.ts';
 import { hasSeenTutorial, markTutorialSeen } from './state/tutorialStore.ts';
@@ -18,6 +19,7 @@ import {
   EvolvedCard,
   TraitOffer,
 } from './ui/Evolution.tsx';
+import { CampBanner, CampConfirm, CampSheet } from './ui/Camp.tsx';
 import { CardSheet, FieldSheet, LogSheet } from './ui/Sheets.tsx';
 import { StatusBar } from './ui/StatusBar.tsx';
 import { Toasts } from './ui/Toasts.tsx';
@@ -49,6 +51,11 @@ export function App({ client }: { client: GameClient }) {
   const [offerOpen, setOfferOpen] = useState(false);
   const [evolveOpen, setEvolveOpen] = useState(false);
   const [evolved, setEvolved] = useState<string | null>(null);
+  // Lager: gewählter Lagerplatz (Vorschau im Dock) und Bestätigung
+  const [campPick, setCampPick] = useState<Pos | null>(null);
+  const [campConfirm, setCampConfirm] = useState(false);
+  // Nur solange die Engine den Platz noch anbietet (nach einem Monat kann er außer Reichweite sein).
+  const campPos = isCampSite(view, campPick) ? campPick : null;
 
   const card = selectedCard === null ? undefined : view.hand[selectedCard];
   const clearSelection = useCallback(() => {
@@ -87,9 +94,17 @@ export function App({ client }: { client: GameClient }) {
         return;
       }
       if (card) return;
+      if (isCampSite(view, pos)) {
+        haptic();
+        setInfoCell(null);
+        setLogOpen(false);
+        setCampPick((current) => (samePos(current, pos) ? null : pos));
+        return;
+      }
+      setCampPick(null);
       setInfoCell((current) => (samePos(current, pos) ? null : pos));
     },
-    [card],
+    [card, view],
   );
 
   const play = useCallback(() => {
@@ -103,6 +118,7 @@ export function App({ client }: { client: GameClient }) {
     (months: number) => {
       clearSelection();
       setInfoCell(null);
+      setCampPick(null);
       run(months);
     },
     [run, clearSelection],
@@ -117,6 +133,8 @@ export function App({ client }: { client: GameClient }) {
     setOfferOpen(false);
     setEvolveOpen(false);
     setEvolved(null);
+    setCampPick(null);
+    setCampConfirm(false);
     newGame();
   }, [newGame, clearSelection]);
 
@@ -150,6 +168,21 @@ export function App({ client }: { client: GameClient }) {
   }, [dispatch, client]);
   const closeEvolved = useCallback(() => setEvolved(null), []);
 
+  const chooseCamp = useCallback(() => {
+    if (running) return;
+    clearSelection();
+    setInfoCell(null);
+    setLogOpen(false);
+    setCampPick(firstCampSite(client.getView()));
+  }, [running, clearSelection, client]);
+
+  const settle = useCallback(() => {
+    setCampConfirm(false);
+    if (!campPos) return;
+    haptic(40);
+    if (dispatch({ type: 'settle', x: campPos.x, y: campPos.y })) setCampPick(null);
+  }, [campPos, dispatch]);
+
   const closeTutorial = useCallback(() => {
     markTutorialSeen();
     setTutorialOpen(false);
@@ -166,13 +199,16 @@ export function App({ client }: { client: GameClient }) {
         view={view}
         targets={targets}
         grown={card?.global ? (preview?.grown ?? null) : null}
-        selected={chosen ?? infoCell}
+        selected={chosen ?? campPos ?? infoCell}
         previewIntent={preview?.intentChanged ? preview.intentAfter : null}
         running={running}
         reducedMotion={reducedMotion}
         subscribeReports={subscribeReports}
         onCellTap={onCellTap}
-        onBackgroundTap={() => setInfoCell(null)}
+        onBackgroundTap={() => {
+          setInfoCell(null);
+          setCampPick(null);
+        }}
       />
 
       <div className="top">
@@ -187,6 +223,7 @@ export function App({ client }: { client: GameClient }) {
           }}
         />
         {!running && !card && <EvolutionBanner data={data} view={view} onOffer={openOffer} onMature={openEvolve} />}
+        {!running && !card && !campPos && <CampBanner data={data} view={view} onChoose={chooseCamp} />}
         <Toasts toasts={toasts} />
       </div>
 
@@ -203,12 +240,18 @@ export function App({ client }: { client: GameClient }) {
             onCancel={clearSelection}
           />
         )}
-        {!card && infoView && !logOpen && (
+        {!card && campPos && !logOpen && (
+          <CampSheet data={data} view={view} pos={campPos} onClose={() => setCampPick(null)} />
+        )}
+        {!card && !campPos && infoView && !logOpen && (
           <FieldSheet data={data} view={view} cell={infoView} onClose={() => setInfoCell(null)} />
         )}
         {!card && logOpen && <LogSheet data={data} log={log} onClose={() => setLogOpen(false)} />}
 
-        <Hand data={data} cards={view.hand} selected={selectedCard} disabled={running || over} onTap={onCardTap} />
+        {/* Bei der Wahl des Lagerplatzes ruht die Hand: Die Insel mit den Plätzen bleibt sichtbar. */}
+        {!(campPos && !card) && (
+          <Hand data={data} cards={view.hand} selected={selectedCard} disabled={running || over} onTap={onCardTap} />
+        )}
 
         <div className="controls">
           {card ? (
@@ -218,6 +261,15 @@ export function App({ client }: { client: GameClient }) {
               </button>
               <button type="button" className="btn btn--primary btn--wide" disabled={!preview} onClick={play}>
                 {card.global ? t.play : t.place}
+              </button>
+            </>
+          ) : campPos && !over && !running ? (
+            <>
+              <button type="button" className="btn" onClick={() => setCampPick(null)}>
+                {t.cancel}
+              </button>
+              <button type="button" className="btn btn--primary btn--wide" onClick={() => setCampConfirm(true)}>
+                ⛺ {t.campConfirm}
               </button>
             </>
           ) : over ? (
@@ -263,6 +315,7 @@ export function App({ client }: { client: GameClient }) {
             onClick={() => {
               clearSelection();
               setInfoCell(null);
+              setCampPick(null);
               setLogOpen((o) => !o);
             }}
           >
@@ -314,6 +367,9 @@ export function App({ client }: { client: GameClient }) {
         />
       )}
       {evolved && <EvolvedCard data={data} stage={evolved} onDone={closeEvolved} />}
+      {campConfirm && campPos && !running && !over && (
+        <CampConfirm data={data} view={view} pos={campPos} onConfirm={settle} onCancel={() => setCampConfirm(false)} />
+      )}
 
       {helpOpen && (
         <Help

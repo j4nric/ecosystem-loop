@@ -1304,6 +1304,137 @@ textarea {
   }
 }
 
+/* --- Wild, Lager, Eiszeiten (H3b) ------------------------------------------------------------- */
+
+/* Ab der Stufe mit Wild: fünf Werte in der Statusleiste */
+.stats--5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.stats--5 .stat {
+  padding: 5px 5px 6px;
+}
+
+.stat--prey b {
+  color: #9a5a22;
+}
+
+/* Nummer der Eiszeit am Jahreskreis */
+.year__ice {
+  flex: none;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  color: #2f5f86;
+  background: rgba(111, 163, 200, 0.18);
+  border-radius: 8px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.year__ice.is-active {
+  background: var(--ice);
+  color: #fff;
+}
+
+.camp-banner {
+  background: linear-gradient(180deg, #ffe2b0, #f2a33a);
+  box-shadow: 0 4px 16px rgba(160, 90, 20, 0.3);
+}
+
+.camp-note {
+  align-self: center;
+  max-width: 100%;
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  background: var(--panel);
+  box-shadow: 0 2px 10px rgba(60, 50, 90, 0.12);
+  text-align: center;
+}
+
+.camp__row small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 11px;
+  margin: 0 0 2px 2px;
+}
+
+/* kompakte Werte der Lager-Vorschau: drei je Zeile */
+.camp__chips {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.camp__chips li {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 7px;
+  border-radius: 9px;
+  background: rgba(79, 154, 58, 0.12);
+  min-width: 0;
+}
+
+.camp__chips li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.camp__chips li b {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.camp__chips li.is-bad {
+  background: rgba(194, 72, 58, 0.12);
+}
+
+.sheet__body p.camp__short {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.camp__effects {
+  margin: 0 0 6px;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.camp__effects {
+  text-align: left;
+}
+
+.is-prey {
+  color: #8a5420;
+}
+
+/* Bilanz am Ende: drei schmale, zwei breite Felder */
+.summary--end {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.summary--end div {
+  grid-column: span 2;
+}
+
+.summary--end .summary__wide {
+  grid-column: span 3;
+}
+
+.summary__icons {
+  font-size: 13px;
+  font-weight: 400;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -6,6 +6,11 @@ const ordinal = (n: number): string => {
   return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 };
 const months = (n: number) => `${n} ${n === 1 ? 'month' : 'months'}`;
+const stocks = (n: number) => `${n} ${n === 1 ? 'herd' : 'herds'} of game`;
+const animals = (n: number) => `${n} ${n === 1 ? 'animal' : 'animals'}`;
+const freshWhen = (n: number) =>
+  n <= 0 ? 'this month' : n === 1 ? 'this month or last month' : `within the last ${n + 1} months`;
+const iceAgeOf = (n: number, max: number | null) => (max === null ? `${ordinal(n)} ice age` : `Ice age ${n} of ${max}`);
 const list = (names: string[]) =>
   names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 const orList = (names: string[]) =>
@@ -26,6 +31,12 @@ export const en: Strings = {
   iceAge: 'Ice age',
   iceLeft: (n) => `${n} mo. left`,
   statusLabel: (herd, fat, fatMax, wolves) => `Herd ${herd}, reserve ${fat} of ${fatMax}, wolves ${wolves}`,
+  prey: 'Game',
+  preyLabel: (stockCount, animalCount) =>
+    stockCount > 0 ? `Game: ${stocks(stockCount)}, ${animals(animalCount)}` : 'No game on the island',
+  iceAgeOf,
+  iceAgeChip: (n, max) => (max === null ? `❄ ${n}` : `❄ ${n}/${max}`),
+  iceAgeNext: (n, max) => `Next trial: ${iceAgeOf(n, max)}${max !== null && n >= max ? ' – the last one' : ''}`,
   date: (year, month) => `Year ${year} · ${month}`,
   seasonHint: (season, r, needs) => {
     const base = (
@@ -104,7 +115,12 @@ export const en: Strings = {
   infoSparse: 'Barren: grows only a little in spring.',
   infoHerd: (n) => `The herd stands here (${n} animals).`,
   infoPack: (size, hungry) =>
-    `Wolf pack of strength ${size}${hungry ? ', hungry: moves through woodland towards the herd' : ''}.`,
+    `Wolf pack of strength ${size}${hungry ? ', hungry: moves through woodland towards game or the herd' : ''}.`,
+  infoPrey: (size, max, hungry) =>
+    `Game: ${size} of ${max} animals${hungry ? ' – hungry, moving on and shrinking soon' : ''}.`,
+  infoPreyReach: 'Within hunting range of the herd.',
+  infoPreyLand: 'Habitat of game.',
+  infoCamp: 'The herd’s camp stands here.',
   evCardPlayed: (card) => `${card} placed.`,
   evCardsDrawn: (cards) => `New cards: ${cards}.`,
   evSuccession: (from, to, n) => `${from} turns into ${to}${n > 1 ? ` (${n} fields)` : ''}.`,
@@ -119,7 +135,7 @@ export const en: Strings = {
   evBurned: (n) => `The fire reaches the herd: −${n}.`,
   evBorn: (n) => `${n} ${n === 1 ? 'calf' : 'calves'} born.`,
   evHunted: (n) => `Wolves kill ${n} ${n === 1 ? 'animal' : 'animals'}.`,
-  evPackMoved: 'A hungry pack moves through the woodland towards the herd.',
+  evPackMoved: 'A hungry pack moves through the woodland – towards game or the herd.',
   evPackGrew: (n) => `A wolf pack grows stronger (${n}).`,
   evPackFounded: 'A new wolf pack forms.',
   evPackStarved: 'A wolf pack starves and grows weaker.',
@@ -140,9 +156,9 @@ export const en: Strings = {
   evPreyStarved: (gone) => (gone ? 'A herd of game has starved.' : 'The game is hungry.'),
   evPreyGone: 'The game has vanished.',
   evPreyImmigrated: 'Game moves onto the island.',
-  evPreyHunted: (n, fire) => `The herd hunts ${n} game${fire ? ' – the fire drove it out' : ''}.`,
+  evPreyHunted: (n, fire) => `Hunt: ${n} game taken${fire ? ' – the fire drove it out' : ''}.`,
   evPackAtePrey: 'Wolves take game.',
-  evCampFounded: 'The herd founds a camp.',
+  evCampFounded: 'The herd founds a camp and settles down.',
   evFieldCleared: (from, to) => `Clearing at the camp: ${from} becomes ${to}.`,
   evTraitOffered: (traits) => `Traits to choose: ${traits}.`,
   evTraitPicked: (trait, effect) => `The herd develops ${trait}: ${effect}`,
@@ -150,14 +166,23 @@ export const en: Strings = {
   evEvolved: (from, to) => `New stage: ${to} (was ${from}).`,
   evRejected: 'That is not possible here.',
   wonTitle: 'You made it',
-  wonText: (n) => `The herd survived the ice age. ${n} ${n === 1 ? 'animal' : 'animals'} made it.`,
+  wonText: (n) =>
+    `The herd became human, founded a camp and survived the last ice age. ${n} ${n === 1 ? 'person' : 'people'} made it.`,
   lostTitle: 'The herd has died out',
   lostText: 'The island lives on – without it. Try again with a new herd.',
+  lostIceTitle: 'The last ice age is over',
+  lostIceText: (human, stage) =>
+    human
+      ? 'The herd survived and became human – but without a camp. The age is lost.'
+      : `The herd survived but never became human (last stage: ${stage}). The age is lost.`,
   survivors: 'Survivors',
   duration: 'Duration',
   durationValue: (years, months) =>
     years > 0 ? `${years} y ${months} mo` : `${months} ${months === 1 ? 'month' : 'months'}`,
-  wildReached: 'Wildness',
+  stageReached: 'Stage',
+  traitsCount: 'Traits',
+  iceAgesLabel: 'Ice ages',
+  iceAgesValue: (n, max) => (max === null ? `${n}` : `${n} of ${max}`),
   viewIsland: 'View island',
   overBar: (won) => (won ? 'This game is won.' : 'This game is lost.'),
   legacyTitle: 'A new game',
@@ -194,7 +219,7 @@ export const en: Strings = {
     {
       icon: '❄️',
       title: 'Wildness and the ice age',
-      text: `Every month and every card makes the wildness grow. At ${r.wildMax} the ice age begins: ${months(r.iceMonths)} of winter without calves. Bring the herd through it and the age is won.`,
+      text: `Every month and every card makes the wildness grow. At ${r.wildMax} an ice age begins: ${months(r.iceMonths)} of winter without calves. Goal: become human and survive the last${r.iceAges === null ? '' : `, the ${ordinal(r.iceAges)},`} ice age with a camp.`,
     },
     {
       icon: '▶',
@@ -211,7 +236,24 @@ export const en: Strings = {
   helpTitle: 'How to play',
   helpGoal: 'Goal',
   helpGoalText: (r) =>
-    `Bring the herd through the ice age. It begins when the wildness reaches ${r.wildMax} – every month and every card makes it grow. Intervening a lot prepares you better, but calls the trial sooner.`,
+    `Evolve the herd into humans, found a camp and survive the last${r.iceAges === null ? '' : `, the ${ordinal(r.iceAges)},`} ice age. An ice age begins when the wildness reaches ${r.wildMax} – every month and every card makes it grow. Intervening a lot prepares you better, but calls the trial sooner.`,
+  helpPrey: 'Game and hunting',
+  helpPreyText: (h) =>
+    `Game lives on ${orList(h.preyLands.map((n) => n.toLowerCase()))} in herds of 1 to ${h.preyMax} animals and grazes there. Well fed, a herd of game grows and founds new ones; hungry, it moves on and shrinks. Once the herd has reached the stage ${h.preyFrom}, game moves in (${animals(h.spawnSize)}) if there are at least ${h.spawnMinLand} fields of habitat. ${h.hunters.map((x) => `As ${x.name} the herd hunts within its radius: up to ${animals(x.kill)} per month, ${x.food} food per animal.`).join(' ')} Wolves eat game first${h.rivals.length > 0 ? ` – for ${list(h.rivals)} they are rivals, not enemies` : ''}.`,
+  helpFire: 'Fire as a tool',
+  helpFireText: (h) =>
+    `For hunters fire is no longer an enemy: if a field within the herd’s radius burnt ${freshWhen(h.fresh)}, the fire drives game out. ${h.hunters
+      .filter((x) => x.fire > 0)
+      .map((x) => `As ${x.name} the herd then takes ${animals(x.fire)} more.`)
+      .join(' ')} Lightning counts too – place it next to the herd on purpose.`,
+  helpCamp: 'Camp',
+  helpCampText: (h) =>
+    h.camp
+      ? `As ${h.camp.stage} the herd settles down. A camp site needs ${list(h.camp.near)} within radius ${h.camp.radius} and must be reachable this month. The sites glow on the island; tap one for a preview. Afterwards the herd no longer moves and lives off the area around the camp.${h.camp.clear ? ` Every year in ${h.camp.clear.month} the camp clears one field of ${orList(h.camp.clear.lands)} into ${h.camp.clear.to}.` : ''} No camp can be founded during an ice age.`
+      : 'No stage founds a camp.',
+  helpIce: 'Ice ages and victory',
+  helpIceText: (r) =>
+    `Every ice age is a trial along the way: ${months(r.iceMonths)} of winter without calves. If the herd survives, the wildness drops to ${r.wildAfter} and the next one comes at ${r.wildMax}. The age is won when the herd survives an ice age as humans with a camp.${r.iceAges === null ? '' : ` The ${ordinal(r.iceAges)} ice age is the last trial: whoever does not survive it as humans with a camp loses.`}`,
   helpHerd: 'The herd',
   helpHerdText: (r) =>
     `It moves at most ${r.move === 1 ? 'one field' : `${r.move} fields`} per month and feeds on its own and the ${r.neighbors} neighbouring fields. Surplus becomes reserve, shortage eats into it, then animals die. ${capitalize(when(r.water))}: thirst without water nearby. ${capitalize(when(r.shelter))}: cold without shelter nearby. Calves are born depending on the reserve. What counts as food, water and shelter depends on the stage (see below).`,
@@ -228,7 +270,7 @@ export const en: Strings = {
     `At the start of every season you draw new cards, at most ${r.handMax} in hand. Tap a card, then a glowing field – the preview shows what happens to the field and whether the herd changes its intention. Rain works on the whole island.`,
   helpWorld: 'The world is alive',
   helpWorldText:
-    'Land changes by itself. Wolves live in woodland, move hungry through forest corridors towards the herd and kill animals nearby. Fire and rock drive them away.',
+    'Land changes by itself. Wolves live in woodland, eat game first, move hungry through forest corridors towards game or the herd and otherwise kill animals of the herd. Fire and rock drive them away.',
   helpLands: 'Landscapes',
   helpControls: 'Controls',
   helpControlsText:
@@ -272,6 +314,48 @@ export const en: Strings = {
   needSeason: (lands, s) => `${lands} · ${when(s)}`,
   needMoveText: (move, reach) => `${move === 1 ? '1 field' : `${move} fields`} per month, radius ${reach}`,
   needNone: '–',
+  needPrey: 'Prey',
+  needPreyText: (food, kill, fire) =>
+    `Game: ${food} food per animal, up to ${animals(kill)} per month${fire > 0 ? `, +${fire} in fire` : ''}`,
+  preyOnIsland: (n, animalCount) =>
+    n > 0 ? `${stocks(n)} (${animals(animalCount)}) on the island` : 'no game on the island',
+  needWolves: 'Wolves',
+  wolvesEnemy: 'Enemies – kill animals of the herd',
+  wolvesRival: 'Rivals – hunt the same game',
+  packsOnIsland: (n) => (n > 0 ? `${n} ${n === 1 ? 'pack' : 'packs'} on the island` : 'none on the island'),
+  needCamp: 'Camp',
+  needCampText: (groups, radius) => `${list(groups)} within radius ${radius}`,
+  campStanding: 'Camp founded',
+  campSitesInReach: (n) => (n > 0 ? `${n} ${n === 1 ? 'site' : 'sites'} within reach` : 'no site within reach'),
+  campSpotsOnIsland: (n) =>
+    n > 0 ? `${n} possible ${n === 1 ? 'site' : 'sites'} on the island` : 'no possible site on the island',
+  preyHintSome: (stage, n, animalCount) =>
+    `The stage ${stage} needs game: currently ${stocks(n)} on the island (${animals(animalCount)}).`,
+  preyHintNone: (stage, lands, have, need, from) =>
+    `The stage ${stage} needs game: currently none on the island. It moves in${from ? ` from the stage ${from} on` : ''} once there are at least ${need} fields of ${orList(lands.map((n) => n.toLowerCase()))} (currently ${have}).`,
+  campBanner: '⛺ Choose a camp site',
+  campBannerIce: '❄ No camp can be founded during an ice age.',
+  campBannerNone: (groups, radius) => `No camp site within reach. Needed: ${list(groups)} within radius ${radius}.`,
+  campTitle: 'Camp site',
+  campAround: (radius) => `Within radius ${radius}`,
+  campGroup: (names, n) => `${names}: ${n > 0 ? fields(n) : 'missing'}`,
+  campFood: (n, reach) => `Food within radius ${reach}: ${fields(n)}`,
+  campShelter: (n) => `Winter shelter: ${n > 0 ? fields(n) : 'none'}`,
+  campPrey: (n) => (n > 0 ? `Game within hunting range: ${stocks(n)}` : 'No game within hunting range'),
+  campSettled: 'The herd settles down: it no longer moves and lives off the area around the camp.',
+  campMoves: 'It moves to this site right away.',
+  campClear: (lands, to, month, radius, n) =>
+    `Every year in ${month} the camp clears one field of ${orList(lands.map((l) => l.toLowerCase()))} within radius ${radius} into ${to.toLowerCase()}${n > 0 ? ` – ${fields(n)} here, so after about ${n} ${n === 1 ? 'year' : 'years'} the woods near the camp are gone` : ''}.`,
+  campChipFood: 'Food',
+  campChipShelter: 'Shelter',
+  campChipPrey: 'Game',
+  campShort: (clear) =>
+    `The herd settles here for good.${clear ? ` Clears one field of ${orList(clear.lands.map((l) => l.toLowerCase()))} every year in ${clear.month}${clear.fields > 0 ? ` (${fields(clear.fields)} here)` : ''}.` : ''}`,
+  campOther: 'Tap another site to compare.',
+  campConfirmTitle: 'Found a camp?',
+  campConfirmWarning: 'No way back: the herd stays at this place for good.',
+  campConfirm: 'Found camp',
+  campCancel: 'Not yet',
   onIsland: (n) => (n > 0 ? `${fields(n)} on the island` : 'missing on the island'),
   blockedOnIsland: (n) => (n > 0 ? `${fields(n)} impassable` : 'none on the island'),
   evolveButton: (stage) => `Evolve into ${stage}`,

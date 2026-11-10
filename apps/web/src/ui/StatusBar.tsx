@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { HerdeData, HerdeView } from '@being-god/herde';
 import { t, locale } from '../i18n/index.ts';
 import { intentText, seasonHint, textOf, wolvesTotal } from '../logic/format.ts';
+import { iceAgeNumber, preyAnimals, showPreyCounter } from '../logic/hunt.ts';
 import { useEscape } from './useEscape.ts';
 
 interface Props {
@@ -12,7 +13,10 @@ interface Props {
   onTutorial: () => void;
 }
 
-/** Kopf: Statusleiste (Herde, Vorrat, Wölfe, Wildnis/Eiszeit), Jahreskreis und Absicht der Herde. */
+/**
+ * Kopf: Statusleiste (Herde, Vorrat, Wölfe, Wild ab der Stufe mit Wild, Wildnis/Eiszeit), Jahreskreis mit der
+ * Nummer der Eiszeit und Absicht der Herde.
+ */
 export function StatusBar({ data, view, onHelp, onNewGame, onTutorial }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -25,11 +29,17 @@ export function StatusBar({ data, view, onHelp, onNewGame, onTutorial }: Props) 
   const wildPct = Math.min(100, (view.wild.value / Math.max(1, view.wild.max)) * 100);
   const icePct = view.ice.months > 0 ? (view.ice.monthsLeft / view.ice.months) * 100 : 0;
   const monthName = textOf(data.months[view.monthOfYear], locale, String(view.monthOfYear + 1));
+  const showPrey = showPreyCounter(data, view);
+  const prey = preyAnimals(view);
+  const ice = iceAgeNumber(view);
 
   return (
     <header className="hud">
       <div className="hud__row">
-        <section className="stats" aria-label={t.statusLabel(view.herd.size, view.herd.fat, view.herd.fatMax, wolves)}>
+        <section
+          className={`stats${showPrey ? ' stats--5' : ''}`}
+          aria-label={t.statusLabel(view.herd.size, view.herd.fat, view.herd.fatMax, wolves)}
+        >
           <div className={`stat${view.herd.size <= 3 ? ' stat--warn' : ''}`}>
             <span>{t.herd}</span>
             <b>{view.herd.size}</b>
@@ -45,6 +55,12 @@ export function StatusBar({ data, view, onHelp, onNewGame, onTutorial }: Props) 
             <span>{t.wolves}</span>
             <b>{wolves}</b>
           </div>
+          {showPrey && (
+            <div className="stat stat--prey" aria-label={t.preyLabel(view.prey.length, prey)}>
+              <span>{t.prey}</span>
+              <b>{prey}</b>
+            </div>
+          )}
           {view.ice.active ? (
             <div className="stat stat--ice">
               <span>{t.iceAge}</span>
@@ -122,6 +138,13 @@ export function StatusBar({ data, view, onHelp, onNewGame, onTutorial }: Props) 
       <section className="year" aria-label={t.date(view.year, monthName)}>
         <div className="year__line">
           <b>{t.date(view.year, monthName)}</b>
+          {view.ice.active ? (
+            <em className="year__ice is-active">{t.iceAgeOf(ice.n, ice.max)}</em>
+          ) : (
+            <em className="year__ice" aria-label={t.iceAgeNext(ice.n, ice.max)} title={t.iceAgeNext(ice.n, ice.max)}>
+              {t.iceAgeChip(ice.n, ice.max)}
+            </em>
+          )}
           <span>{seasonHint(t, data, locale, view)}</span>
         </div>
         <div className="year__months" aria-hidden>

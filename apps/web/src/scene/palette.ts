@@ -35,11 +35,23 @@ export const COLORS = {
   rain: '#a9d4f5',
   evolve: '#ffd66b',
   blocked: '#7a3040',
-  // Wild und Lager (H3b, vorläufige Marker)
-  preyBody: '#b07a45',
+  // Wild (Rehe): warmes Rotbraun, hungrig blasser
+  preyBody: '#c47f3e',
+  preyHungry: '#c9a982',
   preyHead: '#6b4a2b',
+  // Lager: Zelte aus Fell, Steine, Feuer; Lagerplätze mit Fahne
   camp: '#ffb347',
-  campSite: '#ffe9a8',
+  campHut: '#b98a5a',
+  campStone: '#8f877c',
+  campFlame: '#ffb03a',
+  campSite: '#ffe08a',
+  flag: '#f2a33a',
+  // Effekte: Jagd, Rudel reißt Wild, Wild wandert ein, Rodung
+  preyHunt: '#e07a3a',
+  preyFire: '#ff9f2f',
+  packPrey: '#8b8d9c',
+  preyNew: '#d9b77a',
+  cleared: '#a8774a',
 } as const;
 
 /**
@@ -48,7 +60,7 @@ export const COLORS = {
  */
 export interface StageLook {
   /** grasende Tiere (vierbeinig) oder aufrechte Gestalten */
-  figure: 'grazer' | 'upright' | 'walker';
+  figure: 'grazer' | 'upright' | 'walker' | 'hunter' | 'human';
   body: string;
   head: string;
   icon: string;
@@ -58,8 +70,8 @@ export const STAGE_LOOK: Record<string, StageLook> = {
   herd: { figure: 'grazer', body: COLORS.herdBody, head: COLORS.herdHead, icon: '🐑' },
   gatherer: { figure: 'upright', body: '#a8703f', head: '#5d4130', icon: '🫐' },
   wanderer: { figure: 'walker', body: '#c4583e', head: '#e2b88f', icon: '🚶' },
-  hunter: { figure: 'walker', body: '#8a5a2b', head: '#e2b88f', icon: '🏹' },
-  human: { figure: 'upright', body: '#4f6fa8', head: '#e2b88f', icon: '🏕' },
+  hunter: { figure: 'hunter', body: '#7d5a36', head: '#e2b88f', icon: '🏹' },
+  human: { figure: 'human', body: '#4f6fa8', head: '#e2b88f', icon: '🏕' },
 };
 
 export const STAGE_FALLBACK: StageLook = { figure: 'upright', body: '#b98a5a', head: '#5d4130', icon: '✨' };

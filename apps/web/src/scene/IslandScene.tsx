@@ -9,7 +9,9 @@ import {
   type DirectionalLight,
   type Group,
   type HemisphereLight,
+  type BufferGeometry,
   type InstancedMesh,
+  type Mesh,
   type MeshBasicMaterial,
   type PerspectiveCamera,
 } from 'three';
@@ -20,7 +22,7 @@ import { FxLayer } from './FxLayer.tsx';
 import { GEO } from './geometries.ts';
 import { capacityFor, Instanced, type InstanceSpec } from './Instanced.tsx';
 import { BOTTOM, buildIsland, cellCenter, type Grid } from './islandModel.ts';
-import { COLORS, SEASON_LIGHT, stageLook } from './palette.ts';
+import { COLORS, SEASON_LIGHT, stageLook, type StageLook } from './palette.ts';
 
 interface Props {
   data: HerdeData;
@@ -110,25 +112,24 @@ function Island({
   // Herde: bis zu 20 Figuren, größere Herden werden größer dargestellt; Rudel: eine Figur je Stärke.
   // Aussehen je Stufe (grasende Tiere, Waldsammler, Wanderer).
   const look = stageLook(view.herd.stage);
-  const herdGeometry =
-    look.figure === 'grazer'
-      ? { body: GEO.animalBody, head: GEO.animalHead }
-      : look.figure === 'walker'
-        ? { body: GEO.walkerBody, head: GEO.walkerHead }
-        : { body: GEO.uprightBody, head: GEO.uprightHead };
+  const herdGeometry = HERD_GEOMETRY[look.figure];
   const herdPos = at(view.herd);
+  // Am Lager stehen die Menschen vor den Zelten (das Lager-Modell steht auf demselben Feld).
+  const camped = !!view.camp && view.camp.x === view.herd.x && view.camp.y === view.herd.y;
+  const herdFigurePos: [number, number, number] = camped ? [herdPos[0], herdPos[1], herdPos[2] + 0.2] : herdPos;
   const groups: FigureGroup[] =
     view.herd.size > 0
       ? [
           {
             id: 'herd',
-            position: herdPos,
-            count: Math.min(20, view.herd.size),
+            position: herdFigurePos,
+            // Am Lager weniger Figuren, damit Zelte und Feuer sichtbar bleiben (die Zahl steht in der Statusleiste).
+            count: Math.min(camped ? 10 : 20, view.herd.size),
             // Aufrechte Gestalten sind schmaler und werden etwas größer gezeigt, damit sie zwischen Bäumen sichtbar bleiben.
             size:
-              (look.figure === 'grazer' ? 1 : 1.3) *
+              (look.figure === 'grazer' ? 1 : look.figure === 'hunter' || look.figure === 'human' ? 1.45 : 1.3) *
               (view.herd.size > 20 ? Math.min(1.5, 1 + (view.herd.size - 20) / 40) : 1),
-            spread: look.figure === 'grazer' ? 0.085 : 0.075,
+            spread: look.figure === 'grazer' ? 0.085 : camped ? 0.06 : 0.075,
             body: look.body,
             head: look.head,
           },
@@ -143,29 +144,45 @@ function Island({
     body: pack.hungry ? COLORS.wolfHungry : COLORS.wolfBody,
     head: COLORS.wolfHead,
   }));
-  // Wild (H3b, vorläufig): kleine Tierfiguren, eine je Tier des Bestands.
-  const prey: FigureGroup[] = (view.prey ?? []).map((q) => ({
-    id: `prey-${q.id}`,
-    position: at(q),
-    count: q.size,
-    size: 0.8,
-    spread: 0.12,
-    body: COLORS.preyBody,
-    head: COLORS.preyHead,
-  }));
+  // Wild: Rehe, eines je Tier des Bestands (Größe 1–3 ablesbar); hungrige blasser.
+  // Steht Wild auf dem Feld der Herde (oder eines Rudels), weicht es in eine Ecke aus, damit beide sichtbar bleiben.
+  const prey: FigureGroup[] = view.prey.map((q) => {
+    const [px, py, pz] = at(q);
+    const shared = (q.x === view.herd.x && q.y === view.herd.y) || view.packs.some((k) => k.x === q.x && k.y === q.y);
+    return {
+      id: `prey-${q.id}`,
+      position: (shared ? [px + 0.26, py, pz + 0.26] : [px, py, pz]) as [number, number, number],
+      count: q.size,
+      size: shared ? 1.4 : 1.75,
+      spread: shared ? 0.12 : 0.17,
+      body: q.hungry ? COLORS.preyHungry : COLORS.preyBody,
+      head: COLORS.preyHead,
+    };
+  });
   const preyKey = JSON.stringify(prey);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const preyGroups = useMemo(() => prey, [preyKey]);
-  // Lager und gültige Lagerplätze (H3b, vorläufig): Rahmen auf dem Feld.
-  const campSquares = useMemo(
-    () => (view.camp ? [at(view.camp, 0.016)] : []),
+  // Lager: Modell aus Zelten und Feuerstelle auf dem Feld.
+  const campAt = useMemo(
+    () => (view.camp ? at(view.camp) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [view.camp, model],
   );
+  // Gültige Lagerplätze (nicht beim Zielen mit einer Karte): leuchtende Fläche, Rahmen und Fahne.
   const campSiteSquares = useMemo(
-    () => (targets ? [] : (view.campSites ?? []).map((p) => at(p, 0.015))),
+    () => (targets ? [] : view.campSites.map((p) => at(p, 0.015))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [targets, view.campSites, model],
+  );
+  const campFlags = useMemo(
+    () =>
+      campSiteSquares.map(([x, y, z]) => ({
+        position: [x + 0.3, y, z - 0.3] as [number, number, number],
+        scale: [1, 1, 1] as [number, number, number],
+        color: COLORS.flag,
+        rotationY: -0.4,
+      })),
+    [campSiteSquares],
   );
   // Gruppen nur neu anlegen, wenn sich etwas Sichtbares ändert (sonst würde jede View eine Animation prüfen).
   const herdKey = JSON.stringify(groups);
@@ -220,7 +237,8 @@ function Island({
     [grown, model],
   );
 
-  const intent = running ? null : view.intent;
+  // Am Lager bleibt die Herde immer: kein Ring über dem Lager.
+  const intent = running || view.intent?.reason === 'settled' ? null : view.intent;
 
   // Bei frameloop="demand": nach jeder sichtbaren Änderung (auch Ein- und Ausblenden von Meshes) neu zeichnen.
   const invalidate = useThree((st) => st.invalidate);
@@ -237,7 +255,8 @@ function Island({
     herdGroups,
     packGroups,
     preyGroups,
-    campSquares,
+    campAt,
+    campSiteSquares,
   ]);
 
   return (
@@ -275,14 +294,16 @@ function Island({
 
         <Figures
           groups={preyGroups}
-          bodyGeometry={GEO.animalBody}
-          headGeometry={GEO.animalHead}
+          bodyGeometry={GEO.deerBody}
+          headGeometry={GEO.deerHead}
           reducedMotion={reducedMotion}
         />
+        {campAt && <CampModel position={campAt} reducedMotion={reducedMotion} />}
 
         <Squares positions={blockedSquares} color={COLORS.blocked} opacity={0.8} frame />
-        <Squares positions={campSiteSquares} color={COLORS.campSite} opacity={0.9} frame />
-        <Squares positions={campSquares} color={COLORS.camp} opacity={1} frame />
+        <Squares positions={campSiteSquares} color={COLORS.campSite} opacity={0.35} pulse={!reducedMotion} />
+        <Squares positions={campSiteSquares} color={COLORS.campSite} opacity={0.95} frame />
+        <Instanced geometry={GEO.flag} items={campFlags} />
         <Squares positions={dimSquares} color={COLORS.dim} opacity={0.38} />
         <Squares positions={targetSquares} color={COLORS.target} opacity={0.3} />
         <Squares positions={targetSquares} color={COLORS.target} opacity={0.95} pulse={!reducedMotion} frame />
@@ -315,6 +336,39 @@ function Island({
       </group>
       <GroundShadow width={grid.width} height={grid.height} />
     </>
+  );
+}
+
+/** Figuren der Herde je Stufe: Körper und Kopf. */
+const HERD_GEOMETRY: Record<StageLook['figure'], { body: BufferGeometry; head: BufferGeometry }> = {
+  grazer: { body: GEO.animalBody, head: GEO.animalHead },
+  upright: { body: GEO.uprightBody, head: GEO.uprightHead },
+  walker: { body: GEO.walkerBody, head: GEO.walkerHead },
+  hunter: { body: GEO.hunterBody, head: GEO.walkerHead },
+  human: { body: GEO.humanBody, head: GEO.humanHead },
+};
+
+/** Lager: Zelte, Feuerstelle und eine flackernde Flamme (drei Draw Calls). */
+function CampModel({ position, reducedMotion }: { position: [number, number, number]; reducedMotion: boolean }) {
+  const flame = useRef<Mesh>(null);
+  useFrame(({ clock }) => {
+    const f = flame.current;
+    if (!f || reducedMotion) return;
+    const t = clock.elapsedTime;
+    f.scale.set(1 + Math.sin(t * 13) * 0.12, 1 + Math.sin(t * 9 + 1) * 0.25, 1 + Math.cos(t * 11) * 0.12);
+  });
+  return (
+    <group position={position} scale={1.4}>
+      <mesh geometry={GEO.campHuts} raycast={() => null}>
+        <meshLambertMaterial flatShading color={COLORS.campHut} />
+      </mesh>
+      <mesh geometry={GEO.campStones} raycast={() => null}>
+        <meshLambertMaterial flatShading color={COLORS.campStone} />
+      </mesh>
+      <mesh ref={flame} geometry={GEO.campFlame} position={[0, 0.02, -0.04]} raycast={() => null}>
+        <meshBasicMaterial color={COLORS.campFlame} fog={false} />
+      </mesh>
+    </group>
   );
 }
 
