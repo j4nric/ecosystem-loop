@@ -1,0 +1,161 @@
+/**
+ * Übersetzt die Ereignisse eines Engine-Schritts in Meldungen (Toasts und Protokoll) und Effekte für die Szene.
+ * Rein und ohne DOM: Die Engine liefert nur Ids und Zahlen, Namen kommen aus den Daten, Sätze aus `src/i18n`.
+ */
+import type { HerdeData, HerdeEvent, Pos } from '@being-god/herde';
+import type { Strings } from '../i18n/de.ts';
+import type { Locale } from '../i18n/locale.ts';
+import { arrowOf, cardName, landName, seasonName } from './format.ts';
+
+export type Tone = 'good' | 'bad' | 'info';
+
+/** Eine Meldung: `toast` = auch kurz einblenden, sonst nur im Protokoll. */
+export interface Notice {
+  text: string;
+  tone: Tone;
+  toast: boolean;
+  /** gehört schon zum nächsten Monat (Beginn einer Jahreszeit, gezogene Karten) */
+  next?: boolean;
+}
+
+/** Kurze Effekte auf der Insel (der Zug der Herde selbst wird aus dem Zustand animiert). */
+export type Fx =
+  | { type: 'fire'; cells: Pos[] }
+  | { type: 'change'; x: number; y: number; to: string }
+  | { type: 'hunt'; x: number; y: number; packs: Pos[] }
+  | { type: 'born'; x: number; y: number }
+  | { type: 'loss'; x: number; y: number }
+  | { type: 'rain' };
+
+export interface Described {
+  notices: Notice[];
+  fx: Fx[];
+}
+
+/**
+ * @param herdAt Position der Herde nach dem Schritt (für Effekte an der Herde)
+ * @param packsAt Positionen der Rudel vor dem Schritt (Id → Feld), um reißende Rudel zu zeigen
+ */
+export function describeEvents(
+  data: HerdeData,
+  locale: Locale,
+  t: Strings,
+  events: readonly HerdeEvent[],
+  herdAt: Pos,
+  packsAt: ReadonlyMap<number, Pos> = new Map(),
+): Described {
+  const notices: Notice[] = [];
+  const fx: Fx[] = [];
+  const say = (text: string, tone: Tone, toast = true, next = false) =>
+    notices.push(next ? { text, tone, toast, next } : { text, tone, toast });
+  const land = (id: string) => landName(data, locale, id);
+  // Sukzession je Monat zusammenfassen: „Wiese wird zu Busch (2 Felder)“.
+  const succession = new Map<string, { from: string; to: string; n: number }>();
+  const hunters: Pos[] = [];
+  let killed = 0;
+
+  for (const e of events) {
+    switch (e.type) {
+      case 'cardPlayed': {
+        const card = data.cards.get(e.card);
+        // Blitz und Regen melden ihre Wirkung selbst (fire, grassGrew).
+        if (card?.effect.type === 'transform')
+          say(t.evCardPlayed(`${card.icon} ${cardName(data, locale, e.card)}`.trim()), 'info');
+        break;
+      }
+      case 'cardsDrawn':
+        say(t.evCardsDrawn(e.cards.map((id) => cardName(data, locale, id)).join(', ')), 'info', true, true);
+        break;
+      case 'cellChanged':
+        fx.push({ type: 'change', x: e.x, y: e.y, to: e.to });
+        if (e.cause === 'succession') {
+          const key = `${e.from}>${e.to}`;
+          const entry = succession.get(key) ?? { from: e.from, to: e.to, n: 0 };
+          entry.n++;
+          succession.set(key, entry);
+        }
+        break;
+      case 'grassGrew':
+        say(t.evRain(e.cells), 'good');
+        fx.push({ type: 'rain' });
+        break;
+      case 'fire':
+        say(e.cause === 'lightning' ? t.evLightning(e.cells.length) : t.evWildfire(e.cells.length), 'bad');
+        fx.push({ type: 'fire', cells: e.cells });
+        break;
+      case 'herdMoved': {
+        const dx = e.to.x - e.from.x;
+        const dy = e.to.y - e.from.y;
+        const moved = dx !== 0 || dy !== 0;
+        say(t.evHerdMoved(t.intent[e.reason] ?? e.reason, moved ? arrowOf(dx, dy) : t.stays), 'info', false);
+        break;
+      }
+      case 'herdAte':
+        if (e.eaten < e.need) say(t.evHerdHungry(e.eaten, e.need), 'info', false);
+        break;
+      case 'herdStarved':
+        say(t.evStarved(e.dead), 'bad');
+        fx.push({ type: 'loss', ...herdAt });
+        break;
+      case 'herdThirsted':
+        say(t.evThirsted(e.dead), 'bad');
+        fx.push({ type: 'loss', ...herdAt });
+        break;
+      case 'herdFroze':
+        say(t.evFroze(e.dead), 'bad');
+        fx.push({ type: 'loss', ...herdAt });
+        break;
+      case 'herdBurned':
+        say(t.evBurned(e.dead), 'bad');
+        break;
+      case 'herdBorn':
+        say(t.evBorn(e.born), 'good');
+        fx.push({ type: 'born', ...herdAt });
+        break;
+      case 'wolvesHunted': {
+        killed += e.killed;
+        const at = packsAt.get(e.pack);
+        if (at) hunters.push(at);
+        break;
+      }
+      case 'packMoved':
+        say(t.evPackMoved, 'bad', false);
+        break;
+      case 'packGrew':
+        say(t.evPackGrew(e.size), 'bad');
+        break;
+      case 'packFounded':
+        say(t.evPackFounded, 'bad');
+        break;
+      case 'packStarved':
+        if (e.size > 0) say(t.evPackStarved, 'good');
+        break;
+      case 'packGone':
+        say(t.evPackGone[e.cause] ?? t.evPackGone['driven']!, 'good');
+        break;
+      case 'packImmigrated':
+        say(t.evPackImmigrated, 'bad');
+        break;
+      case 'seasonBegan':
+        say(t.evSeason(seasonName(data, locale, e.season), e.year), 'info', true, true);
+        break;
+      case 'iceAgeBegan':
+        say(t.evIceBegan(e.months), 'bad');
+        break;
+      case 'iceAgeEnded':
+        say(t.evIceEnded(e.survivors), 'good');
+        break;
+      case 'gameWon':
+        break; // iceAgeEnded erzählt es schon
+      case 'gameLost':
+        say(t.evLost, 'bad');
+        break;
+    }
+  }
+  if (killed > 0) {
+    say(t.evHunted(killed), 'bad');
+    fx.push({ type: 'hunt', ...herdAt, packs: hunters });
+  }
+  for (const s of succession.values()) say(t.evSuccession(land(s.from), land(s.to), s.n), 'info');
+  return { notices, fx };
+}

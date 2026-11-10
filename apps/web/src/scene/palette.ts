@@ -1,105 +1,92 @@
-import type { FormKind, SpeciesGroup } from '@core/api';
-
-/** Farbstimmung im Stil des Referenzbilds: weiche, leicht entsättigte Low-Poly-Töne. */
+/** Farbstimmung im Stil des Referenzbilds: weiche, leicht entsättigte Low-Poly-Töne. Nur Optik. */
 export const COLORS = {
   background: '#c8c4d6',
   earth: '#8a5a3b',
   earthDark: '#6a4329',
-  stratum: '#5a3a26',
-  rockBottom: '#4d3324',
-  rock: '#9c98aa',
-  rockDark: '#7f7b8f',
-  snow: '#f6f8fb',
-  water: '#6cb7dc',
-  waterDeep: '#4f9fcf',
-  sand: '#e8d6a0',
+  underside: '#5a3a26',
+  sea: '#86b3c6',
+  water: '#5aa6d2',
+  snow: '#f2f5fa',
   trunk: '#7a5236',
-  trunkBurnt: '#3b302b',
-  select: '#ffffff',
+  stump: '#3b302b',
+  boulder: '#a29d93',
+  shrub: '#5f9a45',
+  crown: '#3f7d4a',
+  crownOld: '#24452c',
+  grassDry: '#c2b46a',
+  grassLush: '#4f9a35',
+  herdBody: '#f1e9d8',
+  herdHead: '#5a4636',
+  wolfBody: '#6f7180',
+  wolfHead: '#4a4b57',
+  wolfHungry: '#8a5a5a',
+  arrow: '#ffffff',
+  arrowPreview: '#ffb347',
   target: '#ffd66b',
-  /** Zielring: Karte bringt die Zone näher an ihre Idealform bzw. weiter weg. */
-  better: '#5fd46a',
-  worse: '#ff5f4f',
-  /** Nebel bei niedriger Harmonie – nah an der Hintergrundfarbe, damit die Insel „verblasst“. */
-  fog: '#dcd8e6',
-  paleSky: '#e4e2ea',
-  burst: '#fff3b8',
+  grown: '#8ff07a',
+  select: '#ffffff',
+  dim: '#2d2a3a',
+  fire: '#ff7a2f',
+  fireCore: '#ffd24a',
+  change: '#fff3b8',
+  hunt: '#e0453a',
+  born: '#8ff07a',
+  loss: '#7a86a8',
+  rain: '#a9d4f5',
 } as const;
 
-/** Lichtfarbe der Sonne je Jahreszeit (leichte Tönung). */
+/** Lichtfarbe der Sonne je Jahreszeit (leichte Tönung); `ice` gilt in der Eiszeit. */
 export const SEASON_LIGHT: Record<string, { sun: string; sky: string }> = {
   spring: { sun: '#fff4e2', sky: '#f4f1ff' },
   summer: { sun: '#fff0c2', sky: '#f8f4ea' },
   autumn: { sun: '#ffd6ae', sky: '#f6ece6' },
   winter: { sun: '#e0e9ff', sky: '#eef2ff' },
+  ice: { sun: '#d4e4ff', sky: '#e8f2ff' },
 };
 
-/** Darstellungsgruppen der Arten kommen aus der Engine (`populations[].group`, species.yaml → group). */
-export type { SpeciesGroup };
-export const SPECIES_GROUPS: SpeciesGroup[] = ['water', 'insect', 'amphibian', 'reptile', 'bird', 'mammal', 'human'];
-
-export const GROUP_COLORS: Record<SpeciesGroup, string> = {
-  water: '#3f8fd0',
-  insect: '#e7b43c',
-  amphibian: '#4fae5a',
-  reptile: '#9ab53f',
-  bird: '#f2f2f6',
-  mammal: '#a8714a',
-  human: '#e2876a',
-};
-
-/** Nur Optik: eigene Farbtöne einzelner Arten innerhalb ihrer Gruppe. Unbekannte Arten nehmen die Gruppenfarbe. */
-const SPECIES_COLORS: Record<string, string> = {
-  plankton: '#a6e3ea',
-  fish: '#3f8fd0',
-  beetle: '#5b4a78',
-  bee: '#f2c230',
-  frog: '#4fae5a',
-  lizard: '#9ab53f',
-  small_mammal: '#c09062',
-  bird: '#f4f4f8',
-  deer: '#a0603a',
-  wolf: '#8d8f9c',
-  raptor: '#7d5b45',
-  primate: '#6b4a35',
-  human: '#e2876a',
-};
-
-/**
- * Gruppe und Farbe einer Art. Die Gruppe liefert die Engine; fehlt sie (ältere Daten, Vorschau-Client),
- * ordnet die Stufe grob zu.
- */
-export function speciesStyle(pop: { species: string; tier: number; group?: SpeciesGroup }): {
-  group: SpeciesGroup;
+/** Darstellung einer Landschaft: Höhe der Oberkante, Farbe, Bewuchs. Unbekannte Ids: `landStyle` leitet ab. */
+export interface LandStyle {
+  /** Oberkante des Plättchens (Welt-y) */
+  top: number;
   color: string;
-} {
-  const t = pop.tier;
-  const group: SpeciesGroup = pop.group ?? (t <= 1 ? 'insect' : t <= 4 ? 'reptile' : t <= 6 ? 'mammal' : 'human');
-  return { group, color: SPECIES_COLORS[pop.species] ?? GROUP_COLORS[group] };
+  /** Wasserfläche statt Boden */
+  water?: boolean;
+  /** Bewuchs: Büsche, Bäume (Anzahl, Höhe, Farbe), Stümpfe, Felsbrocken */
+  shrubs?: number;
+  trees?: { count: number; height: number; color: string };
+  stumps?: number;
+  boulders?: number;
 }
 
-const TOP: Record<string, Record<FormKind, string>> = {
-  mountains: { ideal: '#9fcd6f', normal: '#a9a6b4', degraded: '#b8ab98', disturbance: '#e8eef6' },
-  forest: { ideal: '#4e9a4b', normal: '#6aaa56', degraded: '#4d433b', disturbance: '#7a4b31' },
-  plains: { ideal: '#a8d470', normal: '#c3c47b', degraded: '#b59c78', disturbance: '#9c7a5a' },
-  river: { ideal: '#7dc56a', normal: '#8ebe67', degraded: '#b69e78', disturbance: '#86b3a3' },
-  coast: { ideal: '#73b06a', normal: '#e7d49e', degraded: '#f0eadc', disturbance: '#d9cfb8' },
+export const LAND_STYLES: Record<string, LandStyle> = {
+  sea: { top: -0.22, color: COLORS.sea, water: true },
+  river: { top: 0.02, color: COLORS.water, water: true },
+  steppe: { top: 0.12, color: '#d8cb98' },
+  meadow: { top: 0.16, color: '#9cc76b' },
+  burnt: { top: 0.1, color: '#5e4b40', stumps: 3 },
+  bush: { top: 0.18, color: '#7fae5c', shrubs: 4 },
+  forest: { top: 0.2, color: '#4f8a52', trees: { count: 3, height: 0.55, color: COLORS.crown } },
+  old: { top: 0.22, color: '#33593b', trees: { count: 5, height: 0.78, color: COLORS.crownOld } },
+  rock: { top: 0.42, color: '#9a958b', boulders: 3 },
 };
 
-const FALLBACK: Record<FormKind, string> = {
-  ideal: '#8fcb6a',
-  normal: '#9cc46e',
-  degraded: '#b59c78',
-  disturbance: '#a5785a',
-};
-
-export function topColor(geography: string, kind: FormKind): string {
-  return TOP[geography]?.[kind] ?? FALLBACK[kind];
+/** Stil einer Landschaft; neue Landschaften ohne eigenen Eintrag bekommen einen schlichten Stil aus ihren Daten. */
+export function landStyle(id: string, info?: { walk: boolean; wood: boolean }): LandStyle {
+  const known = LAND_STYLES[id];
+  if (known) return known;
+  if (info && !info.walk) return { top: 0.4, color: '#9a958b', boulders: 2 };
+  if (info?.wood) return { top: 0.2, color: '#4f8a52', trees: { count: 3, height: 0.55, color: COLORS.crown } };
+  return { top: 0.14, color: '#b8c48a' };
 }
 
-export const CROWN: Record<FormKind, string> = {
-  ideal: '#2f7d3f',
-  normal: '#428f47',
-  degraded: '#6f7d4a',
-  disturbance: '#a35b2c',
-};
+/** Mischt zwei Hex-Farben (#rrggbb), k = 0 … 1. Rein, ohne three. */
+export function mix(a: string, b: string, k: number): string {
+  const pa = parseInt(a.slice(1), 16);
+  const pb = parseInt(b.slice(1), 16);
+  const ch = (shift: number) => {
+    const va = (pa >> shift) & 0xff;
+    const vb = (pb >> shift) & 0xff;
+    return Math.round(va + (vb - va) * Math.max(0, Math.min(1, k)));
+  };
+  return `#${((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, '0')}`;
+}
