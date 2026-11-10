@@ -86,6 +86,8 @@ export function ruleNumbers(data: HerdeData, locale: Locale, stage: StageRules):
     move: stage.move,
     water: seasonSet(data, locale, stage.waterSeasons),
     shelter: seasonSet(data, locale, stage.shelterSeasons),
+    iceAges: p.ice.ages ?? null,
+    wildAfter: p.ice.wildAfter,
   };
 }
 

@@ -23,6 +23,39 @@ export interface RuleNumbers {
   /** Jahreszeiten (Namen), in denen die aktuelle Stufe Wasser bzw. Schutz braucht */
   water: SeasonSet;
   shelter: SeasonSet;
+  /** die so vielte Eiszeit ist die letzte Prüfung (null = unbegrenzt) */
+  iceAges: number | null;
+  /** Wildnis nach einer überstandenen Eiszeit ohne Sieg */
+  wildAfter: number;
+}
+
+/** Regeln zu Wild, Jagd, Feuer und Lager für Hilfe-Texte (aus `data.params` und den Stufen, siehe `huntRules`). */
+export interface HuntRules {
+  /** Stufe, ab der Wild einwandert (Name) */
+  preyFrom: string;
+  /** Lebensraum des Wilds (Namen) */
+  preyLands: string[];
+  preyMax: number;
+  /** so viele Felder Lebensraum braucht das Einwandern */
+  spawnMinLand: number;
+  spawnSize: number;
+  /** Stufen, die jagen: Name, Futter je Tier, Tiere je Monat, mehr im Feuer */
+  hunters: { name: string; food: number; kill: number; fire: number }[];
+  /** Stufen, für die Wölfe Konkurrenten sind (Namen) */
+  rivals: string[];
+  /** Brandfläche gilt so lange als frisch (0 = nur in diesem Monat) */
+  fresh: number;
+  /**
+   * Lager: Stufe, Umkreis, Landschafts-Gruppen (je Gruppe „Wald oder Altwald“), begehbare Landschaften, auf denen kein
+   * Lager stehen darf (nicht in `camp.on`, z. B. Fluss), Rodung
+   */
+  camp: {
+    stage: string;
+    radius: number;
+    near: string[];
+    notOn: string[];
+    clear: { lands: string[]; to: string; month: string } | null;
+  } | null;
 }
 
 /** Jahreszeiten als Namen; `all`, wenn es alle Jahreszeiten sind. */
@@ -48,6 +81,12 @@ const fields = (n: number) => `${n} ${n === 1 ? 'Feld' : 'Felder'}`;
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 const months = (n: number) => `${n} ${n === 1 ? 'Monat' : 'Monate'}`;
+const stocks = (n: number) => `${n} ${n === 1 ? 'Bestand' : 'Bestände'}`;
+const animals = (n: number) => `${n} ${n === 1 ? 'Tier' : 'Tiere'}`;
+/** „in diesem Monat“, „in diesem oder im letzten Monat“, „in den letzten 3 Monaten“ */
+const freshWhen = (n: number) =>
+  n <= 0 ? 'in diesem Monat' : n === 1 ? 'in diesem oder im letzten Monat' : `in den letzten ${n + 1} Monaten`;
+const iceAgeOf = (n: number, max: number | null) => (max === null ? `${n}. Eiszeit` : `Eiszeit ${n} von ${max}`);
 
 export const de = {
   appTitle: 'Die Herde',
@@ -60,6 +99,14 @@ export const de = {
   iceLeft: (n: number) => `noch ${n} Mon.`,
   statusLabel: (herd: number, fat: number, fatMax: number, wolves: number) =>
     `Herde ${herd}, Vorrat ${fat} von ${fatMax}, Wölfe ${wolves}`,
+  prey: 'Wild',
+  preyLabel: (stockCount: number, animalCount: number) =>
+    stockCount > 0 ? `Wild: ${stocks(stockCount)}, ${animals(animalCount)}` : 'Kein Wild auf der Insel',
+  iceAgeOf,
+  /** kurz am Jahreskreis */
+  iceAgeChip: (n: number, max: number | null) => (max === null ? `❄ ${n}` : `❄ ${n}/${max}`),
+  iceAgeNext: (n: number, max: number | null) =>
+    `Nächste Prüfung: ${iceAgeOf(n, max)}${max !== null && n >= max ? ' – die letzte' : ''}`,
   // Jahreskreis
   date: (year: number, month: string) => `Jahr ${year} · ${month}`,
   /** Grundton der Jahreszeit (Gras), dazu die Bedürfnisse der aktuellen Stufe, Brandgefahr und Nachwuchs. */
@@ -91,6 +138,7 @@ export const de = {
     seekShelter: 'sucht Schutz vor der Kälte',
     freshGrass: 'zieht zu frischem Futter',
     stay: 'grast hier weiter',
+    settled: 'bleibt am Lager',
   } as Record<string, string>,
   intentLine: (reason: string) => `Die Herde ${reason}`,
   stays: '(bleibt)',
@@ -143,7 +191,12 @@ export const de = {
   infoSparse: 'Karg: wächst nur im Frühling ein wenig.',
   infoHerd: (n: number) => `Hier steht die Herde (${n} Tiere).`,
   infoPack: (size: number, hungry: boolean) =>
-    `Wolfsrudel der Stärke ${size}${hungry ? ', hungrig: zieht durchs Gehölz zur Herde' : ''}.`,
+    `Wolfsrudel der Stärke ${size}${hungry ? ', hungrig: zieht durchs Gehölz zu Wild oder Herde' : ''}.`,
+  infoPrey: (size: number, max: number, hungry: boolean) =>
+    `Wild: ${size} von ${max} Tieren${hungry ? ' – hungrig, zieht weiter und schrumpft bald' : ''}.`,
+  infoPreyReach: 'In Jagdweite der Herde.',
+  infoPreyLand: 'Lebensraum des Wilds.',
+  infoCamp: 'Hier steht das Lager der Herde.',
   // Meldungen (Toasts und Protokoll)
   evCardPlayed: (card: string) => `${card} gelegt.`,
   evCardsDrawn: (cards: string) => `Neue Karten: ${cards}.`,
@@ -159,7 +212,7 @@ export const de = {
   evBurned: (n: number) => `Das Feuer erfasst die Herde: −${n}.`,
   evBorn: (n: number) => `Nachwuchs: ${n} ${n === 1 ? 'Kalb' : 'Kälber'} geboren.`,
   evHunted: (n: number) => `Wölfe reißen ${n} ${n === 1 ? 'Tier' : 'Tiere'}.`,
-  evPackMoved: 'Ein hungriges Rudel zieht durchs Gehölz zur Herde.',
+  evPackMoved: 'Ein hungriges Rudel zieht durchs Gehölz – zum Wild oder zur Herde.',
   evPackGrew: (n: number) => `Ein Wolfsrudel wird stärker (${n}).`,
   evPackFounded: 'Ein neues Wolfsrudel gründet sich.',
   evPackStarved: 'Ein Wolfsrudel hungert und wird schwächer.',
@@ -173,6 +226,19 @@ export const de = {
   evIceBegan: (n: number) => `Die Eiszeit beginnt: ${n} Monate Winter.`,
   evIceEnded: (n: number) => `Die Eiszeit ist vorbei. ${n} Tiere haben überlebt.`,
   evLost: 'Die Herde ist ausgestorben.',
+  evLostLastIce: 'Die letzte Eiszeit ist vorbei – die Herde hat kein Lager als Mensch erreicht.',
+  evIceSurvived: (count: number) => `${count}. Eiszeit überstanden – das Zeitalter geht weiter.`,
+  // Wild und Lager
+  evPreyGrew: 'Das Wild vermehrt sich.',
+  evPreyFounded: 'Neues Wild auf der Weide.',
+  evPreyStarved: (gone: boolean): string => (gone ? 'Ein Wildbestand ist verhungert.' : 'Das Wild hungert.'),
+  evPreyGone: 'Das Wild ist verschwunden.',
+  evPreyImmigrated: 'Wild wandert auf die Insel ein.',
+  evPreyHunted: (n: number, fire: boolean) =>
+    `Jagd: ${n} Wild erlegt${fire ? ' – das Feuer hat es aufgetrieben' : ''}.`,
+  evPackAtePrey: 'Wölfe reißen Wild.',
+  evCampFounded: 'Die Herde gründet ein Lager und wird sesshaft.',
+  evFieldCleared: (from: string, to: string) => `Rodung am Lager: ${from} wird ${to}.`,
   evTraitOffered: (traits: string) => `Merkmale zur Wahl: ${traits}.`,
   evTraitPicked: (trait: string, effect: string) => `Die Herde entwickelt ${trait}: ${effect}`,
   evMatured: (next: string) => `Die Herde ist reif für den Sprung: ${next}.`,
@@ -181,14 +247,22 @@ export const de = {
   // Ende
   wonTitle: 'Geschafft',
   wonText: (n: number) =>
-    `Die Herde hat die Eiszeit überstanden. ${n} ${n === 1 ? 'Tier hat' : 'Tiere haben'} überlebt.`,
+    `Die Herde ist Mensch geworden, hat ein Lager gegründet und die letzte Eiszeit überstanden. ${n} ${n === 1 ? 'Mensch hat' : 'Menschen haben'} überlebt.`,
   lostTitle: 'Die Herde ist ausgestorben',
   lostText: 'Die Insel lebt weiter – ohne sie. Versuch es mit einer neuen Herde.',
+  lostIceTitle: 'Die letzte Eiszeit ist vorbei',
+  lostIceText: (human: boolean, stage: string) =>
+    human
+      ? 'Die Herde hat überlebt und ist Mensch geworden – aber ohne Lager. Das Zeitalter ist verloren.'
+      : `Die Herde hat überlebt, ist aber nicht Mensch geworden (zuletzt: ${stage}). Das Zeitalter ist verloren.`,
   survivors: 'Überlebende',
   duration: 'Dauer',
   durationValue: (years: number, months: number) =>
     years > 0 ? `${years} J. ${months} Mon.` : `${months} ${months === 1 ? 'Monat' : 'Monate'}`,
-  wildReached: 'Wildnis',
+  stageReached: 'Stufe',
+  traitsCount: 'Merkmale',
+  iceAgesLabel: 'Eiszeiten',
+  iceAgesValue: (n: number, max: number | null) => (max === null ? `${n}` : `${n} von ${max}`),
   viewIsland: 'Insel ansehen',
   overBar: (won: boolean): string => (won ? 'Die Partie ist gewonnen.' : 'Die Partie ist verloren.'),
   // Spielstand
@@ -227,7 +301,7 @@ export const de = {
     {
       icon: '❄️',
       title: 'Wildnis und Eiszeit',
-      text: `Jeder Monat und jede gelegte Karte lässt die Wildnis wachsen. Bei ${r.wildMax} beginnt die Eiszeit: ${months(r.iceMonths)} Winter ohne Nachwuchs. Bring die Herde hindurch, dann ist das Zeitalter gewonnen.`,
+      text: `Jeder Monat und jede gelegte Karte lässt die Wildnis wachsen. Bei ${r.wildMax} beginnt eine Eiszeit: ${months(r.iceMonths)} Winter ohne Nachwuchs. Ziel: Werde Mensch und übersteh mit einem Lager die letzte${r.iceAges === null ? '' : `, die ${r.iceAges}.`} Eiszeit.`,
     },
     {
       icon: '▶',
@@ -245,7 +319,24 @@ export const de = {
   helpTitle: 'So spielst du',
   helpGoal: 'Ziel',
   helpGoalText: (r: RuleNumbers) =>
-    `Bring die Herde durch die Eiszeit. Sie beginnt, wenn die Wildnis ${r.wildMax} erreicht – jeder Monat und jede Karte lässt sie wachsen. Wer viel eingreift, ist besser vorbereitet, ruft die Prüfung aber früher herbei.`,
+    `Entwickle die Herde bis zum Menschen, gründe ein Lager und übersteh die letzte${r.iceAges === null ? '' : `, die ${r.iceAges}.`} Eiszeit. Eine Eiszeit beginnt, wenn die Wildnis ${r.wildMax} erreicht – jeder Monat und jede Karte lässt sie wachsen. Wer viel eingreift, ist besser vorbereitet, ruft die Prüfung aber früher herbei.`,
+  helpPrey: 'Wild und Jagd',
+  helpPreyText: (h: HuntRules) =>
+    `Wild lebt auf ${orList(h.preyLands)} in Beständen von 1 bis ${h.preyMax} Tieren und frisst dort Gras. Satt wächst ein Bestand und gründet neue, hungrig zieht er weiter und schrumpft. Sobald die Herde die Stufe ${h.preyFrom} erreicht hat, wandert Wild ein (${animals(h.spawnSize)}), wenn es mindestens ${h.spawnMinLand} Felder Lebensraum gibt. ${h.hunters.map((x) => `Als ${x.name} jagt die Herde im Umkreis: bis ${animals(x.kill)} je Monat, ${x.food} Futter je Tier.`).join(' ')} Wölfe fressen zuerst Wild${h.rivals.length > 0 ? ` – für ${list(h.rivals)} sind sie Konkurrenten, keine Feinde` : ''}.`,
+  helpFire: 'Feuer als Werkzeug',
+  helpFireText: (h: HuntRules) =>
+    `Für Jäger ist Feuer kein Feind mehr: Liegt im Umkreis der Herde eine Brandfläche, die ${freshWhen(h.fresh)} gebrannt hat, treibt das Feuer Wild auf. ${h.hunters
+      .filter((x) => x.fire > 0)
+      .map((x) => `Als ${x.name} erlegt die Herde dann ${animals(x.fire)} mehr.`)
+      .join(' ')} Der Blitz zählt mit – leg ihn gezielt neben die Herde.`,
+  helpCamp: 'Lager',
+  helpCampText: (h: HuntRules) =>
+    h.camp
+      ? `Als ${h.camp.stage} lässt sich die Herde nieder. Ein Lagerplatz braucht im Umkreis ${h.camp.radius} ${list(h.camp.near)} und muss in diesem Monat erreichbar sein.${h.camp.notOn.length > 0 ? ` Felder mit ${orList(h.camp.notOn)} sind kein Lagerplatz.` : ''} Die Plätze leuchten auf der Insel; antippen zeigt eine Vorschau. Danach zieht die Herde nicht mehr und lebt aus dem Umkreis des Lagers.${h.camp.clear ? ` Jedes Jahr im ${h.camp.clear.month} rodet das Lager ein Feld ${orList(h.camp.clear.lands)} zu ${h.camp.clear.to}.` : ''} In der Eiszeit wird kein Lager gegründet.`
+      : 'Keine Stufe gründet ein Lager.',
+  helpIce: 'Eiszeiten und Sieg',
+  helpIceText: (r: RuleNumbers) =>
+    `Jede Eiszeit ist eine Prüfung unterwegs: ${months(r.iceMonths)} Winter ohne Nachwuchs. Übersteht die Herde sie, fällt die Wildnis auf ${r.wildAfter} und die nächste kommt bei ${r.wildMax}. Gewonnen ist das Zeitalter, wenn die Herde eine Eiszeit als Mensch mit Lager übersteht.${r.iceAges === null ? '' : ` Die ${r.iceAges}. Eiszeit ist die letzte Prüfung: Wer sie nicht als Mensch mit Lager übersteht, verliert.`}`,
   helpHerd: 'Die Herde',
   helpHerdText: (r: RuleNumbers) =>
     `Sie zieht jeden Monat höchstens ${r.move === 1 ? 'ein Feld' : `${r.move} Felder`} und frisst aus dem eigenen und den ${r.neighbors} Nachbarfeldern. Überschuss wird Vorrat, Mangel zehrt ihn auf, danach sterben Tiere. ${capitalize(when(r.water))}: Durst ohne Wasser in der Nähe. ${capitalize(when(r.shelter))}: Kälte ohne Schutz in der Nähe. Nachwuchs gibt es je nach Vorrat. Was Futter, Wasser und Schutz ist, hängt von der Stufe ab (siehe unten).`,
@@ -262,7 +353,7 @@ export const de = {
     `Zu Beginn jeder Jahreszeit ziehst du neue Karten, höchstens ${r.handMax} auf der Hand. Karte antippen, dann ein leuchtendes Feld – die Vorschau zeigt, was mit dem Feld geschieht und ob die Herde ihre Absicht ändert. Regen wirkt auf die ganze Insel.`,
   helpWorld: 'Die Welt lebt',
   helpWorldText:
-    'Landschaft wandelt sich von selbst. Wölfe leben im Gehölz, ziehen hungrig durch Waldkorridore zur Herde und reißen Tiere in ihrer Nähe. Feuer und Fels vertreiben sie.',
+    'Landschaft wandelt sich von selbst. Wölfe leben im Gehölz, fressen zuerst Wild, ziehen hungrig durch Waldkorridore zu Wild oder Herde und reißen sonst Tiere der Herde. Feuer und Fels vertreiben sie.',
   helpLands: 'Landschaften',
   helpControls: 'Steuerung',
   helpControlsText:
@@ -309,6 +400,53 @@ export const de = {
   needMoveText: (move: number, reach: number) =>
     `${move === 1 ? '1 Feld' : `${move} Felder`} je Monat, Umkreis ${reach}`,
   needNone: '–',
+  needPrey: 'Beute',
+  needPreyText: (food: number, kill: number, fire: number) =>
+    `Wild: ${food} Futter je Tier, bis ${animals(kill)} je Monat${fire > 0 ? `, im Feuer +${fire}` : ''}`,
+  preyOnIsland: (n: number, animalCount: number) =>
+    n > 0 ? `${stocks(n)} (${animals(animalCount)}) auf der Insel` : 'kein Wild auf der Insel',
+  needWolves: 'Wölfe',
+  wolvesEnemy: 'Feinde – reißen Tiere der Herde',
+  wolvesRival: 'Konkurrenten – jagen dasselbe Wild',
+  packsOnIsland: (n: number) => (n > 0 ? `${n} Rudel auf der Insel` : 'keine auf der Insel'),
+  needCamp: 'Lager',
+  needCampText: (groups: string[], radius: number) => `${list(groups)} im Umkreis ${radius}`,
+  campStanding: 'Lager steht',
+  campSitesInReach: (n: number) =>
+    n > 0 ? `${n} ${n === 1 ? 'Platz' : 'Plätze'} in Zugweite` : 'kein Platz in Zugweite',
+  campSpotsOnIsland: (n: number) =>
+    n > 0
+      ? `${n} ${n === 1 ? 'möglicher Platz' : 'mögliche Plätze'} auf der Insel`
+      : 'kein möglicher Platz auf der Insel',
+  preyHintSome: (stage: string, n: number, animalCount: number) =>
+    `Die Stufe ${stage} braucht Wild: zurzeit ${stocks(n)} auf der Insel (${animals(animalCount)}).`,
+  preyHintNone: (stage: string, lands: string[], have: number, need: number, from: string | null) =>
+    `Die Stufe ${stage} braucht Wild: zurzeit keines auf der Insel. Es wandert ${from ? `ab der Stufe ${from} ` : ''}ein, wenn mindestens ${need} Felder ${orList(lands)} da sind (zurzeit ${have}).`,
+  // Lager gründen
+  campBanner: '⛺ Lagerplatz wählen',
+  campBannerIce: '❄ In der Eiszeit gründet die Herde kein Lager.',
+  campBannerNone: (groups: string[], radius: number) =>
+    `Kein Lagerplatz in Zugweite. Gesucht: ${list(groups)} im Umkreis ${radius}.`,
+  campTitle: 'Lagerplatz',
+  campAround: (radius: number) => `Im Umkreis ${radius}`,
+  campGroup: (names: string, n: number) => `${names}: ${n > 0 ? fields(n) : 'fehlt'}`,
+  campFood: (n: number, reach: number) => `Futter im Umkreis ${reach}: ${fields(n)}`,
+  campShelter: (n: number) => `Schutz im Winter: ${n > 0 ? fields(n) : 'keiner'}`,
+  campPrey: (n: number) => (n > 0 ? `Wild in Jagdweite: ${stocks(n)}` : 'Kein Wild in Jagdweite'),
+  campSettled: 'Die Herde wird sesshaft: Sie zieht nicht mehr und lebt aus dem Umkreis des Lagers.',
+  campMoves: 'Sie zieht sofort auf diesen Platz.',
+  campClear: (lands: string[], to: string, month: string, radius: number, n: number) =>
+    `Jedes Jahr im ${month} rodet das Lager ein Feld ${orList(lands)} im Umkreis ${radius} zu ${to}${n > 0 ? ` – hier ${fields(n)}, nach etwa ${n} ${n === 1 ? 'Jahr' : 'Jahren'} ist der Wald nah am Lager fort` : ''}.`,
+  campChipFood: 'Futter',
+  campChipShelter: 'Schutz',
+  campChipPrey: 'Wild',
+  campShort: (clear: { lands: string[]; month: string; fields: number } | null) =>
+    `Die Herde wird hier sesshaft.${clear ? ` Rodet jedes Jahr im ${clear.month} ein Feld ${orList(clear.lands)}${clear.fields > 0 ? ` (hier ${fields(clear.fields)})` : ''}.` : ''}`,
+  campOther: 'Zum Vergleich einen anderen Platz antippen.',
+  campConfirmTitle: 'Lager gründen?',
+  campConfirmWarning: 'Kein Zurück: Die Herde bleibt für immer an diesem Ort.',
+  campConfirm: 'Lager gründen',
+  campCancel: 'Noch nicht',
   onIsland: (n: number) => (n > 0 ? `${fields(n)} auf der Insel` : 'fehlt auf der Insel'),
   blockedOnIsland: (n: number) => (n > 0 ? `${fields(n)} unpassierbar` : 'keines auf der Insel'),
   evolveButton: (stage: string) => `Weiterentwickeln zu ${stage}`,

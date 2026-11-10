@@ -32,7 +32,17 @@ export type Fx =
   /** `cells`: Felder mit mehr Futter (für das ruhige Einfärben bei reduzierter Bewegung) */
   | { type: 'rain'; cells: Pos[] }
   /** Sprung zur nächsten Stufe, an der Herde */
-  | { type: 'evolve'; x: number; y: number; stage: string };
+  | { type: 'evolve'; x: number; y: number; stage: string }
+  /** die Herde jagt Wild auf diesem Feld; `fire`: Feuer hat es aufgetrieben */
+  | { type: 'preyHunted'; x: number; y: number; fire: boolean; from: Pos }
+  /** ein Rudel reißt Wild auf diesem Feld */
+  | { type: 'packAtePrey'; x: number; y: number }
+  /** Wild wandert ein */
+  | { type: 'preyArrived'; x: number; y: number }
+  /** Rodung am Lager: ein Baum fällt */
+  | { type: 'cleared'; x: number; y: number }
+  /** Lager gegründet */
+  | { type: 'camp'; x: number; y: number };
 
 export interface Described {
   notices: Notice[];
@@ -43,6 +53,7 @@ export interface Described {
  * @param herdAt Position der Herde nach dem Schritt (für Effekte an der Herde)
  * @param packsAt Positionen der Rudel vor dem Schritt (Id → Feld), um reißende Rudel zu zeigen
  * @param grown Felder, deren Futter im Schritt gewachsen ist (für den Regen-Effekt)
+ * @param preyAt Positionen der Wildbestände vor dem Schritt (Id → Feld), für Jagd-Effekte
  */
 export function describeEvents(
   data: HerdeData,
@@ -52,6 +63,7 @@ export function describeEvents(
   herdAt: Pos,
   packsAt: ReadonlyMap<number, Pos> = new Map(),
   grown: readonly Pos[] = [],
+  preyAt: ReadonlyMap<number, Pos> = new Map(),
 ): Described {
   const notices: Notice[] = [];
   const fx: Fx[] = [];
@@ -76,7 +88,8 @@ export function describeEvents(
         say(t.evCardsDrawn(e.cards.map((id) => cardName(data, locale, id)).join(', ')), 'info', true, true);
         break;
       case 'cellChanged':
-        fx.push({ type: 'change', x: e.x, y: e.y, to: e.to });
+        // Rodung hat einen eigenen Effekt (fieldCleared)
+        if (e.cause !== 'clearing') fx.push({ type: 'change', x: e.x, y: e.y, to: e.to });
         if (e.cause === 'succession') {
           const key = `${e.from}>${e.to}`;
           const entry = succession.get(key) ?? { from: e.from, to: e.to, n: 0 };
@@ -153,11 +166,53 @@ export function describeEvents(
         break;
       case 'iceAgeEnded':
         say(t.evIceEnded(e.survivors), 'good');
+        // Prüfung unterwegs: Geht die Partie weiter, sagt das eine eigene Meldung.
+        if (!events.some((x) => x.type === 'gameWon' || x.type === 'gameLost')) say(t.evIceSurvived(e.count), 'info');
         break;
       case 'gameWon':
         break; // iceAgeEnded erzählt es schon
       case 'gameLost':
-        say(t.evLost, 'bad');
+        say(e.cause === 'lastIce' ? t.evLostLastIce : t.evLost, 'bad');
+        break;
+      // Wild und Lager (H3b): vorläufige, schlichte Meldungen; die eigentliche Oberfläche folgt.
+      case 'preyGrew':
+        say(t.evPreyGrew, 'info', false);
+        break;
+      case 'preyFounded':
+        say(t.evPreyFounded, 'info', false);
+        break;
+      case 'preyMoved':
+        break;
+      case 'preyStarved':
+        say(t.evPreyStarved(e.size <= 0), 'info', false);
+        break;
+      case 'preyGone':
+        say(t.evPreyGone, 'info', false);
+        break;
+      case 'preyImmigrated':
+        say(t.evPreyImmigrated, 'good');
+        fx.push({ type: 'preyArrived', x: e.x, y: e.y });
+        break;
+      case 'preyHunted': {
+        // Jagd im Feuer ist selten und gewollt: auch als Toast
+        say(t.evPreyHunted(e.killed, e.fire), 'good', e.fire);
+        const at = preyAt.get(e.prey);
+        if (at) fx.push({ type: 'preyHunted', ...at, fire: e.fire, from: herdAt });
+        break;
+      }
+      case 'packAtePrey': {
+        say(t.evPackAtePrey, 'info', false);
+        const at = preyAt.get(e.prey);
+        if (at) fx.push({ type: 'packAtePrey', ...at });
+        break;
+      }
+      case 'campFounded':
+        say(t.evCampFounded, 'good');
+        fx.push({ type: 'camp', x: e.x, y: e.y });
+        break;
+      case 'fieldCleared':
+        say(t.evFieldCleared(land(e.from), land(e.to)), 'info');
+        fx.push({ type: 'cleared', x: e.x, y: e.y });
         break;
       // Entwicklung: Angebot (Hinweis an der Herde, Auswahl im Spiel), Wahl mit Wirkung, Reife, Sprung mit Effekt.
       case 'traitOffered':

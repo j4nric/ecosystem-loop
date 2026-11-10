@@ -1,10 +1,12 @@
 import {
+  campPreview,
   newGame,
   STATE_VERSION,
   step,
   validateState,
   view,
   type Action,
+  type CampPreviewView,
   type HerdeData,
   type HerdeState,
   type HerdeView,
@@ -121,7 +123,17 @@ export class HerdeClient implements GameClient {
     const grown = this.state.cells.flatMap((c, i) =>
       c.food > (before.cells[i]?.food ?? 0) ? [{ x: i % width, y: Math.floor(i / width) }] : [],
     );
-    const { notices, fx } = describeEvents(this.data, this.locale, this.t, result.events, herdAt, packsAt, grown);
+    const preyAt = new Map<number, Pos>(before.prey.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const { notices, fx } = describeEvents(
+      this.data,
+      this.locale,
+      this.t,
+      result.events,
+      herdAt,
+      packsAt,
+      grown,
+      preyAt,
+    );
     const entries = notices.map((n) => ({ month: before.month + (n.next ? 1 : 0), text: n.text, tone: n.tone }));
     this.log = [...entries.reverse(), ...this.log].slice(0, LOG_MAX);
     this.persist();
@@ -132,6 +144,10 @@ export class HerdeClient implements GameClient {
 
   preview(action: Action): PlayPreview | null {
     return previewPlay(this.data, this.state, action);
+  }
+
+  campPreview(pos: Pos): CampPreviewView | null {
+    return campPreview(this.data, this.state, pos);
   }
 
   newGame(): void {

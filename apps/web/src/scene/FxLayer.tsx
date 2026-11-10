@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import {
   Color,
   DoubleSide,
+  type Group,
   Matrix4,
   Quaternion,
   Vector3,
@@ -15,7 +16,7 @@ import { GEO } from './geometries.ts';
 import { cellCenter, jitter, type Grid } from './islandModel.ts';
 import { COLORS } from './palette.ts';
 
-const RINGS = 10;
+const RINGS = 16;
 const FLAMES = 48;
 const STREAKS = 48;
 const RING_SECONDS = 0.9;
@@ -23,6 +24,9 @@ const FIRE_SECONDS = 1.6;
 const RAIN_SECONDS = 1.3;
 /** Sprung zur nächsten Stufe: goldene Lichtsäule über der Herde */
 const BEAM_SECONDS = 2.2;
+/** Rodung: ein Baum kippt um und versinkt */
+const TREES = 2;
+const TREE_SECONDS = 1.5;
 /** Reduzierte Bewegung: statt Flammen und Regen ein kurzes, ruhiges Einfärben der Felder */
 const TINTS = 64;
 const TINT_SECONDS = 1.4;
@@ -52,6 +56,15 @@ interface Tint {
   y: number;
   z: number;
   color: string;
+}
+
+interface Felled {
+  x: number;
+  y: number;
+  z: number;
+  /** Fallrichtung (Drehung um y) */
+  dir: number;
+  start: number | null;
 }
 
 const m = new Matrix4();
@@ -88,6 +101,8 @@ export function FxLayer({
   const tintMesh = useRef<InstancedMesh>(null);
   const beamMesh = useRef<Mesh>(null);
   const beam = useRef<{ x: number; y: number; z: number; start: number | null } | null>(null);
+  const felled = useRef<Felled[]>([]);
+  const treeMeshes = useRef<(Group | null)[]>([]);
   const geo = useRef({ grid, topY, reducedMotion });
   useEffect(() => {
     geo.current = { grid, topY, reducedMotion };
@@ -158,6 +173,42 @@ export function FxLayer({
               if (calm) tint(fx.cells, COLORS.grown);
               else rainStart.current = null;
               break;
+            case 'preyHunted':
+              ring(fx.x, fx.y, COLORS.preyHunt, 1.6);
+              ring(fx.from.x, fx.from.y, COLORS.preyHunt, 0.9, 0.15);
+              if (fx.fire) {
+                ring(fx.x, fx.y, COLORS.preyFire, 2.4, 0.2);
+                if (calm) tint([fx], COLORS.preyFire);
+                else {
+                  const [px, py, pz] = at(fx.x, fx.y);
+                  for (let k = 0; k < 3; k++)
+                    flames.current.push({ x: px, y: py, z: pz, seed: 97 + k, delay: k * 0.1, start: null });
+                  flames.current = flames.current.slice(-FLAMES);
+                }
+              }
+              break;
+            case 'packAtePrey':
+              ring(fx.x, fx.y, COLORS.packPrey, 1.3, 0.1);
+              break;
+            case 'preyArrived':
+              ring(fx.x, fx.y, COLORS.preyNew, 1.8);
+              ring(fx.x, fx.y, COLORS.preyNew, 1.2, 0.3);
+              break;
+            case 'camp':
+              for (let k = 0; k < 3; k++) ring(fx.x, fx.y, COLORS.camp, 2.2, k * 0.3);
+              break;
+            case 'cleared': {
+              ring(fx.x, fx.y, COLORS.cleared, 1.6, 0.6);
+              if (calm) {
+                tint([fx], COLORS.cleared);
+                break;
+              }
+              const [px, py, pz] = at(fx.x, fx.y);
+              felled.current = [...felled.current, { x: px, y: py, z: pz, dir: fx.x + fx.y, start: null }].slice(
+                -TREES,
+              );
+              break;
+            }
           }
         }
         invalidate();
@@ -251,6 +302,22 @@ export function FxLayer({
       }
     }
 
+    // Rodung: Baum kippt (Drehung um die Fallachse), sinkt danach ein und verschwindet
+    felled.current = felled.current.filter((f) => f.start === null || now - f.start < TREE_SECONDS);
+    for (let i = 0; i < TREES; i++) {
+      const g = treeMeshes.current[i];
+      if (!g) continue;
+      const f = felled.current[i];
+      g.visible = f !== undefined;
+      if (!f) continue;
+      if (f.start === null) f.start = now;
+      const k = Math.min(1, (now - f.start) / TREE_SECONDS);
+      const fall = Math.min(1, k / 0.55);
+      g.position.set(f.x, f.y - Math.max(0, k - 0.6) * 0.5, f.z);
+      g.rotation.set(0, f.dir, (fall * fall * Math.PI) / 2);
+      g.scale.setScalar(1 - Math.max(0, k - 0.7) / 0.3);
+    }
+
     // Einfärben (reduzierte Bewegung): einmal einblenden und wieder aus, ohne Bewegung
     const tm = tintMesh.current;
     if (tm && tintStart.current !== undefined) {
@@ -280,7 +347,8 @@ export function FxLayer({
       (fm?.count ?? 0) > 0 ||
       rainStart.current !== undefined ||
       tintStart.current !== undefined ||
-      beam.current !== null;
+      beam.current !== null ||
+      felled.current.length > 0;
     if (active) invalidate();
   });
 
@@ -298,6 +366,19 @@ export function FxLayer({
         >
           <meshBasicMaterial transparent depthWrite={false} fog={false} />
         </mesh>
+      ))}
+      {Array.from({ length: TREES }, (_, i) => (
+        <group
+          key={`tree-${i}`}
+          ref={(g) => {
+            treeMeshes.current[i] = g;
+          }}
+          visible={false}
+        >
+          <mesh geometry={GEO.fallingTree} raycast={() => null}>
+            <meshLambertMaterial flatShading color={COLORS.crown} />
+          </mesh>
+        </group>
       ))}
       <mesh ref={beamMesh} geometry={GEO.beam} visible={false} renderOrder={4} raycast={() => null}>
         <meshBasicMaterial

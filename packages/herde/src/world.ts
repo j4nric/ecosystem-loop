@@ -9,7 +9,7 @@ import {
   type Stage,
   type StageStat,
 } from './schema.ts';
-import type { CellState, Emit, HerdeState, Pos } from './state.ts';
+import type { CellState, ChangeCause, Emit, HerdeState, Pos, PreyState } from './state.ts';
 
 /** Regelverstoß einer Aktion (ungültiger Zug, Partie vorbei …). */
 export class RuleError extends Error {
@@ -148,6 +148,48 @@ export function reachable(data: HerdeData, s: HerdeState, from: Pos, steps: numb
   return around(island, from.x, from.y, steps).filter((p) => seen.has(key(p)));
 }
 
+/** Stufen auf dem festen Weg ab der Startstufe (params.herd.stage), in dieser Reihenfolge. */
+export function stagePath(data: HerdeData): string[] {
+  const path: string[] = [];
+  let id: string | undefined = data.params.herd.stage;
+  while (id !== undefined && !path.includes(id)) {
+    path.push(id);
+    id = data.stages.get(id)?.next;
+  }
+  return path;
+}
+
+/** Hat die Herde die Stufe `id` (auf dem festen Weg) schon erreicht? */
+export function stageReached(data: HerdeData, s: HerdeState, id: string): boolean {
+  const path = stagePath(data);
+  const want = path.indexOf(id);
+  return want >= 0 && path.indexOf(s.herd.stage) >= want;
+}
+
+/** Landschaften, die durch Feuer entstehen (Brandflächen: `burnsTo` einer Landschaft). */
+export function burntLands(data: HerdeData): Set<string> {
+  const out = new Set<string>();
+  for (const l of data.landscapes.values()) if (l.burnsTo) out.add(l.burnsTo);
+  return out;
+}
+
+/**
+ * Liegt im Umkreis r eine frische Brandfläche (Alter ≤ fire.fresh)? Ein Waldbrand im Monat hat Alter 0, ein Blitz
+ * vor dem Monat nach der Sukzession Alter 1 – mit fresh: 1 zählt also ein Feuer in diesem oder im letzten Monat.
+ */
+export function freshBurnNear(data: HerdeData, s: HerdeState, p: Pos, r: number): boolean {
+  const burnt = burntLands(data);
+  return around(islandOf(data, s), p.x, p.y, r).some((q) => {
+    const c = cellAt(data, s, q.x, q.y);
+    return burnt.has(c.land) && c.age <= data.params.fire.fresh;
+  });
+}
+
+/** Wildbestände im Umkreis r (Chebyshev) eines Felds, in der Reihenfolge des Zustands. */
+export function preyNear(s: HerdeState, p: Pos, r: number): PreyState[] {
+  return s.prey.filter((q) => cheb(q, p) <= r);
+}
+
 /** Summe der Rudelstärken im Umkreis 1. */
 export function packsNear(s: HerdeState, x: number, y: number): number {
   return s.packs.filter((p) => cheb(p, { x, y }) <= 1).reduce((a, p) => a + p.size, 0);
@@ -158,7 +200,7 @@ export interface TransformOptions {
   food?: number;
   /** Monate fruchtbar; ohne Angabe bleibt der bisherige Wert */
   fertile?: number;
-  cause: 'succession' | 'card' | 'fire';
+  cause: ChangeCause;
 }
 
 /**
@@ -182,5 +224,27 @@ export function transform(data: HerdeData, s: HerdeState, pos: Pos, to: string, 
     s.packs = s.packs.filter((p) => !samePos(p, pos));
     for (const p of gone)
       emit({ type: 'packGone', pack: p.id, x: p.x, y: p.y, cause: opts.cause === 'fire' ? 'fire' : 'driven' });
+  }
+  if (!landOf(data, cell).walk) {
+    // AUSLEGUNG: Wild auf einem Feld, das unbegehbar wird (z. B. Fels), weicht auf das erste freie Nachbarfeld seines
+    // Lebensraums aus (Zeile für Zeile); gibt es keins, verschwindet es. Auf begehbaren Feldern außerhalb des
+    // Lebensraums (z. B. Brandfläche) bleibt es und zieht weiter, sobald es hungrig ist.
+    const island = islandOf(data, s);
+    for (const q of s.prey.filter((x) => samePos(x, pos))) {
+      const to = around(island, pos.x, pos.y).find(
+        (n) =>
+          !samePos(n, pos) &&
+          data.params.prey.lands.includes(cellAt(data, s, n.x, n.y).land) &&
+          !s.prey.some((o) => samePos(o, n)),
+      );
+      if (to) {
+        q.x = to.x;
+        q.y = to.y;
+        emit({ type: 'preyMoved', prey: q.id, from: { ...pos }, to: { ...to } });
+      } else {
+        s.prey = s.prey.filter((o) => o !== q);
+        emit({ type: 'preyGone', prey: q.id, x: pos.x, y: pos.y });
+      }
+    }
   }
 }

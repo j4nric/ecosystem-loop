@@ -124,9 +124,9 @@ describe('describeEvents', () => {
       { type: 'cardsDrawn', cards: ['seed', 'rain'] },
       { type: 'seasonBegan', season: 'summer', month: 3, year: 1 },
       { type: 'iceAgeBegan', months: 6 },
-      { type: 'iceAgeEnded', survivors: 7 },
+      { type: 'iceAgeEnded', survivors: 7, count: 1 },
       { type: 'gameWon', survivors: 7 },
-      { type: 'gameLost', month: 40 },
+      { type: 'gameLost', month: 40, cause: 'extinct' },
     ]);
     expect(notices.map((n) => n.text)).toEqual([
       '🌱 Wiese säen gelegt.',
@@ -158,7 +158,7 @@ describe('describeEvents', () => {
       'Die Herde sucht Wasser ↘',
       'Die Herde grast hier weiter (bleibt)',
       'Zu wenig Futter (5 von 10), der Vorrat schwindet.',
-      'Ein hungriges Rudel zieht durchs Gehölz zur Herde.',
+      'Ein hungriges Rudel zieht durchs Gehölz – zum Wild oder zur Herde.',
     ]);
     expect(notices.every((n) => !n.toast)).toBe(true);
   });
@@ -258,6 +258,8 @@ describe('Regelzahlen in Texten kommen aus den Daten', () => {
       move: 1,
       water: { names: ['Sommer'], all: false },
       shelter: { names: ['Winter'], all: false },
+      iceAges: p.ice.ages ?? null,
+      wildAfter: p.ice.wildAfter,
     });
   });
 

@@ -3,9 +3,10 @@ import type { CellView, HerdeData, HerdeView } from '@being-god/herde';
 import type { LogEntry, PlayPreview } from '../client/index.ts';
 import { locale, t } from '../i18n/index.ts';
 import { forecastLines, intentText, landName, textOf } from '../logic/format.ts';
+import { preyFieldLines } from '../logic/hunt.ts';
 import { useEscape } from './useEscape.ts';
 
-function Sheet({
+export function Sheet({
   title,
   icon,
   onClose,
@@ -114,7 +115,7 @@ function PreviewLines({ data, preview }: { data: HerdeData; preview: PlayPreview
   );
 }
 
-/** Feld-Info: Landschaft, Futter, Prognose, Herde und Rudel auf dem Feld. */
+/** Feld-Info: Landschaft, Futter, Prognose, Herde, Lager, Wild und Rudel auf dem Feld. */
 export function FieldSheet({
   data,
   view,
@@ -143,6 +144,11 @@ export function FieldSheet({
         <p key={line}>{line}</p>
       ))}
       {cell.herd && <p className="is-herd">{t.infoHerd(view.herd.size)}</p>}
+      {preyFieldLines(t, data, view, cell).map((line) => (
+        <p key={line} className="is-prey">
+          {line}
+        </p>
+      ))}
       {pack && <p className="is-bad">{t.infoPack(pack.size, pack.hungry)}</p>}
     </Sheet>
   );

@@ -4,7 +4,7 @@
  */
 
 /** Version des Zustandsformats; bei inkompatiblen Änderungen erhöhen (validateState lehnt alte Stände ab). */
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 
 export interface Pos {
   x: number;
@@ -61,7 +61,22 @@ export interface PackState {
   hungry: number;
 }
 
+/** Ein Wildbestand (Beutetiere, Konzept 9.2): ohne Kampf, wächst bei Futter, zieht, verhungert. */
+export interface PreyState {
+  id: number;
+  x: number;
+  y: number;
+  /** Größe des Bestands (1 … prey.maxSize) */
+  size: number;
+  /** satte Monate in Folge (Wachstum bei prey.fedToGrow) */
+  fed: number;
+  /** hungrige Monate (Schrumpfen bei prey.starveAfter) */
+  hungry: number;
+}
+
 export type Outcome = 'won' | 'lost';
+/** extinct: die Herde ist ausgestorben · lastIce: nach der letzten Eiszeit nicht auf der letzten Stufe mit Lager */
+export type LostCause = 'extinct' | 'lastIce';
 
 export interface HerdeState {
   version: number;
@@ -80,19 +95,29 @@ export interface HerdeState {
   herd: HerdState;
   packs: PackState[];
   nextPackId: number;
+  /** Wildbestände */
+  prey: PreyState[];
+  nextPreyId: number;
+  /** Lager der Herde (Stufe mit `camp`, nach `settle`); die Herde steht darauf und zieht nicht mehr */
+  camp: Pos | null;
+  /** überstandene Eiszeiten */
+  iceAges: number;
   /** Karten-Ids auf der Hand */
   hand: string[];
 }
 
 /** Grund der Herdenwahl (Absicht), Reihenfolge der Prüfung wie im Prototyp. */
-export type ReasonId = 'avoidWolves' | 'seekWater' | 'seekShelter' | 'freshGrass' | 'stay';
+export type ReasonId = 'avoidWolves' | 'seekWater' | 'seekShelter' | 'freshGrass' | 'stay' | 'settled';
 
 export type PackGoneCause = 'starved' | 'fire' | 'driven';
+
+/** Ursache eines Landschaftswandels */
+export type ChangeCause = 'succession' | 'card' | 'fire' | 'clearing';
 
 export type HerdeEvent =
   | { type: 'cardPlayed'; card: string; hand: number; x?: number; y?: number; wild: number }
   | { type: 'cardsDrawn'; cards: string[] }
-  | { type: 'cellChanged'; x: number; y: number; from: string; to: string; cause: 'succession' | 'card' | 'fire' }
+  | { type: 'cellChanged'; x: number; y: number; from: string; to: string; cause: ChangeCause }
   /** Futter auf vielen Feldern auf einmal (z. B. Regen) */
   | { type: 'grassGrew'; card: string; amount: number; cells: number }
   /** Feuer: Blitz (Karte) oder Waldbrand (von selbst); `cells` in Reihenfolge des Übergreifens */
@@ -119,9 +144,27 @@ export type HerdeEvent =
   /** Die Herde ist reif für die nächste Stufe (nach einer Wahl) */
   | { type: 'matured'; stage: string; next: string }
   | { type: 'herdEvolved'; from: string; to: string }
-  | { type: 'iceAgeEnded'; survivors: number }
+  /** Eiszeit überstanden; `count`: so viele Eiszeiten hat die Herde jetzt überstanden */
+  | { type: 'iceAgeEnded'; survivors: number; count: number }
   | { type: 'gameWon'; survivors: number }
-  | { type: 'gameLost'; month: number };
+  /** extinct: die Herde ist ausgestorben · lastIce: die letzte Eiszeit (ice.ages) ohne Lager als Mensch überstanden */
+  | { type: 'gameLost'; month: number; cause: LostCause }
+  // Wild
+  | { type: 'preyGrew'; prey: number; size: number }
+  | { type: 'preyFounded'; prey: number; parent: number; x: number; y: number }
+  | { type: 'preyMoved'; prey: number; from: Pos; to: Pos }
+  /** hungrig geschrumpft; `size` danach (0 = verschwunden) */
+  | { type: 'preyStarved'; prey: number; size: number }
+  /** Feld unbegehbar geworden, kein Ausweichen möglich */
+  | { type: 'preyGone'; prey: number; x: number; y: number }
+  | { type: 'preyImmigrated'; prey: number; x: number; y: number; size: number }
+  /** die Herde hat gejagt; `size` danach (0 = verschwunden); `fire`: Feuer hat das Wild aufgetrieben */
+  | { type: 'preyHunted'; prey: number; killed: number; size: number; fire: boolean }
+  /** ein Rudel hat Wild gerissen (statt der Herde); `size` danach */
+  | { type: 'packAtePrey'; pack: number; prey: number; killed: number; size: number }
+  // Lager
+  | { type: 'campFounded'; x: number; y: number }
+  | { type: 'fieldCleared'; x: number; y: number; from: string; to: string };
 
 export type EventType = HerdeEvent['type'];
 export type Emit = (e: HerdeEvent) => void;

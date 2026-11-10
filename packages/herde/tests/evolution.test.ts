@@ -167,7 +167,9 @@ describe('Angebot und Wahl', () => {
 
   it('ein liegen gebliebenes Angebot rotiert: Reife-Merkmal bleibt, die übrigen Plätze wandern weiter', () => {
     const s = beforeSeason();
-    for (const id of data.experiences.keys()) s.herd.experience[id] = 99;
+    // Genau die Schwellen der Merkmale der Stufen 1–3 (H3a) – die Merkmale der Stufen 4–5 bleiben außen vor.
+    const h3a = ['thick_fur', 'vigilant', 'frugal', 'fire_wary', 'forest_wise', 'far_sight', 'endurance'];
+    for (const id of h3a) s.herd.experience[data.traits.get(id)!.from] = data.traits.get(id)!.at;
     // verfügbar außer Waldkundig: thick_fur, vigilant, frugal, fire_wary, far_sight, endurance
     let st = nextSeason(s).state;
     const offers = [st.herd.offer];
@@ -424,7 +426,8 @@ describe('Reife und Sprung', () => {
 
   it('nicht mehr erfüllbare Bedingungen gelten als erfüllt (die Herde sitzt nicht fest)', () => {
     // Weitblick und Ausdauer schon auf Stufe 1 gewählt, nur noch zwei Merkmale übrig.
-    const earlier = ['forest_wise', 'thick_fur', 'far_sight', 'endurance', 'frugal'];
+    const earlier = ['forest_wise', 'thick_fur', 'far_sight', 'endurance', 'frugal', 'tracker', 'fire_keeper'];
+    earlier.push('weathered', 'seasoned_hunter');
     const s = inStage('gatherer', [], blank(), earlier);
     expect(view(data, s).evolution.missing).toEqual({ required: 2, traits: 2, oneOf: null });
     const done = inStage('gatherer', ['vigilant', 'fire_wary'], blank(), earlier);
@@ -445,8 +448,8 @@ describe('Reife und Sprung', () => {
     expect(act(used, { type: 'evolve' }).state.herd.offer).toEqual([]);
   });
 
-  it('letzte Stufe (H3a: Wanderer): keine Reife, keine Vorschau', () => {
-    const s = inStage('wanderer', ['forest_wise', 'thick_fur', 'endurance']);
+  it('letzte Stufe (H3b: Mensch): keine Reife, keine Vorschau', () => {
+    const s = inStage('human', ['forest_wise', 'thick_fur', 'endurance']);
     expect(view(data, s).evolution).toMatchObject({ mature: false, missing: null, next: null });
     expect(() => act(s, { type: 'evolve' })).toThrow(RuleError);
   });
@@ -614,13 +617,13 @@ describe('validateState: Entwicklung', () => {
 
   it('Version 1 (vor H3a) wird abgelehnt', () => {
     const s = blank() as unknown as Record<string, unknown>;
-    expect(validateState(data, { ...s, version: 1 })).toEqual({ ok: false, reason: 'Version 1 statt 3' });
+    expect(validateState(data, { ...s, version: 1 })).toEqual({ ok: false, reason: 'Version 1 statt 4' });
   });
 
   it('Version 2 (vor der Reife je Stufe) wird abgelehnt', () => {
     const s = blank();
     const { traitsAtStage: _a, offerTurn: _b, ...herd } = s.herd;
-    expect(validateState(data, { ...s, version: 2, herd })).toEqual({ ok: false, reason: 'Version 2 statt 3' });
+    expect(validateState(data, { ...s, version: 2, herd })).toEqual({ ok: false, reason: 'Version 2 statt 4' });
   });
 
   it.each<[string, (s: HerdeState) => void, RegExp]>([
@@ -658,9 +661,9 @@ describe('validateState: Entwicklung', () => {
 });
 
 describe('Zufalls-Bot', () => {
-  it('wählt Merkmale und springt bis zur dritten Stufe', () => {
+  it('wählt Merkmale und springt mindestens bis zur dritten Stufe', () => {
     const r = playRandomGame(data, { seed: 1, check: true });
-    expect(r.stages).toEqual(['herd', 'gatherer', 'wanderer']);
+    expect(r.stages.slice(0, 3)).toEqual(['herd', 'gatherer', 'wanderer']);
     expect(r.state.herd.traits.length).toBeGreaterThanOrEqual(5);
   });
 });

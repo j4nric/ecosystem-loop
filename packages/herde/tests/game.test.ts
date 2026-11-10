@@ -98,7 +98,7 @@ describe('Wildnis und Eiszeit (Konzept 8)', () => {
     expect(advance(played).state.wild).toBe(s.wild + 1.5);
   });
 
-  it('bei 100 beginnt die Eiszeit: 6 Monate Winter, kein Nachwuchs, dann Sieg', () => {
+  it('bei 100 beginnt die Eiszeit: 6 Monate Winter, kein Nachwuchs; überstanden geht die Partie weiter (9.2)', () => {
     let s = shelteredHerd();
     s.wild = 99.5;
     let r = advance(s);
@@ -115,12 +115,13 @@ describe('Wildnis und Eiszeit (Konzept 8)', () => {
       s = r.state;
     }
     expect(months).toEqual(Array(6).fill('winter'));
-    expect(s.over).toBe('won');
-    expect(ofType(r.events, 'iceAgeEnded')).toEqual([{ type: 'iceAgeEnded', survivors: 2 }]);
-    expect(ofType(r.events, 'gameWon')).toEqual([{ type: 'gameWon', survivors: 2 }]);
-    expect(view(data, s)).toMatchObject({ over: 'won', intent: null });
-    expect(legalPlays(data, s)).toEqual([]);
-    expect(() => advance(s)).toThrow(/vorbei/);
+    // Stufe 1 ist nicht die letzte: Die Eiszeit war eine Prüfung unterwegs, die Wildnis fällt zurück.
+    expect(s.over).toBeNull();
+    expect(ofType(r.events, 'iceAgeEnded')).toEqual([{ type: 'iceAgeEnded', survivors: 2, count: 1 }]);
+    expect(ofType(r.events, 'gameWon')).toEqual([]);
+    expect(s).toMatchObject({ ice: 0, iceAges: 1, wild: data.params.ice.wildAfter });
+    expect(view(data, s).iceAges).toEqual({ survived: 1, max: data.params.ice.ages });
+    expect(advance(s).state.ice).toBe(0);
   });
 
   it('in der Eiszeit friert die Herde ohne Schutz, auch im Sommer', () => {
@@ -138,7 +139,7 @@ describe('Wildnis und Eiszeit (Konzept 8)', () => {
     s.herd.fat = 0;
     const r = advance(s);
     expect(r.state.over).toBe('lost');
-    expect(ofType(r.events, 'gameLost')).toEqual([{ type: 'gameLost', month: s.month }]);
+    expect(ofType(r.events, 'gameLost')).toEqual([{ type: 'gameLost', month: s.month, cause: 'extinct' }]);
     expect(ofType(r.events, 'seasonBegan')).toEqual([]);
     expect(() => step(data, r.state, { type: 'play', hand: 0, x: 0, y: 0 })).toThrow(RuleError);
   });
@@ -234,7 +235,7 @@ describe('validateState', () => {
     ['unbekannte Insel', (s) => (s.island = 'atlantis'), /Insel/],
     ['Felderzahl', (s) => s.cells.pop(), /62 Felder/],
     ['Landschaft', (s) => (s.cells[3]!.land = 'lava'), /Landschaft lava/],
-    ['Stufe', (s) => (s.herd.stage = 'human'), /Stufe human/],
+    ['Stufe', (s) => (s.herd.stage = 'robot'), /Stufe robot/],
     ['Herde außerhalb', (s) => (s.herd.x = 7), /außerhalb/],
     ['Herde auf Fels', (s) => (s.cells[5 * 7 + 1]!.land = 'rock'), /unbegehbar/],
     ['Vorrat', (s) => (s.herd.fat = 99), /Vorrat/],

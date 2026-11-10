@@ -57,7 +57,7 @@ describe('Zählen aus der View', () => {
   it('Bedürfnisse der aktuellen Stufe mit Feldern auf der Insel', () => {
     const v = viewOf(constructed({ '1,1': 'bush', '2,2': 'river' }));
     const rows = needRows(de, data, 'de', v, v.evolution.stage);
-    expect(rows.map((r) => r.kind)).toEqual(['food', 'water', 'shelter', 'move']);
+    expect(rows.map((r) => r.kind)).toEqual(['food', 'water', 'shelter', 'wolves', 'move']);
     const food = rows.find((r) => r.kind === 'food')!;
     const steppe = v.cells.filter((c) => c.land === 'steppe').length;
     expect(food.count).toBe(steppe + 1);
@@ -195,7 +195,7 @@ describe('Merkmale, Erfahrung und Reife', () => {
     const last = view(
       data,
       constructed({}, (st) => {
-        st.herd.stage = 'wanderer';
+        st.herd.stage = 'human';
         st.herd.traits = ['thick_fur'];
       }),
     ).evolution;
@@ -206,7 +206,8 @@ describe('Merkmale, Erfahrung und Reife', () => {
   it('Merkmal gewählt: Erfahrung ohne weiteres Merkmal zeigt „alles erreicht“', () => {
     const s = constructed({}, (st) => {
       st.herd.experience = { ...st.herd.experience, sheltered: 5 };
-      st.herd.traits = ['thick_fur'];
+      // Kälte-Erfahrung trägt zwei Merkmale (Dichtes Fell, Wetterfest); beide gewählt
+      st.herd.traits = ['thick_fur', 'weathered'];
     });
     const row = experienceRows(data, 'de', view(data, s).evolution).find((r) => r.id === 'sheltered')!;
     expect(row).toMatchObject({ at: null, trait: null, share: 1, status: null });
@@ -241,7 +242,7 @@ describe('Merkmale, Erfahrung und Reife', () => {
     const last = view(
       data,
       constructed({}, (s) => {
-        s.herd.stage = 'wanderer';
+        s.herd.stage = 'human';
       }),
     ).evolution;
     expect(missingText(de, data, 'de', last)).toBeNull();
@@ -396,7 +397,9 @@ describe('Texte hängen von der Stufe ab', () => {
 
   it('jede Stufe hat ein eigenes Aussehen; unbekannte Stufen einen Ersatz', () => {
     for (const id of data.stages.keys()) expect(STAGE_LOOK[id]).toBeDefined();
-    expect(new Set([...data.stages.keys()].map((id) => stageLook(id).figure)).size).toBe(data.stages.size);
+    // Figur und Farbe zusammen unterscheiden die Stufen (Jäger und Mensch haben vorläufig noch keine eigene Figur).
+    const looks = [...data.stages.keys()].map((id) => `${stageLook(id).figure}/${stageLook(id).body}`);
+    expect(new Set(looks).size).toBe(data.stages.size);
     expect(stageLook('mensch')).toBe(STAGE_FALLBACK);
   });
 });

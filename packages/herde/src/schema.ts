@@ -106,6 +106,21 @@ export const Maturity = z.strictObject({
 });
 export type Maturity = z.infer<typeof Maturity>;
 
+/**
+ * Lager einer Stufe (Konzept 9.2, Stufe 5): Gültig ist ein Feld mit einer Landschaft aus `on`, das die Herde in diesem
+ * Monat erreichen kann und in dessen Umkreis `radius` je eine Landschaft aus jeder Gruppe von `near` liegt. Einmal im Jahr (Monat `clear.month`
+ * im Jahr) rodet die Herde das erste Feld aus `clear.lands` (Reihenfolge der Liste, dann Zeile für Zeile) im Umkreis
+ * `radius` des Lagers zu `clear.to`.
+ */
+export const Camp = z.strictObject({
+  /** Landschaften, auf denen ein Lager stehen darf (z. B. nicht auf dem Fluss) */
+  on: z.array(Id).min(1),
+  radius: z.number().int().positive(),
+  near: z.array(z.array(Id).min(1)).min(1),
+  clear: z.strictObject({ lands: z.array(Id).min(1), to: Id, month: Count }).optional(),
+});
+export type Camp = z.infer<typeof Camp>;
+
 export const Stage = z.strictObject({
   id: Id,
   name: Text,
@@ -133,6 +148,16 @@ export const Stage = z.strictObject({
   fireLoss: Rate,
   /** jedes reißende Rudel reißt so viele Tiere weniger */
   wolfGuard: Count.default(0),
+  /** enemy: Wölfe reißen Tiere der Herde · rival: Wölfe greifen nicht an, jagen aber dasselbe Wild */
+  wolves: z.enum(['enemy', 'rival']).default('enemy'),
+  /** Jagd: Futter je erlegtem Wild-Tier (0 = die Stufe jagt nicht) */
+  preyFood: Count.default(0),
+  /** Jagd: so viele Wild-Tiere erlegt die Herde je Monat höchstens */
+  huntKill: Count.default(0),
+  /** Jagd: so viele Tiere mehr, wenn im Umkreis eine frische Brandfläche liegt (Feuer treibt Wild auf) */
+  fireHunt: Count.default(0),
+  /** Lager (nur Stufen, die sich niederlassen können) */
+  camp: Camp.optional(),
   trail: Count,
   choice: z.strictObject({
     food: Rate,
@@ -162,6 +187,9 @@ export const STAGE_STATS = [
   'coldLoss',
   'fireLoss',
   'wolfGuard',
+  'preyFood',
+  'huntKill',
+  'fireHunt',
   'trail',
   'move',
   'reach',
@@ -183,6 +211,9 @@ export type TraitEffect = z.infer<typeof TraitEffect>;
  * ate       – die Herde steht auf einer der Landschaften `lands` und hat gefressen (+1)
  * on        – die Herde steht auf einer der Landschaften `lands` (+1)
  * moved     – gegangene Felder (+ Zahl der Felder)
+ * prey      – Wild im Umkreis `reach` der Stufe um die Herde (+1)
+ * burnt     – frische Brandfläche (fire.fresh) im Umkreis `reach` und kein Verlust durch Feuer in diesem Monat (+1);
+ *             anders als `fire` zählt hier auch der Blitz (Feuer als Werkzeug)
  */
 export const ExperienceWhen = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('sheltered') }),
@@ -192,6 +223,8 @@ export const ExperienceWhen = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('ate'), lands: z.array(Id).min(1) }),
   z.strictObject({ type: z.literal('on'), lands: z.array(Id).min(1) }),
   z.strictObject({ type: z.literal('moved') }),
+  z.strictObject({ type: z.literal('prey') }),
+  z.strictObject({ type: z.literal('burnt') }),
 ]);
 export type ExperienceWhen = z.infer<typeof ExperienceWhen>;
 
@@ -224,7 +257,11 @@ export const Params = z.strictObject({
     fat: Count,
     birthMonth: Count,
   }),
-  fire: z.strictObject({ spread: Chance }),
+  fire: z.strictObject({
+    spread: Chance,
+    /** eine Brandfläche gilt so viele Monatsschritte nach dem Brand als frisch (Alter ≤ fresh) */
+    fresh: Count,
+  }),
   wolves: z.strictObject({
     hungryAfter: z.number().int().positive(),
     fedToGrow: z.number().int().positive(),
@@ -234,9 +271,41 @@ export const Params = z.strictObject({
     starveReset: z.number().int().nonnegative(),
     spawnChance: Chance,
     spawnMinWood: Count,
+    /** ein Rudel reißt je Monat so viele Wild-Tiere … */
+    preyKill: z.number().int().positive(),
+    /** … und wird davon um so viel satter (fed) */
+    preyFed: z.number().int().positive(),
+  }),
+  /** Wild (Beutetiere, Konzept 9.2) */
+  prey: z.strictObject({
+    /** Wild wandert erst ein, sobald die Herde diese Stufe (auf dem festen Weg) erreicht hat */
+    from: Id,
+    /** Lebensraum: hier steht Wild */
+    lands: z.array(Id).min(1),
+    /** Landschaften, deren Futter Wild frisst (eigenes Feld und Nachbarfelder) */
+    eats: z.array(Id).min(1),
+    /** Futter je Tier und Monat */
+    food: z.number().int().positive(),
+    maxSize: z.number().int().positive(),
+    /** satte Monate, bis der Bestand wächst bzw. (in voller Größe) einen neuen gründet */
+    fedToGrow: z.number().int().positive(),
+    /** hungrige Monate, bis der Bestand um 1 schrumpft */
+    starveAfter: z.number().int().positive(),
+    spawnChance: Chance,
+    /** dafür nötige Zahl an Feldern im Lebensraum */
+    spawnMinLand: Count,
+    /** Größe eines eingewanderten Bestands */
+    spawnSize: z.number().int().positive(),
   }),
   wild: z.strictObject({ start: Rate, perMonth: Rate, max: z.number().positive() }),
-  ice: z.strictObject({ months: z.number().int().positive(), season: Id }),
+  ice: z.strictObject({
+    months: z.number().int().positive(),
+    season: Id,
+    /** nach einer überstandenen Eiszeit (ohne Sieg) fällt die Wildnis auf diesen Wert */
+    wildAfter: Rate,
+    /** die so vielte Eiszeit ist die letzte Prüfung (ohne Angabe: unbegrenzt) */
+    ages: z.number().int().positive().optional(),
+  }),
   cards: z.strictObject({
     startHand: Count,
     drawPerSeason: Count,

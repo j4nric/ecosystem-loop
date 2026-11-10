@@ -39,6 +39,10 @@ const StateSchema = z.strictObject({
   }),
   packs: z.array(z.strictObject({ id: Count, x: Count, y: Count, size: Int.positive(), fed: Count, hungry: Count })),
   nextPackId: Count,
+  prey: z.array(z.strictObject({ id: Count, x: Count, y: Count, size: Int.positive(), fed: Count, hungry: Count })),
+  nextPreyId: Count,
+  camp: Pos.nullable(),
+  iceAges: Count,
   hand: z.array(z.string()),
 });
 
@@ -88,6 +92,31 @@ function problem(data: HerdeData, s: HerdeState): string | null {
     if (p.id >= s.nextPackId) return `Rudel-Id ${p.id} ≥ nextPackId ${s.nextPackId}`;
     ids.add(p.id);
   }
+  const preyIds = new Set<number>();
+  const preySpots = new Set<string>();
+  for (const q of s.prey) {
+    if (!inside(q)) return `Wild ${q.id} außerhalb der Insel`;
+    if (!landAt(q).walk) return `Wild ${q.id} auf unbegehbarem Feld`;
+    if (preySpots.has(`${q.x},${q.y}`)) return `zwei Wildbestände auf Feld (${q.x},${q.y})`;
+    preySpots.add(`${q.x},${q.y}`);
+    if (q.size > data.params.prey.maxSize) return `Wild ${q.id} größer als ${data.params.prey.maxSize}`;
+    if (preyIds.has(q.id)) return `Wild-Id ${q.id} doppelt`;
+    if (q.id >= s.nextPreyId) return `Wild-Id ${q.id} ≥ nextPreyId ${s.nextPreyId}`;
+    preyIds.add(q.id);
+  }
+  if (s.camp) {
+    if (!stage.camp) return `Lager auf Stufe ${s.herd.stage} ohne Lager`;
+    if (!inside(s.camp)) return 'Lager außerhalb der Insel';
+    if (s.camp.x !== s.herd.x || s.camp.y !== s.herd.y) return 'Herde nicht am Lager';
+  }
+  const ages = data.params.ice.ages;
+  if (ages !== undefined && s.iceAges > ages) return `${s.iceAges} Eiszeiten überstanden (max. ${ages})`;
+  // Ausgang und Herde passen zusammen (darauf beruht `overCause` in der View)
+  if (s.over === null && s.herd.size <= 0) return 'Herde ausgestorben, Partie läuft';
+  if (s.over === null && ages !== undefined && s.iceAges >= ages) return 'letzte Eiszeit überstanden, Partie läuft';
+  if (s.over === 'won' && s.herd.size <= 0) return 'gewonnen ohne Herde';
+  if (s.over === 'lost' && s.herd.size > 0 && (ages === undefined || s.iceAges < ages))
+    return 'verloren mit lebender Herde vor der letzten Eiszeit';
   const card = s.hand.find((id) => !data.cards.has(id));
   if (card) return `unbekannte Karte ${card}`;
   if (s.hand.length > data.params.cards.handMax)

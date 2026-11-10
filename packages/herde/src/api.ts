@@ -3,9 +3,9 @@
  * Texte liefert die Engine nicht; Namen von Landschaften, Karten, Jahreszeiten und Monaten stehen in den Daten
  * (`data.landscapes.get(id).name.de` …), Meldungen zu Ereignissen und Gründen setzt die Oberfläche zusammen.
  */
-import type { HerdeEvent, HerdeState, Outcome, Pos, ReasonId } from './state.ts';
+import type { HerdeEvent, HerdeState, LostCause, Outcome, Pos, ReasonId } from './state.ts';
 
-export type { HerdeEvent, HerdeState, Outcome, Pos, ReasonId };
+export type { HerdeEvent, HerdeState, LostCause, Outcome, Pos, ReasonId };
 
 export type Action =
   /** Karte an Handposition `hand` ausspielen; globale Karten ohne x/y */
@@ -15,7 +15,9 @@ export type Action =
   /** ein angebotenes Merkmal wählen (Id aus traits.yaml) */
   | { type: 'pickTrait'; trait: string }
   /** zur nächsten Stufe springen (nur wenn reif, unumkehrbar) */
-  | { type: 'evolve' };
+  | { type: 'evolve' }
+  /** Lager gründen (nur Stufe mit Lager, gültiger Platz in Zugweite, nicht in der Eiszeit; danach sesshaft) */
+  | { type: 'settle'; x: number; y: number };
 
 export interface NewGameOptions {
   seed: number | string;
@@ -58,6 +60,12 @@ export interface CellView extends Pos {
   blocked?: boolean;
   /** Id des Rudels auf dem Feld oder null */
   pack: number | null;
+  /** Id des Wildbestands auf dem Feld oder null (`view` setzt es immer; optional wie `blocked`) */
+  prey?: number | null;
+  /** hier steht das Lager */
+  camp?: boolean;
+  /** gültiger Lagerplatz, den die Herde jetzt wählen kann (`settle`) */
+  campSite?: boolean;
 }
 
 export interface HerdView extends Pos {
@@ -89,6 +97,52 @@ export interface StageNeedsView {
   move: number;
   /** Umkreis für Fressen, Wasser, Schutz */
   reach: number;
+  /**
+   * Beute als Bedürfnis: Futter je erlegtem Wild-Tier, Tiere je Monat, zusätzliche Tiere im Feuer; null, wenn die
+   * Stufe nicht jagt
+   */
+  prey: { food: number; kill: number; fire: number } | null;
+  /** enemy: Wölfe reißen Tiere der Herde · rival: Wölfe sind Konkurrenten um Wild */
+  wolves: 'enemy' | 'rival';
+  /** Lager der Stufe; null ohne Lager */
+  camp: StageCampView | null;
+}
+
+/** Lager einer Stufe (Ids und Zahlen aus `stages.yaml → camp`). */
+export interface StageCampView {
+  /** Landschaften, auf denen das Lager stehen darf */
+  on: string[];
+  /** Umkreis, in dem je eine Landschaft jeder Gruppe aus `near` liegen muss */
+  radius: number;
+  near: string[][];
+  /** gültige Lagerplätze auf der ganzen Insel, ohne Zugweite (für die aktuelle Stufe und als Vorschau der nächsten) */
+  spots: number;
+  /** Rodung: Landschaften in Reihenfolge, Ziel-Landschaft, Monat im Jahr (ab 0, Namen: data.months); null ohne */
+  clear: { lands: string[]; to: string; month: number } | null;
+}
+
+/** Vorschau eines Lagers an einem Feld (`campPreview`), für die aktuelle Stufe. */
+export interface CampPreviewView extends Pos {
+  /** jetzt wählbar (`settle`): wie `HerdeView.campSites` */
+  valid: boolean;
+  radius: number;
+  /** je Gruppe aus `camp.near`: ihre Landschaften und wie viele solche Felder im Umkreis `radius` liegen */
+  near: { lands: string[]; count: number }[];
+  /** Umkreis, aus dem die Herde am Lager frisst, trinkt und Schutz sucht (`reach` der Stufe mit Merkmalen) */
+  reach: number;
+  /** Felder im Umkreis `reach`, die für die Stufe Futter, Wasser bzw. Schutz sind */
+  food: number;
+  water: number;
+  shelter: number;
+  /** Wildbestände im Umkreis `reach` */
+  prey: number;
+  /** die Herde zieht für das Lager auf ein anderes Feld */
+  moves: boolean;
+  /**
+   * Rodung: Landschaften, Ziel, Monat im Jahr; `fields`: rodbare Felder im Umkreis `radius`; `next`: das Feld, das die
+   * nächste Rodung träfe (null, wenn keins da ist). null, wenn die Stufe nicht rodet.
+   */
+  clear: { lands: string[]; to: string; month: number; fields: number; next: Pos | null } | null;
 }
 
 export interface ExperienceView {
@@ -126,6 +180,15 @@ export interface EvolutionView {
   missing: { required: number; traits: number; oneOf: string[] | null } | null;
   /** Bedürfnisse der nächsten Stufe (zum Vorplanen); null auf der letzten Stufe */
   next: StageNeedsView | null;
+}
+
+export interface PreyView extends Pos {
+  id: number;
+  size: number;
+  /** hungrig: zieht weiter, schrumpft bald */
+  hungry: boolean;
+  /** in Jagdweite: die Stufe jagt und der Bestand liegt im Umkreis `reach` der Herde (wie die Jagd in `advance`) */
+  inReach: boolean;
 }
 
 export interface PackView extends Pos {
@@ -170,10 +233,23 @@ export interface HerdeView {
   cells: CellView[];
   herd: HerdView;
   packs: PackView[];
+  /** Wildbestände */
+  prey: PreyView[];
+  /** Lager der Herde oder null */
+  camp: Pos | null;
+  /** gültige Lagerplätze für `settle` (leer, wenn die Stufe kein Lager braucht, schon eins hat oder Eiszeit ist) */
+  campSites: Pos[];
+  /** überstandene Eiszeiten; `max`: die so vielte ist die letzte Prüfung (null = unbegrenzt) */
+  iceAges: { survived: number; max: number | null };
   /** null, wenn die Partie vorbei ist */
   intent: IntentView | null;
   hand: HandCardView[];
   handMax: number;
   evolution: EvolutionView;
   over: Outcome | null;
+  /**
+   * Ausgang einer verlorenen Partie (wie `gameLost.cause`): ausgestorben oder die letzte Eiszeit nicht als Mensch mit
+   * Lager überstanden; null, solange die Partie läuft oder wenn sie gewonnen ist
+   */
+  overCause: LostCause | null;
 }

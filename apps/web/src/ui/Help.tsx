@@ -1,12 +1,14 @@
 import type { HerdeData } from '@being-god/herde';
 import { locale, t } from '../i18n/index.ts';
 import { landName, ruleNumbers, textOf, traitName, type StageRules } from '../logic/format.ts';
+import { huntRules } from '../logic/hunt.ts';
 import { landStyle, stageLook } from '../scene/palette.ts';
 import { useEscape } from './useEscape.ts';
 
 /**
  * Hilfe: Ziel, Herde (Schritte, Umkreis, Wasser- und Schutzzeiten der aktuellen Stufe), Karten (aus den Daten),
- * Entwicklung mit Merkmalen und Stufen (aus den Daten), lebende Welt, Landschaften mit Farbe; Einführung erneut zeigen.
+ * Entwicklung mit Merkmalen und Stufen (aus den Daten), lebende Welt, Wild und Jagd, Feuer als Werkzeug, Lager,
+ * Eiszeiten und Sieg (Zahlen aus den Daten), Landschaften mit Farbe; Einführung erneut zeigen.
  */
 export function Help({
   data,
@@ -21,6 +23,7 @@ export function Help({
 }) {
   useEscape(onClose);
   const rules = ruleNumbers(data, locale, stage);
+  const hunt = huntRules(data, locale);
   const lands = (ids: readonly string[]) => ids.map((id) => landName(data, locale, id)).join(', ');
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" onClick={onClose}>
@@ -59,6 +62,8 @@ export function Help({
                   <b>{textOf(s.name, locale, s.id)}</b> – {t.needFood}: {lands(s.eats)}. {t.needWater}: {lands(s.water)}
                   . {t.needShelter}: {lands(s.shelter)}.
                   {s.blocked.length > 0 && ` ${t.needBlocked}: ${lands(s.blocked)}.`}
+                  {s.preyFood > 0 && ` ${t.needPrey}: ${t.needPreyText(s.preyFood, s.huntKill, s.fireHunt)}.`}
+                  {` ${t.needWolves}: ${s.wolves === 'rival' ? t.wolvesRival : t.wolvesEnemy}.`}
                   {s.mature &&
                     ` ${t.helpStageMature(
                       s.mature.traits,
@@ -82,6 +87,14 @@ export function Help({
           </dl>
           <h3>{t.helpWorld}</h3>
           <p>{t.helpWorldText}</p>
+          <h3>{t.helpPrey}</h3>
+          <p>{t.helpPreyText(hunt)}</p>
+          <h3>{t.helpFire}</h3>
+          <p>{t.helpFireText(hunt)}</p>
+          <h3>{t.helpCamp}</h3>
+          <p>{t.helpCampText(hunt)}</p>
+          <h3>{t.helpIce}</h3>
+          <p>{t.helpIceText(rules)}</p>
           <h3>{t.helpLands}</h3>
           <ul className="legend">
             {[...data.landscapes.values()].map((l) => (
