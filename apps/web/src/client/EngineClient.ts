@@ -21,6 +21,7 @@ import {
 } from '@being-god/core';
 import type { Action, DeckIssue, GameView, Locale, Targets } from '@core/api';
 import type { DeckSetup } from '../logic/deck.ts';
+import { matchesLegalPlay } from '../logic/targeting.ts';
 import type { BookView, GameClient, GameResult, Notice, PreviewView } from './GameClient.ts';
 import { MemoryBookStore, type BookStore, type SaveStore } from './SaveStore.ts';
 
@@ -279,12 +280,8 @@ export class EngineClient implements GameClient {
   private isLegal(action: Action): boolean {
     try {
       if (action.type === 'endTurn') return this.view.canEndTurn;
-      return legalPlays(this.data, this.state).some(
-        (p) =>
-          p.uid === action.uid &&
-          Object.keys(p.targets).length === Object.keys(action.targets).length &&
-          Object.entries(p.targets).every(([k, v]) => action.targets[k] === v),
-      );
+      // Weltkarten ohne Slots: `legalPlays` liefert sie mit leeren Zielen, die App schickt `targets: {}`.
+      return matchesLegalPlay(legalPlays(this.data, this.state), action.uid, action.targets);
     } catch {
       return true;
     }

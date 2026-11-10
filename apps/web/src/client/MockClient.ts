@@ -10,38 +10,89 @@ import type { BookView, GameClient, GameResult, Notice, PreviewView } from './Ga
 
 type L = Record<Locale, string>;
 
+/** Wirkung auf eine Zone: Index des Werts (0 Licht, 1 Feuchte, 2 Vegetation, 3 Sonderwert) → Änderung. */
+type Effect = Partial<Record<0 | 1 | 2 | 3, number>>;
+
 interface CardDef {
   card: string;
   name: L;
   category: string;
   cost: number;
-  text: L;
+  /** Fester Kartentext; bei Weltkarten wird er aus `world` erzeugt. */
+  text?: L;
+  short?: L;
   slots: { id: string; kind: string; label: L }[];
-  /** Grobe Wirkung auf die Zielzone: Index des Werts (0 Licht, 1 Feuchte, 2 Vegetation, 3 Sonderwert) → Änderung. */
-  effect: Partial<Record<0 | 1 | 2 | 3, number>>;
+  /** Gezielte Karte: grobe Wirkung auf die Zielzone. */
+  effect?: Effect;
+  /** Weltkarte (Wetter): Wirkung je Geografie, ohne Zielwahl auf alle Zonen. Fehlende Geografie = keine Wirkung. */
+  world?: Partial<Record<string, Effect>>;
+  /** Grobe Schwelle (nur Vorschau und Meldung): löst in jeder betroffenen Zone aus, deren Werte `when` erfüllen. */
+  trigger?: { id: string; name: L; icon: string; when: (values: readonly number[]) => boolean };
 }
 
 const ZONE_SLOT = { id: 'zone', kind: 'zone', label: { de: 'Zone', en: 'Zone' } };
-const NEIGHBOR_SLOT = { id: 'fall', kind: 'neighbor', label: { de: 'Nachbarzone', en: 'Neighbouring zone' } };
 
+const dry = (v: readonly number[]) => (v[1] ?? 0) <= 1 && (v[2] ?? 0) >= 1;
+
+/**
+ * Wetter wirkt überall, je Geografie anders (Konzept 6.2, Variante C). Abschrift im Geist der Engine-Daten,
+ * Zahlen nur für die Vorschau.
+ */
 const CARDS: CardDef[] = [
-  {
-    card: 'thunderstorm',
-    name: { de: 'Gewitter', en: 'Thunderstorm' },
-    category: 'force',
-    cost: 0,
-    text: { de: 'Feuchte +2. Auf trockener Zone: 🔥 Feuer.', en: 'Moisture +2. On a dry zone: 🔥 fire.' },
-    slots: [ZONE_SLOT],
-    effect: { 1: 2 },
-  },
   {
     card: 'rain',
     name: { de: 'Regen', en: 'Rain' },
-    category: 'gift',
+    category: 'weather',
     cost: 1,
-    text: { de: 'Feuchte +1.', en: 'Moisture +1.' },
-    slots: [ZONE_SLOT],
-    effect: { 1: 1 },
+    short: { de: 'Mehr Wasser, Küste weniger Salz', en: 'More water, less salt on the coast' },
+    slots: [],
+    world: { forest: { 1: 1 }, plains: { 1: 1 }, mountains: { 3: 1 }, river: { 3: 1 }, coast: { 3: -1 } },
+  },
+  {
+    card: 'thunderstorm',
+    name: { de: 'Gewitter', en: 'Thunderstorm' },
+    category: 'weather',
+    cost: 0,
+    short: { de: 'Viel Wasser · 🔥 auf trockenem Land', en: 'Much water · 🔥 on dry land' },
+    slots: [],
+    world: { forest: { 1: 2 }, plains: { 1: 1 }, mountains: { 3: 1 }, river: { 3: 2 }, coast: { 3: -1 } },
+    trigger: { id: 'fire', name: { de: 'Feuer', en: 'Fire' }, icon: '🔥', when: dry },
+  },
+  {
+    card: 'drought',
+    name: { de: 'Dürre', en: 'Drought' },
+    category: 'weather',
+    cost: 0,
+    short: { de: 'Weniger Wasser, Küste mehr Salz', en: 'Less water, more salt on the coast' },
+    slots: [],
+    world: { forest: { 1: -1 }, plains: { 1: -1, 3: -1 }, mountains: { 3: -1 }, river: { 3: -1 }, coast: { 3: 1 } },
+  },
+  {
+    card: 'storm',
+    name: { de: 'Sturm', en: 'Storm' },
+    category: 'weather',
+    cost: 0,
+    short: { de: 'Wald fällt, Küste versalzt', en: 'Trees fall, coast salts up' },
+    slots: [],
+    world: { forest: { 2: -1, 3: 1 }, mountains: { 3: 1 }, plains: { 3: -1 }, coast: { 3: 1 } },
+  },
+  {
+    card: 'frost',
+    name: { de: 'Frost', en: 'Frost' },
+    category: 'weather',
+    cost: 0,
+    short: { de: 'Schnee, Pflanzen erfrieren', en: 'Snow, plants freeze' },
+    slots: [],
+    world: { mountains: { 3: 1 }, forest: { 2: -1 }, plains: { 2: -1 }, river: { 3: -1 } },
+  },
+  {
+    card: 'dry_wind',
+    name: { de: 'Trockenwind', en: 'Dry wind' },
+    category: 'weather',
+    cost: 1,
+    short: { de: 'Trocknet aus, Küste mehr Salz', en: 'Dries out, more salt on the coast' },
+    slots: [],
+    world: { forest: { 1: -1 }, plains: { 1: -1 }, mountains: { 3: -1 }, coast: { 3: 1 } },
   },
   {
     card: 'sun',
@@ -56,31 +107,10 @@ const CARDS: CardDef[] = [
     card: 'seeds',
     name: { de: 'Samen', en: 'Seeds' },
     category: 'gift',
-    cost: 2,
+    cost: 1,
     text: { de: 'Vegetation +1.', en: 'Vegetation +1.' },
     slots: [ZONE_SLOT],
     effect: { 2: 1 },
-  },
-  {
-    card: 'storm',
-    name: { de: 'Sturm', en: 'Storm' },
-    category: 'force',
-    cost: 0,
-    text: {
-      de: 'Vegetation −1. Auf dichter Zone: Baumsturz in die Nachbarzone.',
-      en: 'Vegetation −1. On a dense zone: windthrow into the neighbour.',
-    },
-    slots: [ZONE_SLOT, NEIGHBOR_SLOT],
-    effect: { 2: -1 },
-  },
-  {
-    card: 'drought',
-    name: { de: 'Dürre', en: 'Drought' },
-    category: 'force',
-    cost: 0,
-    text: { de: 'Feuchte −2, Licht +1.', en: 'Moisture −2, light +1.' },
-    slots: [ZONE_SLOT],
-    effect: { 0: 1, 1: -2 },
   },
   {
     card: 'healing',
@@ -226,6 +256,34 @@ const statIds = (geo: GeoDef) => ['light', 'moisture', 'vegetation', geo.special
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+/** Neue Werte nach einer Wirkung (Werte 0–5). */
+function applyEffect(values: readonly number[], effect: Effect): number[] {
+  const after = [...values];
+  for (const [stat, delta] of Object.entries(effect)) {
+    const i = Number(stat);
+    after[i] = clamp((after[i] ?? 0) + delta, 0, 5);
+  }
+  return after;
+}
+
+/** Kartentext: fest oder (Weltkarte) je Geografie, z. B. „Wald: Feuchte +1 · Küste: Salz −1“. */
+function cardText(def: CardDef, lc: Locale): string {
+  if (def.text) return def.text[lc];
+  const parts = GEOS.flatMap((geo) => {
+    const effect = def.world?.[geo.id];
+    if (!effect) return [];
+    const names = [...STAT_NAMES, geo.special.name];
+    const list = Object.entries(effect).map(
+      ([i, d]) => `${names[Number(i)]?.[lc] ?? i} ${d > 0 ? '+' : '−'}${Math.abs(d)}`,
+    );
+    return [`${geo.name[lc]}: ${list.join(', ')}`];
+  });
+  const trigger = def.trigger
+    ? ` ${def.trigger.icon} ${def.trigger.name[lc]} ${lc === 'de' ? 'auf trockenem Land' : 'on dry land'}.`
+    : '';
+  return `${parts.join(' · ')}.${trigger}`;
+}
+
 /** Grobe Form-Art aus den Werten – nur damit sich in der Vorschau sichtbar etwas ändert. */
 function mockKind(geo: string, v: number[]): FormKind {
   const [, moist = 0, veg = 0, special = 0] = v;
@@ -314,61 +372,79 @@ export class MockClient implements GameClient {
     return speciesId;
   }
 
+  /**
+   * Vorschau: gezielte Karten für die Zone im Slot `zone`, Weltkarten ohne Ziele für alle Zonen, auf die ihr
+   * Wetter wirkt (Änderungen, Schwellen, Formwechsel und `idealDistance` je betroffener Zone).
+   */
   preview(uid: number, targets: Targets): PreviewView | null {
     const entry = this.state.hand.find((h) => h.uid === uid);
-    const zone = this.state.zones.find((z) => z.geo.id === targets['zone']);
-    if (!entry || !zone) return null;
+    if (!entry) return null;
+    const affected = this.affectedZones(entry.def, targets);
+    if (affected.length === 0 && !entry.def.world) return null;
     const lc = this.locale;
-    const changes: PreviewView['changes'] = [];
-    const after = [...zone.values];
-    const ids = statIds(zone.geo);
-    for (const [stat, delta] of Object.entries(entry.def.effect)) {
-      const i = Number(stat);
-      const from = zone.values[i] ?? 0;
-      const to = clamp(from + delta, 0, 5);
-      after[i] = to;
-      const name = i === 3 ? zone.geo.special.name : STAT_NAMES[i];
-      const toward = towardOf(from, to, IDEALS[zone.geo.id]?.[i] ?? undefined);
-      if (to !== from)
-        changes.push({
-          zone: zone.geo.id,
-          zoneName: zone.geo.name[lc],
-          stat: ids[i] ?? stat,
-          statName: name?.[lc] ?? stat,
-          from,
-          to,
-          toward,
-        });
-    }
-    const kindAfter = mockKind(zone.geo.id, after);
-    const formChanges: PreviewView['formChanges'] =
-      kindAfter === zone.kind
-        ? []
-        : [
-            {
-              zone: zone.geo.id,
-              zoneName: zone.geo.name[lc],
-              from: zone.geo.forms[zone.kind].name[lc],
-              to: zone.geo.forms[kindAfter].name[lc],
-              kind: kindAfter,
-            },
-          ];
-    return {
+    const out: PreviewView = {
       cost: entry.def.cost,
       affordable: entry.def.cost <= this.state.breath,
-      changes,
-      idealDistance: [
-        {
-          zone: zone.geo.id,
-          before: idealDistance(zone.geo.id, zone.values),
-          after: idealDistance(zone.geo.id, after),
-        },
-      ],
+      changes: [],
+      idealDistance: [],
       triggers: [],
-      formChanges,
+      formChanges: [],
       populationChanges: [],
       eventChanges: [],
     };
+    for (const { zone, effect } of affected) {
+      const after = applyEffect(zone.values, effect);
+      const ids = statIds(zone.geo);
+      const names = [...STAT_NAMES, zone.geo.special.name];
+      after.forEach((to, i) => {
+        const from = zone.values[i] ?? 0;
+        if (to === from) return;
+        out.changes.push({
+          zone: zone.geo.id,
+          zoneName: zone.geo.name[lc],
+          stat: ids[i] ?? String(i),
+          statName: names[i]?.[lc] ?? String(i),
+          from,
+          to,
+          toward: towardOf(from, to, IDEALS[zone.geo.id]?.[i] ?? undefined),
+        });
+      });
+      const trigger = entry.def.trigger;
+      if (trigger?.when(zone.values))
+        out.triggers.push({
+          zone: zone.geo.id,
+          zoneName: zone.geo.name[lc],
+          name: trigger.name[lc],
+          icon: trigger.icon,
+        });
+      const kindAfter = mockKind(zone.geo.id, after);
+      if (kindAfter !== zone.kind)
+        out.formChanges.push({
+          zone: zone.geo.id,
+          zoneName: zone.geo.name[lc],
+          from: zone.geo.forms[zone.kind].name[lc],
+          to: zone.geo.forms[kindAfter].name[lc],
+          kind: kindAfter,
+        });
+      out.idealDistance!.push({
+        zone: zone.geo.id,
+        before: idealDistance(zone.geo.id, zone.values),
+        after: idealDistance(zone.geo.id, after),
+      });
+    }
+    return out;
+  }
+
+  /** Zonen, auf die ein Zug wirkt, mit der Wirkung je Zone (Weltkarte: alle Zonen mit Wetterwirkung). */
+  private affectedZones(def: CardDef, targets: Targets): { zone: MockZone; effect: Effect }[] {
+    if (def.world) {
+      return this.state.zones.flatMap((zone) => {
+        const effect = def.world?.[zone.geo.id];
+        return effect ? [{ zone, effect }] : [];
+      });
+    }
+    const zone = this.state.zones.find((z) => z.geo.id === targets['zone']);
+    return zone && def.effect ? [{ zone, effect: def.effect }] : [];
   }
 
   getBook(): BookView {
@@ -399,8 +475,8 @@ export class MockClient implements GameClient {
       name: c.name[lc],
       category: c.category,
       cost: c.cost,
-      text: c.text[lc],
-      short: c.text[lc],
+      text: cardText(c, lc),
+      short: c.short?.[lc] ?? cardText(c, lc),
     }));
     const ids = CARDS.map((c) => c.card);
     const standard = [...ids, ...ids].slice(0, Math.max(MOCK_DECK.min, Math.min(MOCK_DECK.max, ids.length)));
@@ -432,13 +508,19 @@ export class MockClient implements GameClient {
       s.discardPile += 1;
       s.playsThisTurn += 1;
       notices.push({ type: 'played', card: entry.def.name[this.locale] });
-      const zone = s.zones.find((z) => z.geo.id === action.targets['zone']);
-      if (zone) {
+      const lc = this.locale;
+      for (const { zone, effect } of this.affectedZones(entry.def, action.targets)) {
         const before = [...zone.values];
-        for (const [stat, delta] of Object.entries(entry.def.effect)) {
-          const i = Number(stat);
-          zone.values[i] = clamp((zone.values[i] ?? 0) + delta, 0, 5);
-        }
+        const trigger = entry.def.trigger;
+        if (trigger?.when(before))
+          notices.push({
+            type: 'trigger',
+            zone: zone.geo.name[lc],
+            name: trigger.name[lc],
+            icon: trigger.icon,
+            disturbance: false,
+          });
+        zone.values = applyEffect(before, effect);
         notices.push(...this.zoneNotices(zone, before, zone.kind, 'card'));
       }
     } else if (action.type === 'endTurn') {
@@ -510,8 +592,8 @@ export class MockClient implements GameClient {
       rng: 7,
       lastHarmonyDelta: 0,
     };
-    // Starthand: eine bunte Mischung aus Naturgewalt, Gaben und Wunder.
-    for (const id of ['thunderstorm', 'rain', 'storm', 'healing']) {
+    // Starthand: zwei Wetterkarten (wirken überall), eine Gabe und ein Wunder (gezielt).
+    for (const id of ['rain', 'thunderstorm', 'seeds', 'healing']) {
       const def = CARDS.find((c) => c.card === id);
       if (def) s.hand.push({ uid: s.nextUid++, def });
     }
@@ -582,17 +664,14 @@ export class MockClient implements GameClient {
       const ids = statIds(z.geo);
       const ranges = IDEALS[z.geo.id] ?? [];
       const form = z.geo.forms[z.kind];
+      // Gefahren: Schwellen von Handkarten, die in dieser Zone auslösen würden.
       const warnings: ZoneView['warnings'] = [];
-      if ((z.values[1] ?? 0) <= 1 && s.hand.some((h) => h.def.card === 'thunderstorm')) {
-        warnings.push({ card: 'thunderstorm', trigger: 'fire', name: lc === 'de' ? 'Feuer' : 'Fire', icon: '🔥' });
-      }
-      if ((z.values[2] ?? 0) >= 4 && s.hand.some((h) => h.def.card === 'storm')) {
-        warnings.push({
-          card: 'storm',
-          trigger: 'windthrow',
-          name: lc === 'de' ? 'Baumsturz' : 'Windthrow',
-          icon: '🌪️',
-        });
+      for (const { def } of s.hand) {
+        const trigger = def.trigger;
+        const reaches = def.world ? def.world[z.geo.id] !== undefined : true;
+        if (!trigger || !reaches || !trigger.when(z.values)) continue;
+        if (warnings.some((w) => w.card === def.card)) continue;
+        warnings.push({ card: def.card, trigger: trigger.id, name: trigger.name[lc], icon: trigger.icon });
       }
       return {
         id: z.geo.id,
@@ -630,8 +709,10 @@ export class MockClient implements GameClient {
       card: def.card,
       name: def.name[lc],
       category: def.category,
+      reach: def.world ? 'world' : 'zone',
       cost: def.cost,
-      text: def.text[lc],
+      text: cardText(def, lc),
+      ...(def.short ? { short: def.short[lc] } : {}),
       playable: s.phase === 'play' && def.cost <= s.breath,
       slots: def.slots.map((slot) => ({ id: slot.id, kind: slot.kind, label: slot.label[lc] })),
     }));

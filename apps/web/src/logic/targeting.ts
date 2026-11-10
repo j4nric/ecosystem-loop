@@ -107,10 +107,37 @@ export const DRAG_START_PX = 12;
 /** Ab dieser Haltedauer (ms) ohne Ziehen zeigt die App den vollen Kartentext. */
 export const LONG_PRESS_MS = 450;
 
-/** Lässt sich die Karte auf die Insel ziehen? (spielbar, erster Slot ist eine Zone) */
+/** Lässt sich die Karte auf die Insel ziehen? (spielbar; Weltkarte oder erster Slot ist eine Zone) */
 export function canDrag(card: CardView): boolean {
+  if (!card.playable) return false;
+  if (card.reach === 'world') return true;
   const first = card.slots[0];
-  return card.playable && first !== undefined && isZoneSlot(first.kind);
+  return first !== undefined && isZoneSlot(first.kind);
+}
+
+/**
+ * Was passiert beim Loslassen einer Weltkarte über der Spielfläche: ohne Slots sofort ausspielen (`play`),
+ * mit (höchstens einem) Wahl-Slot erst die Wahl öffnen (`choose`).
+ */
+export function worldDropAction(card: CardView): 'play' | 'choose' {
+  return card.slots.length === 0 ? 'play' : 'choose';
+}
+
+/**
+ * Entspricht ein Kartenzug genau einem legalen Zug der Engine (gleiche Karte, gleiche Slots, gleiche Ziele)?
+ * Weltkarten ohne Slots: legal ist der Zug mit leeren Zielen.
+ */
+export function matchesLegalPlay(
+  plays: readonly { uid: number; targets: Targets }[],
+  uid: number,
+  targets: Targets,
+): boolean {
+  return plays.some(
+    (p) =>
+      p.uid === uid &&
+      Object.keys(p.targets).length === Object.keys(targets).length &&
+      Object.entries(p.targets).every(([k, v]) => targets[k] === v),
+  );
 }
 
 /** Hat sich der Finger weit genug bewegt, dass aus dem Druck ein Ziehen (bzw. kein langer Druck) wird? */

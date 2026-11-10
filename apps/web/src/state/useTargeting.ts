@@ -14,7 +14,15 @@ import {
   startTargets,
   type ChipOption,
 } from '../logic/targeting.ts';
-import { completesCard, zoneTints, type Toward } from '../logic/ideal.ts';
+import {
+  completesCard,
+  isWorldCard,
+  worldTints,
+  zoneEffects,
+  zoneTints,
+  type Toward,
+  type ZoneEffect,
+} from '../logic/ideal.ts';
 
 interface Selection {
   uid: number;
@@ -27,6 +35,9 @@ interface Selection {
  * nie aus App-Regeln. Sind alle Slots belegt, ersetzt eine weitere Wahl die des letzten Slots (Vorschauen
  * vergleichen); eine Zone, die für den ersten Slot gültig ist, beginnt die Zielwahl dort neu.
  * Die Übergänge selbst sind reine Funktionen in `logic/targeting.ts`.
+ *
+ * Weltkarten (Wetter, `reach: 'world'`) haben keine Zonen-Slots: Nach dem Start ist der Zug sofort vollständig
+ * (bzw. nach dem einen Wahl-Slot), und die eine Vorschau färbt alle betroffenen Zonen zugleich (`effects`).
  */
 export function useTargeting(client: GameClient, view: GameView, onComplete: (uid: number, targets: Targets) => void) {
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -53,31 +64,40 @@ export function useTargeting(client: GameClient, view: GameView, onComplete: (ui
     return new Set(client.legalTargets(active.card.uid, {}));
   }, [client, active]);
 
-  const editsZone = editSlot !== undefined && isZoneSlot(editSlot.kind);
-  const validZones = useMemo<Set<string>>(
-    () => (editsZone ? new Set(options) : restartZones),
-    [editsZone, options, restartZones],
+  const preview = useMemo<PreviewView | null>(() => {
+    if (!active || !complete) return null;
+    return client.preview(active.card.uid, active.targets);
+  }, [client, active, complete]);
+
+  /** Weltkarte: keine Zonenwahl, die Vorschau wirkt auf alle betroffenen Zonen zugleich. */
+  const world = active !== null && isWorldCard(active.card);
+  const effects = useMemo<ZoneEffect[]>(
+    () => (world ? zoneEffects(preview, view.zones) : []),
+    [world, preview, view.zones],
   );
+
+  const editsZone = editSlot !== undefined && isZoneSlot(editSlot.kind);
+  const validZones = useMemo<Set<string>>(() => {
+    if (world) return new Set(effects.map((e) => e.zone));
+    return editsZone ? new Set(options) : restartZones;
+  }, [world, effects, editsZone, options, restartZones]);
 
   /**
    * Einfärbung der wählbaren Zonen nach Wirkung auf die Idealform (grün näher, rot weiter weg). Nur, wenn die
    * Wahl dieses Zonen-Slots den Zug vervollständigt – dann gibt es für jede Kandidatenzone eine Vorschau.
+   * Weltkarte: alle betroffenen Zonen aus der einen Vorschau.
    */
   const tints = useMemo<Map<string, Toward>>(() => {
+    if (world) return worldTints(effects);
     if (!active || !editSlot || !editsZone || !completesCard(active.card, editSlot.id)) return new Map();
     const base = chosenWithout(active.targets, editSlot);
     return zoneTints(options, (zone) => client.preview(active.card.uid, { ...base, [editSlot.id]: zone }));
-  }, [client, active, editSlot, editsZone, options]);
+  }, [client, world, effects, active, editSlot, editsZone, options]);
 
   const chipOptions = useMemo<ChipOption[]>(
     () => (active ? chipOptionsFor(editSlot, options, active.targets, view.zones, (id) => client.speciesName(id)) : []),
     [client, active, editSlot, options, view.zones],
   );
-
-  const preview = useMemo<PreviewView | null>(() => {
-    if (!active || !complete) return null;
-    return client.preview(active.card.uid, active.targets);
-  }, [client, active, complete]);
 
   const start = useCallback((c: CardView) => {
     if (!c.playable) return;
@@ -135,6 +155,10 @@ export function useTargeting(client: GameClient, view: GameView, onComplete: (ui
     /** Gewählte Option des Chip-Slots (für die Markierung in der Auswahl). */
     chosenChip: active && editSlot && chipSlot ? (active.targets[editSlot.id] ?? null) : null,
     preview,
+    /** true bei einer Weltkarte (Wetter): Wirkung auf alle Zonen, keine Zonenwahl. */
+    world,
+    /** Wirkung je betroffener Zone (nur Weltkarten). */
+    effects,
     start,
     startAt,
     cancel,

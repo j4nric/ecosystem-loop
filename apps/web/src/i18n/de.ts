@@ -115,6 +115,28 @@ export const de = {
   dragInvalid: (zone: string) => `${zone}: hier nicht möglich`,
   dragMoreTargets: 'Nach dem Loslassen folgen weitere Ziele.',
   dragCardLabel: (name: string) => `${name} – antippen oder auf die Insel ziehen, lange drücken für Details`,
+  // Weltkarten (Wetter): wirken ohne Zielwahl auf alle Zonen
+  worldShort: 'wirkt überall',
+  worldHint: 'Wetter wirkt überall – jede Zone reagiert anders.',
+  worldCardLabel: (name: string) =>
+    `${name} – Wetter, wirkt überall. Antippen für die Vorschau oder auf die Insel ziehen zum Ausspielen`,
+  worldDragHint: 'Auf die Insel ziehen und loslassen, um auszuspielen',
+  worldDragArmed: 'Loslassen spielt die Karte',
+  worldDragCancel: 'Zurück auf die Hand ziehen bricht ab.',
+  worldDragChoice: 'Nach dem Loslassen wählst du noch eine Option.',
+  worldNone: 'Keine Zone verändert sich.',
+  worldBalance: (b: { better: number; worse: number; neutral: number }) => {
+    const zones = (n: number) => (n === 1 ? '1 Zone' : `${n} Zonen`);
+    const parts = [
+      b.better > 0 ? `${zones(b.better)} näher` : '',
+      b.worse > 0 ? `${b.better > 0 ? b.worse : zones(b.worse)} weiter weg` : '',
+      b.neutral > 0 ? `${b.better + b.worse > 0 ? b.neutral : zones(b.neutral)} gleich` : '',
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : 'Keine Zone verändert sich.';
+  },
+  worldDistance: (before: number, after: number) => `Ideal ${before} → ${after}`,
+  worldEffectsTitle: 'Wirkung je Zone',
+  playWorld: 'Ausspielen',
   cardDetails: 'Kartendetails',
   cardDetailsHint: 'Lange drücken zeigt den ganzen Kartentext.',
   deckTitle: 'Startdeck',
@@ -161,6 +183,9 @@ export const de = {
     'Senkende Karten wie Dürre, Sturm oder Frost sind Werkzeuge, wenn ein Wert über dem Zielbereich liegt. Du musst jede Runde mindestens eine Karte spielen – auch eine unbequeme.',
   helpIdealTint:
     'Beim Zielen leuchten Zonen grün (▲ näher ans Ideal), rot (▼ weiter weg) oder gelb (gleich). So siehst du sofort, wo eine Karte hilft.',
+  helpWorld: 'Wetter wirkt überall',
+  helpWorldText:
+    'Wetter wirkt überall – jede Zone reagiert anders. Gaben, Wunder und Arten legst du gezielt. Wetterkarten (🌍) wählen kein Ziel: Zieh sie auf die Insel oder tippe sie an. Alle betroffenen Zonen leuchten zugleich grün, rot oder gelb, die Vorschau zeigt jede Zone mit ihrem Abstand zum Ideal vorher → nachher. Ob sich der Tausch lohnt, entscheidest du.',
   // Hilfe
   help: 'Hilfe',
   helpTitle: 'Kurz erklärt',
@@ -178,6 +203,7 @@ export const de = {
     ['▲ ▼', 'Trend der Harmonie seit der letzten Runde.'],
     ['🔥', 'Gefahr auf einer Zone: eine Handkarte würde dort eine Schwelle auslösen.'],
     ['◯', 'Leuchtender Ring: gültiges Ziel der gewählten Karte.'],
+    ['🌍', 'Wetterkarte: wirkt ohne Zielwahl auf alle Zonen, jede Zone reagiert anders.'],
   ] as [string, string][],
   helpCreatures: 'Figuren auf der Insel',
   helpCreaturesText: 'Jede Figur steht für einen Teil des Bestands einer Art.',
@@ -207,12 +233,17 @@ export const de = {
     {
       icon: '✦',
       title: 'Odem',
-      text: 'Karten kosten Odem (oben links). Jede Runde fließt neuer Odem zu – mehr, je gesünder die Welt ist. Naturgewalten kosten nichts, sind aber grob.',
+      text: 'Karten kosten Odem (oben links). Jede Runde fließt neuer Odem zu – mehr, je gesünder die Welt ist. Wetter kostet wenig, trifft aber alle Zonen zugleich.',
     },
     {
       icon: '🂠',
       title: 'Karten spielen',
-      text: 'Tippe eine Karte und dann eine leuchtende Zone – oder zieh die Karte direkt auf die Insel. Vor dem Bestätigen siehst du die Wirkung.',
+      text: 'Gaben, Wunder und Arten legst du gezielt: Tippe die Karte und dann eine leuchtende Zone – oder zieh sie direkt auf die Zone. Vor dem Bestätigen siehst du die Wirkung.',
+    },
+    {
+      icon: '🌍',
+      title: 'Wetter wirkt überall',
+      text: 'Wetter wirkt überall – jede Zone reagiert anders. Gaben, Wunder und Arten legst du gezielt. Zieh eine Wetterkarte auf die Insel oder tippe sie an: Alle betroffenen Zonen leuchten zugleich auf. Ob der Tausch sich lohnt, entscheidest du.',
     },
     {
       icon: '⛰',

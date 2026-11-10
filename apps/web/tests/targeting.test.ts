@@ -8,11 +8,13 @@ import {
   dropZone,
   editSlotOf,
   isSupportedSlot,
+  matchesLegalPlay,
   movedBeyond,
   openSlot,
   pickChipTargets,
   pickZoneTargets,
   startTargets,
+  worldDropAction,
 } from '../src/logic/targeting.ts';
 
 const card = (slots: CardView['slots'], playable = true): CardView => ({
@@ -137,5 +139,43 @@ describe('Ziehen', () => {
     expect(dropZone('a', ['a', 'b'])).toBe('a');
     expect(dropZone('c', ['a', 'b'])).toBeNull();
     expect(dropZone(null, ['a'])).toBeNull();
+  });
+});
+
+describe('Weltkarten (Wetter)', () => {
+  const world = (slots: CardView['slots'] = [], playable = true): CardView => ({
+    ...card(slots, playable),
+    category: 'weather',
+    reach: 'world',
+  });
+
+  it('lassen sich ohne Zonen-Slot ziehen, aber nur, wenn spielbar', () => {
+    expect(canDrag(world())).toBe(true);
+    expect(canDrag(world([choiceSlot]))).toBe(true);
+    expect(canDrag(world([], false))).toBe(false);
+    // ohne reach bleibt eine Karte ohne Zonen-Slot unziehbar
+    expect(canDrag({ ...card([]), reach: 'zone' })).toBe(false);
+  });
+
+  it('Loslassen spielt sofort, mit Wahl-Slot erst die Wahl', () => {
+    expect(worldDropAction(world())).toBe('play');
+    expect(worldDropAction(world([choiceSlot]))).toBe('choose');
+  });
+
+  it('ist ohne offene Slots sofort vollständig', () => {
+    expect(openSlot(world(), {})).toBeUndefined();
+    expect(editSlotOf(world(), {})).toBeUndefined();
+  });
+
+  it('gilt mit leeren Zielen als legaler Zug, mit Zonenziel nicht', () => {
+    const plays: { uid: number; targets: Record<string, string> }[] = [
+      { uid: 7, targets: {} },
+      { uid: 8, targets: { zone: 'forest' } },
+    ];
+    expect(matchesLegalPlay(plays, 7, {})).toBe(true);
+    expect(matchesLegalPlay(plays, 7, { zone: 'forest' })).toBe(false);
+    expect(matchesLegalPlay(plays, 8, {})).toBe(false);
+    expect(matchesLegalPlay(plays, 8, { zone: 'forest' })).toBe(true);
+    expect(matchesLegalPlay(plays, 9, {})).toBe(false);
   });
 });

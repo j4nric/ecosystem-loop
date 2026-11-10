@@ -1,6 +1,7 @@
 /** EngineClient: Partie, Aktionen, Fortsetzen, Verwerfen, Ablehnung und Meldungen – ohne DOM. */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { legalPlays, validateState, type GameEvent, type GameState } from '@being-god/core';
+import type { Action } from '@core/api';
 import { loadGameData } from '@being-god/core/node';
 import { EngineClient } from '../src/client/EngineClient.ts';
 import type { Notice } from '../src/client/GameClient.ts';
@@ -164,6 +165,36 @@ describe('EngineClient', () => {
     }
     expect(ctx.client.speciesName('deer')).toBe('Hirsch');
     expect(ctx.client.speciesName('unbekannt')).toBe('unbekannt');
+  });
+
+  /**
+   * Weltkarten (reach "world") haben keine Zonen-Slots; die App schickt sie mit `targets: {}`. Geprüft an einer
+   * Karte ohne Slots aus den Daten (Segen) – die Prüfung `isLegal` und der Zug selbst laufen ohne Ziele.
+   */
+  it('Zug ohne Ziele (Weltkarte): isLegal ohne Ziele, Ausspielen ohne Ablehnung', () => {
+    const blessing = data.cards.get('blessing');
+    expect(blessing?.slots ?? []).toEqual([]);
+    const store = new MemorySaveStore();
+    const state = structuredClone(savedState(ctx.store));
+    state.hand[0] = { ...state.hand[0]!, card: 'blessing' };
+    state.breath = blessing!.cost;
+    store.save({ version: 1, seed: 'welt', savedAt: 0, state });
+    const client = new EngineClient({ data, locale: 'de', store, seed: 'welt' });
+    const uid = state.hand[0]!.uid;
+    const card = client.getView().hand.find((c) => c.uid === uid)!;
+    expect(card.slots).toEqual([]);
+    expect(client.legalTargets(uid, {})).toEqual([]);
+    expect(client.preview(uid, {})).not.toBeNull();
+
+    const isLegal = (a: Action) => (client as unknown as { isLegal(a: Action): boolean }).isLegal(a);
+    expect(isLegal({ type: 'play', uid, targets: {} })).toBe(true);
+    expect(isLegal({ type: 'play', uid, targets: { zone: 'forest' } })).toBe(false);
+
+    const local: Notice[][] = [];
+    client.subscribeNotices((n) => local.push(n));
+    client.dispatch({ type: 'play', uid, targets: {} });
+    expect(local.flat().some((n) => n.type === 'rejected' || n.type === 'incompatible')).toBe(false);
+    expect(client.getView().hand.some((c) => c.uid === uid)).toBe(false);
   });
 });
 

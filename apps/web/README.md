@@ -69,6 +69,12 @@ URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
 - Karte antippen und dann eine leuchtende Zone antippen – oder die Karte direkt auf die Insel ziehen
   (`state/useCardDrag.ts`, Raycast über `scene/registry.ts`). Beim Ziehen leuchten gültige Zonen, unten erscheint die
   Vorschau der Zone unter dem Finger. Art-Slots (z. B. „Jagd“) wählt man über Chips.
+- Wetterkarten (`CardView.reach === 'world'`, 🌍 und blauer Rahmen, „wirkt überall“) wählen kein Ziel: auf die Insel
+  ziehen (irgendwo außerhalb des Docks loslassen) spielt sie sofort, Antippen öffnet die Vorschau mit „Ausspielen“.
+  Beim Ziehen und in der Vorschau färben sich alle betroffenen Zonen zugleich (grün näher am Ideal, rot weiter weg,
+  gelb gleich); die Vorschau listet je Zone Abstand vorher → nachher und eine Bilanzzeile („2 Zonen näher, 1 weiter
+  weg“) – bewusst ohne Gesamtpunktzahl. Beim Ausspielen läuft eine Welle über die Insel, danach steigen die Werte je
+  Zone auf (`logic/ideal.ts`: `zoneEffects`, `worldTints`, `worldBalance`).
 - Bestände erscheinen als Low-Poly-Figuren je Gruppe (Wasser, Insekt, Reptil, Vogel, Säugetier, Mensch; Zuordnung rein
   optisch in `scene/palette.ts`), ein Instanced-Mesh je Gruppe. Neue Arten blitzen kurz auf.
 - Formwechsel blenden weich über; niedrige Harmonie macht die Insel blass und neblig; die Jahreszeit tönt das Licht.

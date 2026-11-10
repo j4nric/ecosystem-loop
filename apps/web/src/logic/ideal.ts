@@ -92,3 +92,89 @@ export function rangeLabel(target: { min: number; max: number }, statMax: number
   if (target.min <= 0) return `≤ ${target.max}`;
   return `${target.min}–${target.max}`;
 }
+
+// --- Weltkarten (CardView.reach === 'world'): Wirkung auf alle Zonen zugleich ----------------------
+
+/** Wirkt die Karte ohne Zielwahl auf alle Zonen (Wetter)? Fehlt `reach`, ist es eine gezielte Karte. */
+export function isWorldCard(card: Pick<CardView, 'reach'>): boolean {
+  return card.reach === 'world';
+}
+
+/** Wirkung einer (Welt-)Karte auf eine Zone: Abstand zur Idealform vorher/nachher und Einzelwirkungen. */
+export interface ZoneEffect {
+  zone: string;
+  zoneName: string;
+  toward: Toward;
+  /** Abstand zur Idealform vorher → nachher; null, wenn die Engine keinen liefert. */
+  distance: { before: number; after: number } | null;
+  changes: PreviewView['changes'];
+  triggers: PreviewView['triggers'];
+  formChanges: PreviewView['formChanges'];
+  populationChanges: PreviewView['populationChanges'];
+}
+
+/**
+ * Zerlegt eine Vorschau nach Zonen. Betroffen ist eine Zone mit Wertänderung, Schwelle, Formwechsel oder
+ * Bestandsänderung (oder mit verändertem Abstand). Zonen ohne jede Wirkung fehlen – sie bleiben ungefärbt.
+ * Reihenfolge wie `zones` (Insel), unbekannte Zonen danach. Richtung je Zone aus `idealDistance`; fehlt der
+ * Eintrag, entscheidet die Mehrheit der `toward`-Angaben ihrer Wertänderungen.
+ */
+export function zoneEffects(
+  preview: PreviewView | null,
+  zones: readonly { id: string; geographyName: string }[] = [],
+): ZoneEffect[] {
+  if (!preview) return [];
+  const byZone = new Map<string, ZoneEffect>();
+  const entry = (zone: string, name?: string): ZoneEffect => {
+    let e = byZone.get(zone);
+    if (!e) {
+      e = {
+        zone,
+        zoneName: name ?? zones.find((z) => z.id === zone)?.geographyName ?? zone,
+        toward: 'neutral',
+        distance: null,
+        changes: [],
+        triggers: [],
+        formChanges: [],
+        populationChanges: [],
+      };
+      byZone.set(zone, e);
+    }
+    return e;
+  };
+  for (const c of preview.changes) if (c.from !== c.to) entry(c.zone, c.zoneName).changes.push(c);
+  for (const x of preview.triggers) entry(x.zone, x.zoneName).triggers.push(x);
+  for (const f of preview.formChanges) entry(f.zone, f.zoneName).formChanges.push(f);
+  for (const p of preview.populationChanges) entry(p.zone, p.zoneName).populationChanges.push(p);
+  for (const d of preview.idealDistance ?? []) {
+    if (!byZone.has(d.zone) && d.before === d.after) continue;
+    entry(d.zone).distance = { before: d.before, after: d.after };
+  }
+  for (const e of byZone.values()) {
+    if (e.distance) e.toward = towardFromDistance(e.distance.before, e.distance.after);
+    else {
+      const score = e.changes.reduce((s, c) => s + (c.toward === 'better' ? 1 : c.toward === 'worse' ? -1 : 0), 0);
+      e.toward = score > 0 ? 'better' : score < 0 ? 'worse' : 'neutral';
+    }
+  }
+  const order = (zone: string) => {
+    const i = zones.findIndex((z) => z.id === zone);
+    return i < 0 ? zones.length : i;
+  };
+  return [...byZone.values()].sort((a, b) => order(a.zone) - order(b.zone));
+}
+
+/** Einfärbung aller betroffenen Zonen einer Weltkarte (grün näher, rot weiter weg, gelb gleich). */
+export function worldTints(effects: readonly ZoneEffect[]): Map<string, Toward> {
+  return new Map(effects.map((e) => [e.zone, e.toward]));
+}
+
+/**
+ * Bilanz einer Weltkarte: wie viele Zonen näher ans Ideal, weiter weg bzw. gleich weit. Bewusst keine
+ * Gesamtpunktzahl und keine Empfehlung – die Gewichtung trifft der Spieler.
+ */
+export function worldBalance(effects: readonly ZoneEffect[]): Record<Toward, number> {
+  const out: Record<Toward, number> = { better: 0, worse: 0, neutral: 0 };
+  for (const e of effects) out[e.toward] += 1;
+  return out;
+}
