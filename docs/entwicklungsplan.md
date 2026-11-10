@@ -14,7 +14,7 @@ Regeln und Zahlen in YAML, Fortschritt im Cockpit.
 | H0 – Prototyp „Die Herde“            | ✅ erledigt |
 | H1 – Engine: Insel, Herde, Wölfe     | ✅ erledigt |
 | H2 – App: Insel und Herde            | ✅ erledigt |
-| H3 – Entwicklung der Herde, Meta     | offen       |
+| H3 – Entwicklung der Herde, Meta     | ✅ erledigt |
 | H4 – Jahreskreis, Ereignisse, Inseln | offen       |
 | H5 – Balancing                       | offen       |
 | H6 – Grafik und Ton                  | offen       |
