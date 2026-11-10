@@ -143,7 +143,7 @@ describe('Ankündigung und Eintritt im Rundenablauf (Konzept 3)', () => {
     expect(view(data, s, 'de').forecast).toEqual({
       id: 'lightning',
       name: 'Blitzschlag',
-      text: 'Gewitter auf einer zufälligen Zone (kann Feuer auslösen) – trifft Wald',
+      text: 'Gewitter nur auf einer zufälligen Zone (kann Feuer auslösen) – trifft Wald',
       icon: '⚡',
       zone: 'forest',
       zoneName: 'Wald',
@@ -185,6 +185,8 @@ describe('Wirkung der Ereignisse (Konzept 9)', () => {
   it('Blitzschlag: Gewitter auf der Zielzone, auf trockener Zone mit Feuer (Störung)', () => {
     const s = game();
     setStats(s, 'forest', { moisture: 1, vegetation: 4 });
+    setStats(s, 'plains', { moisture: 1, vegetation: 3 });
+    const plains = { ...zone(s, 'plains').stats };
     const events = happen(s, 'lightning', 'forest');
     expect(events[0]).toEqual({ type: 'eventOccurred', event: 'lightning', zone: 'forest', strength: 1 });
     expect(events).toContainEqual({
@@ -197,6 +199,10 @@ describe('Wirkung der Ereignisse (Konzept 9)', () => {
     expect(zone(s, 'forest').stats.vegetation).toBe(0);
     expect(zone(s, 'forest').lastDisturbance).toBe(s.round);
     expect(events).toContainEqual({ type: 'disturbance', zone: 'forest', cause: 'trigger:thunderstorm.fire' });
+    // Die Weltkarte wirkt als Ereignis nur auf die Zielzone: das ebenso trockene Flachland bleibt unberührt.
+    expect(zone(s, 'plains').stats).toEqual(plains);
+    expect(zone(s, 'river').stats).toEqual(zone(game(), 'river').stats);
+    expect(events.filter((e) => e.type === 'triggered')).toHaveLength(1);
   });
 
   it('Seuche: die dichteste Population −3, die Zone ist gestört', () => {

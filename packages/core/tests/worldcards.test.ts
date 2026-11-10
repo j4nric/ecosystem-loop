@@ -271,19 +271,129 @@ describe('Ausspielen einer Weltkarte (Regen)', () => {
   });
 });
 
+describe('Wetterkarten der Spieldaten: Wirkung je Geografie (Konzept 6.2, Variante C)', () => {
+  /** Ruhewerte, Wald mit Vegetation 3 (sonst löst der Sturm Baumsturz aus); ohne Leben. */
+  const calm = (card: string) => {
+    const s = game({ hand: [card], breath: 5, life: false });
+    setStats(s, 'forest', { vegetation: 3 });
+    return s;
+  };
+  /** Vorschau als „zone.wert“ → Änderung. */
+  const deltas = (card: string) => {
+    const s = calm(card);
+    const p = preview(data, s, { uid: uidOf(s, card), targets: {} });
+    return { p, d: Object.fromEntries(p.changes.map((c) => [`${c.zone}.${c.stat}`, c.to - c.from])) };
+  };
+
+  const table: [string, Record<string, number>][] = [
+    [
+      'thunderstorm',
+      // Fluss hat schon Feuchte 5: nur der Wasserstand steigt.
+      {
+        'mountains.moisture': 2,
+        'forest.moisture': 2,
+        'plains.moisture': 2,
+        'river.water': 1,
+        'coast.moisture': 2,
+      },
+    ],
+    [
+      'drought',
+      {
+        'mountains.moisture': -1,
+        'mountains.snow': -1,
+        'forest.moisture': -1,
+        'forest.deadwood': 1,
+        'plains.moisture': -1,
+        'river.moisture': -1,
+        'river.water': -1,
+        'coast.moisture': -1,
+        'coast.salt': 1,
+      },
+    ],
+    ['storm', { 'mountains.snow': -1, 'forest.vegetation': -1, 'forest.deadwood': 1, 'coast.salt': 1 }],
+    ['frost', { 'mountains.snow': 1, 'plains.vegetation': -1, 'plains.soil': 1, 'river.water': -1 }],
+    ['rain', { 'mountains.snow': 1, 'forest.moisture': 1, 'plains.moisture': 1, 'river.water': 1, 'coast.salt': -1 }],
+    [
+      'dry_wind',
+      {
+        'mountains.moisture': -1,
+        'mountains.snow': -1,
+        'forest.moisture': -1,
+        'plains.moisture': -1,
+        'river.moisture': -1,
+        'coast.moisture': -1,
+      },
+    ],
+    [
+      'sun',
+      {
+        'mountains.light': 1,
+        'mountains.snow': -1,
+        'forest.light': 1,
+        'plains.light': 1,
+        'river.light': 1,
+        'coast.light': 1,
+        'coast.salt': 1,
+      },
+    ],
+    [
+      'snowfall',
+      {
+        'mountains.light': -1,
+        'mountains.snow': 1,
+        'forest.light': -1,
+        'forest.moisture': 1,
+        'plains.light': -1,
+        'river.light': -1,
+        'coast.light': -1,
+      },
+    ],
+  ];
+
+  it('alle Wetterkarten stehen in der Tabelle', () => {
+    const weather = [...data.cards.values()].filter((c) => c.category === 'weather').map((c) => c.id);
+    expect(weather.sort()).toEqual(table.map(([id]) => id).sort());
+  });
+
+  it.each(table)('%s wirkt je Geografie wie in den Daten, ohne Schwelle in ruhiger Lage', (card, expected) => {
+    const { p, d } = deltas(card);
+    expect(d).toEqual(expected);
+    expect(p.triggers).toEqual([]);
+    expect(isWorldCard(data.cards.get(card)!)).toBe(true);
+    // Gespielt wie in der Vorschau.
+    const s = calm(card);
+    const after = statsById(play(s, card).state);
+    for (const [key, by] of Object.entries(expected)) {
+      const [z, stat] = key.split('.') as [string, string];
+      expect(after[z]![stat], key).toBe(zone(s, z).stats[stat]! + by);
+    }
+  });
+
+  it.each(table.map(([id]) => id))(
+    'jeder Wetterzug ist ein Tausch: %s hilft einer Zone und schadet einer anderen',
+    (card) => {
+      const { p } = deltas(card);
+      const toward = (dir: string) => new Set(p.changes.filter((c) => c.toward === dir).map((c) => c.zone));
+      expect(toward('better').size, `${card} hilft`).toBeGreaterThan(0);
+      expect(toward('worse').size, `${card} schadet`).toBeGreaterThan(0);
+    },
+  );
+});
+
 describe('legalPlays, slotOptions und view mit reach', () => {
   it('Weltkarte = genau ein Zug ohne Ziele, sofern bezahlbar', () => {
-    const s = game({ hand: ['rain', 'sun'], breath: 1 });
+    const s = game({ hand: ['rain', 'seeds'], breath: 1 });
     const plays = legalPlays(data, s);
     expect(plays.filter((p) => p.card === 'rain')).toEqual([{ uid: uidOf(s, 'rain'), card: 'rain', targets: {} }]);
-    expect(plays.filter((p) => p.card === 'sun').length).toBeGreaterThan(1);
+    expect(plays.filter((p) => p.card === 'seeds').length).toBeGreaterThan(1);
     expect(slotOptions(data, s, uidOf(s, 'rain'), {})).toEqual([]);
     s.breath = 0;
     expect(legalPlays(data, s).filter((p) => p.card === 'rain')).toEqual([]);
   });
 
   it('CardView.reach: world ohne Slots, sonst zone', () => {
-    const s = game({ hand: ['rain', 'sun'], breath: 1 });
+    const s = game({ hand: ['rain', 'seeds'], breath: 1 });
     const v = view(data, s, 'de');
     expect(v.hand.find((c) => c.card === 'rain')).toMatchObject({
       reach: 'world',
@@ -291,7 +401,7 @@ describe('legalPlays, slotOptions und view mit reach', () => {
       slots: [],
       playable: true,
     });
-    expect(v.hand.find((c) => c.card === 'sun')).toMatchObject({ reach: 'zone' });
+    expect(v.hand.find((c) => c.card === 'seeds')).toMatchObject({ reach: 'zone' });
   });
 });
 

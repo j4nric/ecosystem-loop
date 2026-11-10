@@ -42,6 +42,12 @@ describe('Spieldaten', () => {
     expect(p.some((x) => x.startsWith('map.yaml'))).toBe(true);
   });
 
+  // Gezielte Karten (reach: zone) für Slot-, Effekt- und Schwellen-Fälle; Wetterkarten haben keine Slots.
+  type Raw = Parameters<Parameters<typeof dataWith>[0]>[0];
+  const card = (r: Raw, id: string) => r.cards.cards.find((c: { id: string }) => c.id === id);
+  /** Samen: ein Zonen-Slot, ein Effekt. */
+  const seeds = (r: Raw) => card(r, 'seeds');
+
   const broken: [string, Parameters<typeof dataWith>[0], RegExp][] = [
     [
       'unbekannter Wert in Form',
@@ -76,17 +82,17 @@ describe('Spieldaten', () => {
     ['Kopplung: Ziel', (r) => (r.couplings.couplings[0].to.geography = 'moon'), /Geografie moon/],
     ['Kopplung: transfer-Quelle', (r) => (r.couplings.couplings[0].effects[0].from = 'other'), /transfer from=other/],
     ['Karte: Kategorie', (r) => (r.cards.cards[0].category = 'curse'), /Kategorie curse/],
-    ['Karte: Effektziel', (r) => (r.cards.cards[0].effects[0].at = 'other'), /Effektziel other/],
-    ['Karte: Schwelle at', (r) => (r.cards.cards[0].triggers[0].at = 'other'), /Schwelle fire at=other/],
-    ['Karte: Nachbar-Slot', (r) => (r.cards.cards[2].slots[1].of = 'later'), /Slot fall verweist/],
-    ['Karte: Slot doppelt', (r) => r.cards.cards[0].slots.push({ id: 'zone', kind: 'zone' }), /Slot doppelt/],
+    ['Karte: Effektziel', (r) => (seeds(r).effects[0].at = 'other'), /Effektziel other/],
+    ['Karte: Schwelle at', (r) => (card(r, 'fire').triggers[0].at = 'other'), /Schwelle slash_and_burn at=other/],
+    ['Karte: Nachbar-Slot', (r) => (card(r, 'decomposition').slots[1].of = 'later'), /Slot target verweist/],
+    ['Karte: Slot doppelt', (r) => seeds(r).slots.push({ id: 'zone', kind: 'zone' }), /Slot doppelt/],
     ['Karte doppelt', (r) => r.cards.cards.push(r.cards.cards[0]), /Karte doppelt: thunderstorm/],
-    ['Bedingung: Form', (r) => (r.cards.cards[0].triggers[0].when = [{ form: 'castle' }]), /unbekannte Form castle/],
-    ['Bedingung: Geografie', (r) => (r.cards.cards[0].slots[0].when = [{ geography: 'moon' }]), /Geografie moon/],
+    ['Bedingung: Form', (r) => (card(r, 'fire').triggers[0].when = [{ form: 'castle' }]), /unbekannte Form castle/],
+    ['Bedingung: Geografie', (r) => (seeds(r).slots[0].when = [{ geography: 'moon' }]), /Geografie moon/],
     [
       'Bedingung: verschachtelt',
       (r) =>
-        (r.cards.cards[0].slots[0].when = [
+        (seeds(r).slots[0].when = [
           { not: [{ hasStat: 'heat' }] },
           { any: [{ season: 'monsoon' }] },
           { anyNeighbor: [{ stat: 'x', gte: 1 }] },
@@ -139,7 +145,7 @@ describe('Spieldaten', () => {
     [
       'Art-Slot: Zone',
       (r) =>
-        (r.cards.cards[0].slots = [
+        (seeds(r).slots = [
           { id: 'x', kind: 'species', in: 'zone' },
           { id: 'zone', kind: 'zone' },
         ]),
@@ -147,27 +153,19 @@ describe('Spieldaten', () => {
     ],
     [
       'Art-Slot: eats',
-      (r) => r.cards.cards[0].slots.push({ id: 'x', kind: 'species', in: 'zone', eats: 'rocks' }),
+      (r) => seeds(r).slots.push({ id: 'x', kind: 'species', in: 'zone', eats: 'rocks' }),
       /eats=rocks/,
     ],
     [
       'Art-Slot: Arten',
-      (r) => r.cards.cards[0].slots.push({ id: 'x', kind: 'species', in: 'zone', species: ['dragon'] }),
+      (r) => seeds(r).slots.push({ id: 'x', kind: 'species', in: 'zone', species: ['dragon'] }),
       /unbekannte Art dragon/,
     ],
-    [
-      'Slot-Id ist Art',
-      (r) => r.cards.cards[0].slots.push({ id: 'fish', kind: 'zone' }),
-      /Slot-Id fish ist schon eine Art/,
-    ],
-    [
-      'Effekt: Art',
-      (r) => r.cards.cards[0].effects.push({ population: 'dragon', by: 1, at: 'zone' }),
-      /unbekannte Art dragon/,
-    ],
+    ['Slot-Id ist Art', (r) => seeds(r).slots.push({ id: 'fish', kind: 'zone' }), /Slot-Id fish ist schon eine Art/],
+    ['Effekt: Art', (r) => seeds(r).effects.push({ population: 'dragon', by: 1, at: 'zone' }), /unbekannte Art dragon/],
     [
       'Effekt: move from',
-      (r) => r.cards.cards[0].effects.push({ move: 'fish', amount: 1, from: 'x', at: 'zone' }),
+      (r) => seeds(r).effects.push({ move: 'fish', amount: 1, from: 'x', at: 'zone' }),
       /move from=x/,
     ],
     ['rules.life.overuse: Wert', (r) => (r.config.rules.life.overuse = { heat: [] }), /unbekannter Wert heat/],

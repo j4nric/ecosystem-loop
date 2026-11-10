@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { canEndTurn, legalPlays, newGame, step } from '../src/game.ts';
 import type { GameEvent } from '../src/state.ts';
 import { RuleError } from '../src/world.ts';
-import { data, dataWith, endTurn, game, play, setStats } from './helpers.ts';
+import { data, dataWith, endTurn, game, play, setStats, uidOf } from './helpers.ts';
 
 describe('Partie-Aufbau', () => {
   it('startet in Runde 1 (Frühling, Jahr 1) mit Harmonie 60, Startodem und 4 Handkarten', () => {
@@ -138,7 +138,8 @@ describe('Kartenzwang und Hand (Konzept 3, 6.2)', () => {
 
   it('Naturgewalten kosten 0 Odem: man ist nie blockiert', () => {
     const s = game({ hand: ['thunderstorm', 'healing'], breath: 0 });
-    expect(legalPlays(data, s).map((p) => p.card)).toEqual(Array(5).fill('thunderstorm'));
+    // Gewitter ist eine Weltkarte: genau ein Zug ohne Ziel.
+    expect(legalPlays(data, s)).toEqual([{ uid: uidOf(s, 'thunderstorm'), card: 'thunderstorm', targets: {} }]);
     expect(canEndTurn(data, s)).toBe(false);
   });
 
@@ -221,7 +222,7 @@ describe('Reinheit und Determinismus', () => {
     const s = game({ hand: ['thunderstorm', 'rain', 'storm'], draw: [], breath: 3 });
     setStats(s, 'forest', { moisture: 1 });
     const before = structuredClone(s);
-    const a = play(s, 'thunderstorm', { zone: 'forest' });
+    const a = play(s, 'thunderstorm');
     expect(s).toEqual(before);
     const frozen = structuredClone(a.state);
     endTurn(a.state);
@@ -229,10 +230,10 @@ describe('Reinheit und Determinismus', () => {
   });
 
   it('ungültige Aktionen werfen RuleError', () => {
-    const s = game({ hand: ['storm', 'healing'], breath: 1 });
+    const s = game({ hand: ['decomposition', 'healing'], breath: 1 });
     expect(() => step(data, s, { type: 'play', uid: 999, targets: {} })).toThrow(/nicht auf der Hand/);
-    expect(() => play(s, 'storm', {})).toThrow(/Ziel fehlt/);
-    expect(() => play(s, 'storm', { zone: 'nowhere', fall: 'river' })).toThrow(/Ungültiges Ziel/);
+    expect(() => play(s, 'decomposition', {})).toThrow(/Ziel fehlt/);
+    expect(() => play(s, 'decomposition', { zone: 'nowhere', target: 'plains' })).toThrow(/Ungültiges Ziel/);
     expect(() => play(s, 'healing', { zone: 'forest' })).toThrow(/Zu wenig Odem/);
   });
 });

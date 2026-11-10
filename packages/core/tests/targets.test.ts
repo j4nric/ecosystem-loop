@@ -144,7 +144,8 @@ describe('Ansicht: Zielbereiche und Ideal', () => {
 
 describe('Vorschau: Richtung zum Ideal', () => {
   it('toward better/worse/neutral und idealDistance vorher/nachher', () => {
-    const s = game({ hand: ['rain_call', 'dry_wind', 'sun'] });
+    // Gezielte Karten: Regenruf (Feuchte +1), Sonnenbad (Licht +1, Feuchte −1), Schatten (Licht −1).
+    const s = game({ hand: ['rain_call', 'sunbathing', 'shade'] });
     setStats(s, 'coast', { moisture: 3 });
     setStats(s, 'forest', { moisture: 5 });
     const before = structuredClone(s);
@@ -154,16 +155,19 @@ describe('Vorschau: Richtung zum Ideal', () => {
     const coastDist = idealDistance(data.ideals.get('coast')!, s.zones.find((z) => z.id === 'coast')!.stats);
     expect(better.idealDistance).toEqual([{ zone: 'coast', before: coastDist, after: coastDist - 1 }]);
 
-    const worse = preview(data, s, { uid: uidOf(s, 'dry_wind'), targets: { zone: 'forest' } });
-    expect(worse.changes[0]).toMatchObject({ zone: 'forest', stat: 'moisture', from: 5, to: 4, toward: 'neutral' });
+    const moisture = (p: ReturnType<typeof preview>) => p.changes.find((c) => c.stat === 'moisture');
+    const worse = preview(data, s, { uid: uidOf(s, 'sunbathing'), targets: { zone: 'forest' } });
+    expect(moisture(worse)).toMatchObject({ zone: 'forest', stat: 'moisture', from: 5, to: 4, toward: 'neutral' });
+    // Licht schränkt den Urwald nicht ein.
+    expect(worse.changes.find((c) => c.stat === 'light')).toMatchObject({ toward: 'neutral' });
     setStats(s, 'forest', { moisture: 4 });
-    const worse2 = preview(data, s, { uid: uidOf(s, 'dry_wind'), targets: { zone: 'forest' } });
-    expect(worse2.changes[0]).toMatchObject({ to: 3, toward: 'worse' });
+    const worse2 = preview(data, s, { uid: uidOf(s, 'sunbathing'), targets: { zone: 'forest' } });
+    expect(moisture(worse2)).toMatchObject({ to: 3, toward: 'worse' });
     const d = worse2.idealDistance![0]!;
     expect(d.after - d.before).toBe(1);
 
     // Licht schränkt die Aue nicht ein: neutral, Abstand unverändert.
-    const neutral = preview(data, s, { uid: uidOf(s, 'sun'), targets: { zone: 'river' } });
+    const neutral = preview(data, s, { uid: uidOf(s, 'shade'), targets: { zone: 'river' } });
     expect(neutral.changes[0]).toMatchObject({ zone: 'river', stat: 'light', toward: 'neutral' });
     expect(neutral.idealDistance![0]!.before).toBe(neutral.idealDistance![0]!.after);
 
