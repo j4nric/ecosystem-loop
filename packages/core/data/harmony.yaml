@@ -10,7 +10,7 @@ perRound:
   # je Zone mit Störung in dieser Runde (AUSLEGUNG: „Harmonie-Einbruch“ aus Konzept 8, Zahl ist Platzhalter)
   disturbance: -2
   # ab Phase 2 (Arten)
-  perSpecies: 0.5
+  perSpecies: 0.25 # Balancing 2026-11-10: 0.5 → 0.25 (gute Spieler überlebten zu lange)
   extinction: -10
   hungerPerZone: -1
   perHuman: -0.5

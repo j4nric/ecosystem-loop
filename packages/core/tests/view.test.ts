@@ -72,11 +72,11 @@ describe('view', () => {
   it('Stufenfortschritt und Jahr', () => {
     const s = game();
     s.round = 5;
-    zone(s, 'forest').levelProgress = 2;
+    zone(s, 'forest').levelProgress = 1;
     const v = view(data, s);
     expect(v.year).toBe(2);
     expect(v.season.id).toBe('spring');
-    expect(v.zones.find((z) => z.id === 'forest')!.levelProgress).toBeCloseTo(2 / 3);
+    expect(v.zones.find((z) => z.id === 'forest')!.levelProgress).toBeCloseTo(1 / 2);
     zone(s, 'forest').level = 3; // normale Form: Stufe 4 unerreichbar
     expect(view(data, s).zones.find((z) => z.id === 'forest')!.levelProgress).toBe(0);
   });
@@ -183,8 +183,8 @@ describe('preview', () => {
       // Totholz springt über den Zielbereich 2–3 hinweg: vorher 1 zu wenig, nachher 1 zu viel.
       { zone: 'forest', stat: 'deadwood', from: 1, to: 4, zoneName: 'Forest', statName: 'Deadwood', toward: 'neutral' },
     ]);
-    // Urwald: Vegetation =5, Feuchte ≥4, Totholz 2–3 → vorher 1+3+1, nachher 5+1+1.
-    expect(p.idealDistance).toEqual([{ zone: 'forest', before: 5, after: 7 }]);
+    // Urwald: Vegetation ≥4, Feuchte ≥4, Totholz 2–3 → vorher 0+3+1, nachher 4+1+1.
+    expect(p.idealDistance).toEqual([{ zone: 'forest', before: 4, after: 6 }]);
     expect(p.populationChanges).toEqual([]);
     expect(p.eventChanges).toEqual([]);
     expect(p.formChanges).toEqual([

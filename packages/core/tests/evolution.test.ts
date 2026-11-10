@@ -166,15 +166,17 @@ describe('Stammbaum (Konzept 5.3)', () => {
 });
 
 describe('Evolutionsbedingungen (Konzept 5.2, 4.4)', () => {
-  it('Vorfahr braucht Bestand ≥ 5', () => {
-    const s = build({ ...TREE.fish!, pops: { plankton: 4 } });
+  it('Vorfahr braucht Bestand ≥ 4', () => {
+    const s = build({ ...TREE.fish!, pops: { plankton: 3 } });
     expect(evolve(s, 5).some((e) => e.type === 'speciesEmerged')).toBe(false);
+    const t = build({ ...TREE.fish!, pops: { plankton: 4 } });
+    expect(evolve(t, 3).some((e) => e.type === 'speciesEmerged' && e.species === 'fish')).toBe(true);
   });
 
   it('Bedingungen müssen 3 Runden am Stück gelten – eine Unterbrechung setzt zurück', () => {
     const s = build(TREE.fish!);
     evolve(s, 2);
-    zone(s, 'river').populations.plankton = 4;
+    zone(s, 'river').populations.plankton = 3;
     evolve(s, 1, 3);
     expect(zone(s, 'river').evolution.fish).toBeUndefined();
     zone(s, 'river').populations.plankton = 5;
@@ -190,29 +192,29 @@ describe('Evolutionsbedingungen (Konzept 5.2, 4.4)', () => {
     expect(evolutionTarget(data, s, zone(s, 'forest'), data.species.get('bee')!)?.id).toBe('mountains');
   });
 
-  it('Zonenstufe ≥ Stufe − 2', () => {
-    const s = build({ ...TREE.deer!, level: 3 });
+  it('Zonenstufe ≥ Stufe − 3', () => {
+    const s = build({ ...TREE.deer!, level: 2 });
     expect(evolve(s, 3).some((e) => e.type === 'speciesEmerged')).toBe(false);
-    zone(s, 'plains').level = 4;
+    zone(s, 'plains').level = 3;
     zone(s, 'plains').lastDisturbance = 4;
     expect(evolve(s, 3, 4).some((e) => e.type === 'speciesEmerged' && e.species === 'deer')).toBe(true);
   });
 
   it('Zonenstufe zählt an der Zielzone: Landgang nur in eine Nachbarzone mit ausreichender Stufe', () => {
-    // Frosch im Moor (Stufe 2), Echse kann nur im Trockenwald nebenan leben.
-    const s = build(TREE.lizard!);
+    // Echse auf dem Fels (Berge, Stufe 3), der Vogel (Stufe 5) kann nur im Lichten Wald nebenan leben.
+    const s = build(TREE.bird!);
     zone(s, 'forest').level = 1;
-    expect(evolutionTarget(data, s, zone(s, 'plains'), data.species.get('lizard')!)).toBeNull();
+    expect(evolutionTarget(data, s, zone(s, 'mountains'), data.species.get('bird')!)).toBeNull();
     expect(evolve(s, 3).some((e) => e.type === 'speciesEmerged')).toBe(false);
     zone(s, 'forest').level = 2;
-    zone(s, 'plains').lastDisturbance = 4;
-    expect(evolutionTarget(data, s, zone(s, 'plains'), data.species.get('lizard')!)?.id).toBe('forest');
-    expect(evolve(s, 3, 4).some((e) => e.type === 'speciesEmerged' && e.species === 'lizard')).toBe(true);
+    zone(s, 'mountains').lastDisturbance = 4;
+    expect(evolutionTarget(data, s, zone(s, 'mountains'), data.species.get('bird')!)?.id).toBe('forest');
+    expect(evolve(s, 3, 4).some((e) => e.type === 'speciesEmerged' && e.species === 'bird')).toBe(true);
   });
 
-  it('Frosch (Stufe 3) entsteht schon in einer Zone der Stufe 1 (Stufe − 2)', () => {
-    const s = build({ ...TREE.frog!, level: 1 });
-    expect(evolutionTarget(data, s, zone(s, 'river'), data.species.get('frog')!)?.id).toBe('river');
+  it('Echse (Stufe 4) entsteht schon in einer Zone der Stufe 1 (Stufe − 3)', () => {
+    const s = build({ ...TREE.lizard!, level: 1 });
+    expect(evolutionTarget(data, s, zone(s, 'plains'), data.species.get('lizard')!)?.id).toBe('forest');
   });
 
   it('Selektionsdruck ab Stufe 4: ohne Störung keine Evolution, mit Störung (auch nebenan) schon', () => {

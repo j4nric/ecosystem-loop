@@ -34,8 +34,8 @@ milestones:
 
   - id: weathered
     name: { de: Wetterfest, en: Weathered }
-    description: { de: '5 Ereignisse überstanden.', en: 'Weathered 5 events.' }
-    when: [{ stat: events, gte: 5 }]
+    description: { de: '20 Ereignisse überstanden.', en: 'Weathered 20 events.' }
+    when: [{ stat: events, gte: 20 }] # Balancing 2026-11-10: 5 → 20
     unlocks: [silence]
 
   - id: first_year

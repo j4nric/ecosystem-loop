@@ -16,7 +16,7 @@ describe('Zielbereiche der Idealform (Konzept 4.2)', () => {
       },
       forest: {
         form: 'primeval_forest',
-        ranges: { vegetation: { min: 5, max: 5 }, moisture: { min: 4, max: 5 }, deadwood: { min: 2, max: 3 } },
+        ranges: { vegetation: { min: 4, max: 5 }, moisture: { min: 4, max: 5 }, deadwood: { min: 2, max: 3 } },
       },
       plains: {
         form: 'flower_meadow',
@@ -27,10 +27,10 @@ describe('Zielbereiche der Idealform (Konzept 4.2)', () => {
           moisture: { min: 0, max: 3 },
         },
       },
-      river: { form: 'floodplain', ranges: { water: { min: 3, max: 3 }, vegetation: { min: 4, max: 5 } } },
+      river: { form: 'floodplain', ranges: { water: { min: 3, max: 3 }, vegetation: { min: 3, max: 5 } } },
       coast: {
         form: 'mangrove',
-        ranges: { vegetation: { min: 4, max: 5 }, salt: { min: 2, max: 3 }, moisture: { min: 4, max: 5 } },
+        ranges: { vegetation: { min: 3, max: 5 }, salt: { min: 2, max: 3 }, moisture: { min: 4, max: 5 } },
       },
     });
   });
@@ -118,7 +118,7 @@ describe('Zielbereiche der Idealform (Konzept 4.2)', () => {
   it('Abstand zur Idealform = Summe über die eingeschränkten Werte', () => {
     const river = data.ideals.get('river')!;
     expect(idealDistance(river, { water: 3, vegetation: 4, light: 0 })).toBe(0);
-    expect(idealDistance(river, { water: 5, vegetation: 1, light: 0 })).toBe(2 + 3);
+    expect(idealDistance(river, { water: 5, vegetation: 1, light: 0 })).toBe(2 + 2);
     expect(idealDistance(river, { light: 2 })).toBe(0); // fehlende Werte zählen nicht
   });
 });
@@ -131,13 +131,13 @@ describe('Ansicht: Zielbereiche und Ideal', () => {
     const river = v.zones.find((z) => z.id === 'river')!;
     const stat = (id: string) => river.stats.find((x) => x.id === id)!;
     expect(stat('water').target).toEqual({ min: 3, max: 3, status: 'high' });
-    expect(stat('vegetation').target).toEqual({ min: 4, max: 5, status: 'ok' });
+    expect(stat('vegetation').target).toEqual({ min: 3, max: 5, status: 'ok' });
     expect(stat('light').target).toBeUndefined();
     expect(river.ideal).toEqual({ id: 'floodplain', name: 'Aue', distance: 2 });
     setStats(s, 'river', { water: 0, vegetation: 1 });
     const low = view(data, s, 'en').zones.find((z) => z.id === 'river')!;
     expect(low.stats.find((x) => x.id === 'water')!.target!.status).toBe('low');
-    expect(low.ideal).toMatchObject({ id: 'floodplain', distance: 3 + 3 });
+    expect(low.ideal).toMatchObject({ id: 'floodplain', distance: 3 + 2 });
     expect(low.ideal!.name).toBe(data.forms.get('floodplain')!.form.name.en);
   });
 });

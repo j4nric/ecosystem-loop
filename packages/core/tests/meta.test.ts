@@ -87,11 +87,12 @@ describe('Schöpfungsbuch (Konzept 10)', () => {
     expect(again.book.milestones.first_extinction).toEqual({ game: 2 });
   });
 
-  it('Meilensteine über Summen: Stille nach 5 Ereignissen (über mehrere Partien)', () => {
+  it('Meilensteine über Summen: Stille nach 20 Ereignissen (über mehrere Partien)', () => {
     let b = newBook();
-    b = recordGame(data, b, finished({ events: 3, round: 2 })).book;
+    b = recordGame(data, b, finished({ events: 12, round: 2 })).book;
+    b = recordGame(data, b, finished({ events: 7, round: 2 })).book;
     expect(b.milestones.weathered).toBeUndefined();
-    const u = recordGame(data, b, finished({ events: 2, round: 2 }));
+    const u = recordGame(data, b, finished({ events: 1, round: 2 }));
     expect(u.milestones).toEqual(['weathered']);
     expect(u.unlocked).toEqual(['silence']);
   });

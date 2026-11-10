@@ -147,15 +147,15 @@ describe('Zonenstufe (Konzept 4.4)', () => {
     return events;
   }
 
-  it('steigt nach 3 Runden am Stück in derselben nicht verödeten Form', () => {
+  it('steigt nach 2 Runden am Stück in derselben nicht verödeten Form', () => {
     const s = game();
-    rounds(s, 2);
+    rounds(s, 1);
     expect(zone(s, 'forest').level).toBe(1);
-    expect(zone(s, 'forest').levelProgress).toBe(2);
-    rounds(s, 1, 3);
+    expect(zone(s, 'forest').levelProgress).toBe(1);
+    rounds(s, 1, 2);
     expect(zone(s, 'forest').level).toBe(2);
     expect(zone(s, 'forest').levelProgress).toBe(0);
-    rounds(s, 6, 4);
+    rounds(s, 6, 3);
     expect(zone(s, 'forest').level).toBe(4 - 1); // normale Form: höchstens Stufe 3
   });
 
@@ -240,7 +240,7 @@ describe('Zonenstufe (Konzept 4.4)', () => {
     rounds(s, 6, 1, d);
     expect(zone(s, 'forest').level).toBe(1);
     zone(s, 'forest').populations = { a: 1 };
-    rounds(s, 3, 7, d);
+    rounds(s, 1, 7, d); // die Serie ist längst voll, es fehlte nur die Art
     expect(zone(s, 'forest').level).toBe(2);
 
     setStats(s, 'forest', { vegetation: 5, moisture: 4, deadwood: 2 });

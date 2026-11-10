@@ -60,7 +60,7 @@ geographies:
       - id: primeval_forest
         name: { de: Urwald, en: Primeval forest }
         kind: ideal
-        when: [{ stat: vegetation, eq: 5 }, { stat: moisture, gte: 4 }, { stat: deadwood, gte: 2, lte: 3 }]
+        when: [{ stat: vegetation, gte: 4 }, { stat: moisture, gte: 4 }, { stat: deadwood, gte: 2, lte: 3 }]
       - id: open_forest
         name: { de: Lichter Wald, en: Open woodland }
         kind: normal
@@ -124,7 +124,7 @@ geographies:
       - id: floodplain
         name: { de: Aue, en: Floodplain }
         kind: ideal
-        when: [{ stat: water, eq: 3 }, { stat: vegetation, gte: 4 }]
+        when: [{ stat: water, eq: 3 }, { stat: vegetation, gte: 3 }]
       - id: stream
         name: { de: Strom, en: Stream }
         kind: normal
@@ -141,7 +141,7 @@ geographies:
       - id: mangrove
         name: { de: Mangrove, en: Mangrove }
         kind: ideal
-        when: [{ stat: vegetation, gte: 4 }, { stat: salt, gte: 2, lte: 3 }, { stat: moisture, gte: 4 }]
+        when: [{ stat: vegetation, gte: 3 }, { stat: salt, gte: 2, lte: 3 }, { stat: moisture, gte: 4 }]
       - id: reef
         name: { de: Riff, en: Reef }
         kind: normal
