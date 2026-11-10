@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { Action, GameView } from '@core/api';
-import type { GameClient } from '../client/index.ts';
+import type { Action } from '@core/api';
+import type { GameClient, Notice } from '../client/index.ts';
 import { t } from '../i18n/index.ts';
 
 export interface Toast {
@@ -9,12 +9,12 @@ export interface Toast {
   tone: 'info' | 'good' | 'bad';
 }
 
-const TOAST_MS = 2600;
-const MAX_TOASTS = 3;
+const TOAST_MS = 3200;
+const MAX_TOASTS = 4;
 
 /**
  * Bindet einen GameClient an React: aktuelle GameView, dispatch und kurze Ereignis-Meldungen.
- * Die Meldungen entstehen aus dem Unterschied zweier Views, bis die Engine ein Ereignis-Log liefert.
+ * Die Meldungen kommen aus den Engine-Ereignissen des jeweiligen Schritts (`subscribeNotices`).
  */
 export function useGame(client: GameClient) {
   const view = useSyncExternalStore(
@@ -22,46 +22,57 @@ export function useGame(client: GameClient) {
     () => client.getView(),
   );
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const prev = useRef<GameView>(view);
   const nextId = useRef(1);
 
-  const push = useCallback((text: string, tone: Toast['tone'] = 'info') => {
-    const id = nextId.current++;
-    setToasts((list) => [...list, { id, text, tone }].slice(-MAX_TOASTS));
-    window.setTimeout(() => setToasts((list) => list.filter((x) => x.id !== id)), TOAST_MS);
-  }, []);
-
   useEffect(() => {
-    const before = prev.current;
-    prev.current = view;
-    if (before === view) return;
-    for (const message of diffViews(before, view)) push(message.text, message.tone);
-  }, [view, push]);
+    const timers = new Set<number>();
+    const unsubscribe = client.subscribeNotices((notices) => {
+      const fresh = notices.map((n) => ({ id: nextId.current++, ...noticeToast(n) }));
+      setToasts((list) => [...list, ...fresh].slice(-MAX_TOASTS));
+      for (const toast of fresh) {
+        const timer = window.setTimeout(() => {
+          timers.delete(timer);
+          setToasts((list) => list.filter((x) => x.id !== toast.id));
+        }, TOAST_MS);
+        timers.add(timer);
+      }
+    });
+    return () => {
+      unsubscribe();
+      for (const timer of timers) window.clearTimeout(timer);
+    };
+  }, [client]);
 
   const dispatch = useCallback((action: Action) => client.dispatch(action), [client]);
-  const newGame = useCallback(() => client.newGame(), [client]);
+  const newGame = useCallback(() => {
+    setToasts([]);
+    client.newGame();
+  }, [client]);
 
   return { view, dispatch, newGame, toasts };
 }
 
-function diffViews(a: GameView, b: GameView): Omit<Toast, 'id'>[] {
-  const out: Omit<Toast, 'id'>[] = [];
-  if (b.round !== a.round) out.push({ text: t.toastRound(b.round, b.season.name), tone: 'info' });
-  for (const card of a.hand) {
-    if (b.round === a.round && !b.hand.some((c) => c.uid === card.uid)) {
-      out.push({ text: t.toastPlayed(card.name), tone: 'info' });
-    }
+function noticeToast(n: Notice): Omit<Toast, 'id'> {
+  switch (n.type) {
+    case 'round':
+      return { text: t.toastRound(n.round, n.season), tone: 'info' };
+    case 'played':
+      return { text: t.toastPlayed(n.card), tone: 'info' };
+    case 'trigger':
+      return { text: t.toastTrigger(n.icon, n.name, n.zone), tone: n.disturbance ? 'bad' : 'info' };
+    case 'form':
+      if (n.kind === 'disturbance') return { text: t.toastDisturbance(n.zone, n.to), tone: 'bad' };
+      return {
+        text: t.toastForm(n.zone, n.from, n.to),
+        tone: n.kind === 'ideal' ? 'good' : n.kind === 'normal' ? 'info' : 'bad',
+      };
+    case 'level':
+      return n.to > n.from
+        ? { text: t.toastLevel(n.zone, n.to), tone: 'good' }
+        : { text: t.toastLevelDown(n.zone, n.to), tone: 'bad' };
+    case 'harmony':
+      return { text: t.toastHarmony(n.delta), tone: n.delta > 0 ? 'good' : 'bad' };
+    case 'collapsed':
+      return { text: t.toastCollapsed, tone: 'bad' };
   }
-  for (const zb of b.zones) {
-    const za = a.zones.find((z) => z.id === zb.id);
-    if (!za) continue;
-    if (za.form.id !== zb.form.id) {
-      const tone = zb.form.kind === 'ideal' ? 'good' : zb.form.kind === 'normal' ? 'info' : 'bad';
-      out.push({ text: t.toastForm(zb.geographyName, za.form.name, zb.form.name), tone });
-    }
-    if (zb.level > za.level) out.push({ text: t.toastLevel(zb.geographyName, zb.level), tone: 'good' });
-  }
-  const dh = b.harmony.value - a.harmony.value;
-  if (dh !== 0 && b.round !== a.round) out.push({ text: t.toastHarmony(dh), tone: dh > 0 ? 'good' : 'bad' });
-  return out;
 }
