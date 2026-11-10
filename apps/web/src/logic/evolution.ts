@@ -7,7 +7,7 @@ import type { EvolutionView, HerdeData, HerdeView, StageNeedsView } from '@being
 import type { Strings } from '../i18n/de.ts';
 import type { Locale } from '../i18n/locale.ts';
 import { landName, seasonSet, stageName, textOf, traitName } from './format.ts';
-import { campGroupNames, campSpotsOnIsland, preyAnimals } from './hunt.ts';
+import { campGroupNames, preyAnimals } from './hunt.ts';
 
 /** Wie eine Zeile zu lesen ist: vorhanden, fehlt, Warnung (z. B. Hindernis auf der Insel) oder nur Hinweis. */
 export type NeedTone = 'ok' | 'missing' | 'warn' | 'info';
@@ -39,14 +39,13 @@ const names = (data: HerdeData, locale: Locale, lands: readonly string[]) =>
   lands.map((id) => landName(data, locale, id)).join(', ');
 
 /** Was `needRows` aus der View liest; Wild, Rudel und Lager sind optional (ältere Test-Literale). */
-export type NeedsSource = Pick<HerdeView, 'cells'> &
-  Partial<Pick<HerdeView, 'prey' | 'packs' | 'camp' | 'campSites' | 'width' | 'height'>>;
+export type NeedsSource = Pick<HerdeView, 'cells'> & Partial<Pick<HerdeView, 'prey' | 'packs' | 'camp' | 'campSites'>>;
 
 /**
  * Bedürfnisse einer Stufe als Zeilen mit dem, was die Insel heute bietet: Futter, Beute (Wild), Wasser, Schutz,
  * Wölfe (Feinde oder Konkurrenten), Hindernis, Lager, Wege. Mit `from` (der aktuellen Stufe) ist es die Vorschau der
  * nächsten Stufe: Dazu kommt, welche bisherigen Futter-Landschaften nicht mehr zählen, und beim Lager zählen die
- * möglichen Plätze auf der ganzen Insel (die Engine liefert Plätze nur für die aktuelle Stufe).
+ * möglichen Plätze auf der ganzen Insel (`camp.spots` der Engine, ohne Zugweite).
  */
 export function needRows(
   t: Strings,
@@ -149,10 +148,7 @@ export function needRows(
         tone: n > 0 ? 'ok' : 'warn',
       });
     } else {
-      const n =
-        view.width !== undefined && view.height !== undefined
-          ? campSpotsOnIsland({ cells: view.cells, width: view.width, height: view.height }, needs.camp)
-          : 0;
+      const n = needs.camp.spots;
       rows.push({
         kind: 'camp',
         label: t.needCamp,

@@ -75,6 +75,8 @@ export interface PreyState {
 }
 
 export type Outcome = 'won' | 'lost';
+/** extinct: die Herde ist ausgestorben · lastIce: nach der letzten Eiszeit nicht auf der letzten Stufe mit Lager */
+export type LostCause = 'extinct' | 'lastIce';
 
 export interface HerdeState {
   version: number;
@@ -146,7 +148,7 @@ export type HerdeEvent =
   | { type: 'iceAgeEnded'; survivors: number; count: number }
   | { type: 'gameWon'; survivors: number }
   /** extinct: die Herde ist ausgestorben · lastIce: die letzte Eiszeit (ice.ages) ohne Lager als Mensch überstanden */
-  | { type: 'gameLost'; month: number; cause: 'extinct' | 'lastIce' }
+  | { type: 'gameLost'; month: number; cause: LostCause }
   // Wild
   | { type: 'preyGrew'; prey: number; size: number }
   | { type: 'preyFounded'; prey: number; parent: number; x: number; y: number }

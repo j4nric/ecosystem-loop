@@ -107,12 +107,14 @@ export const Maturity = z.strictObject({
 export type Maturity = z.infer<typeof Maturity>;
 
 /**
- * Lager einer Stufe (Konzept 9.2, Stufe 5): Gültig ist ein Feld, das die Herde in diesem Monat erreichen kann und in
- * dessen Umkreis `radius` je eine Landschaft aus jeder Gruppe von `near` liegt. Einmal im Jahr (Monat `clear.month`
+ * Lager einer Stufe (Konzept 9.2, Stufe 5): Gültig ist ein Feld mit einer Landschaft aus `on`, das die Herde in diesem
+ * Monat erreichen kann und in dessen Umkreis `radius` je eine Landschaft aus jeder Gruppe von `near` liegt. Einmal im Jahr (Monat `clear.month`
  * im Jahr) rodet die Herde das erste Feld aus `clear.lands` (Reihenfolge der Liste, dann Zeile für Zeile) im Umkreis
  * `radius` des Lagers zu `clear.to`.
  */
 export const Camp = z.strictObject({
+  /** Landschaften, auf denen ein Lager stehen darf (z. B. nicht auf dem Fluss) */
+  on: z.array(Id).min(1),
   radius: z.number().int().positive(),
   near: z.array(z.array(Id).min(1)).min(1),
   clear: z.strictObject({ lands: z.array(Id).min(1), to: Id, month: Count }).optional(),

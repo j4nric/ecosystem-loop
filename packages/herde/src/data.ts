@@ -152,6 +152,13 @@ export function buildData(raw: RawData): HerdeData {
     if (s.preyFood > 0 !== s.huntKill > 0)
       problems.push(`${DATA_FILES.stages}: ${where}: preyFood und huntKill nur gemeinsam (Jagd)`);
     if (s.camp) {
+      for (const id of s.camp.on) {
+        land(DATA_FILES.stages, `${where} → camp.on`, id);
+        if (landscapes.has(id) && !landscapes.get(id)!.walk)
+          problems.push(`${DATA_FILES.stages}: ${where}: camp.on ${id} ist nicht begehbar`);
+        if (s.blocked.includes(id))
+          problems.push(`${DATA_FILES.stages}: ${where}: camp.on ${id} ist für diese Stufe ein Hindernis`);
+      }
       s.camp.near.forEach((group, i) => {
         for (const id of group) land(DATA_FILES.stages, `${where} → camp.near.${i}`, id);
       });

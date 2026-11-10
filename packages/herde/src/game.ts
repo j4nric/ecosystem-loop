@@ -13,6 +13,7 @@ import { evolve, maturityOf, pickTrait } from './traits.ts';
 import { RuleError } from './world.ts';
 
 export { view, intentOf, forecastOf, evolutionOf } from './view.ts';
+export { campPreview } from './camp.ts';
 export { validateState } from './validate.ts';
 
 const rand = (h: RngHolder, n: number) => (n > 0 ? nextInt(h, n) : 0);

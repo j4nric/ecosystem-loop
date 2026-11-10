@@ -3,13 +3,13 @@
  */
 import type { CellForecast, EvolutionView, HerdeView, IntentView, StageNeedsView } from './api.ts';
 import { getCard, targetsOf } from './cards.ts';
-import { campSites } from './camp.ts';
+import { campSites, campSpotCount } from './camp.ts';
 import { chooseMove } from './herd.ts';
 import { runNature } from './nature.ts';
 import type { HerdeData, SeasonSet } from './schema.ts';
-import type { CellState, HerdeState } from './state.ts';
+import type { CellState, HerdeState, LostCause } from './state.ts';
 import { availableTraits, maturityOf } from './traits.ts';
-import { islandOf, landOf, maxFood, seasonOf, stageOf, walkable, yearLength } from './world.ts';
+import { cheb, islandOf, landOf, maxFood, seasonOf, stageOf, walkable, yearLength } from './world.ts';
 
 /**
  * Absicht der Herde: Die Herde wählt nach Wachstum, Sukzession und Waldbrand dieses Monats (Schritte 1–3).
@@ -58,8 +58,28 @@ export function stageNeeds(data: HerdeData, s: HerdeState, stageId: string): Sta
     reach: stage.reach,
     prey: stage.preyFood > 0 ? { food: stage.preyFood, kill: stage.huntKill, fire: stage.fireHunt } : null,
     wolves: stage.wolves,
-    camp: stage.camp ? { radius: stage.camp.radius, near: stage.camp.near.map((g) => [...g]) } : null,
+    camp: stage.camp
+      ? {
+          on: [...stage.camp.on],
+          radius: stage.camp.radius,
+          near: stage.camp.near.map((g) => [...g]),
+          spots: campSpotCount(data, sim),
+          clear: stage.camp.clear
+            ? { lands: [...stage.camp.clear.lands], to: stage.camp.clear.to, month: stage.camp.clear.month }
+            : null,
+        }
+      : null,
   };
+}
+
+/**
+ * Ausgang einer verlorenen Partie, aus dem Zustand abgeleitet (ohne neues Zustandsfeld): Eine verlorene Partie mit
+ * lebender Herde endet nur nach der letzten Eiszeit (`gameLost` mit cause lastIce in `month.ts`), sonst ist die Herde
+ * ausgestorben. `validateState` sichert diesen Zusammenhang für gespeicherte Stände.
+ */
+export function lostCauseOf(s: HerdeState): LostCause | null {
+  if (s.over !== 'lost') return null;
+  return s.herd.size > 0 ? 'lastIce' : 'extinct';
 }
 
 /** Entwicklung: Stufe, Merkmale, Angebot, Fortschritt der Erfahrungen, Reife, Vorschau der nächsten Stufe. */
@@ -91,6 +111,9 @@ export function view(data: HerdeData, s: HerdeState): HerdeView {
   const stage = stageOf(data, s);
   const sites = campSites(data, s);
   const year = yearLength(data);
+  // Jagdweite wie `huntLimit`/`eat` (herd.ts): die Stufe jagt (preyFood > 0) und das Wild liegt im Umkreis `reach`
+  // (mit der Wirkung der Merkmale). Gemessen vom Feld der Herde jetzt; `advance` jagt nach dem Zug vom Ziel der Absicht.
+  const hunts = !s.over && stage.preyFood > 0;
   return {
     island: s.island,
     width: island.width,
@@ -139,7 +162,14 @@ export function view(data: HerdeData, s: HerdeState): HerdeView {
       size: p.size,
       hungry: p.hungry >= data.params.wolves.hungryAfter,
     })),
-    prey: s.prey.map((p) => ({ id: p.id, x: p.x, y: p.y, size: p.size, hungry: p.hungry > 0 })),
+    prey: s.prey.map((p) => ({
+      id: p.id,
+      x: p.x,
+      y: p.y,
+      size: p.size,
+      hungry: p.hungry > 0,
+      inReach: hunts && cheb(p, s.herd) <= stage.reach,
+    })),
     camp: s.camp ? { x: s.camp.x, y: s.camp.y } : null,
     campSites: sites,
     iceAges: { survived: s.iceAges, max: data.params.ice.ages ?? null },
@@ -151,5 +181,6 @@ export function view(data: HerdeData, s: HerdeState): HerdeView {
     handMax: data.params.cards.handMax,
     evolution: evolutionOf(data, s),
     over: s.over,
+    overCause: lostCauseOf(s),
   };
 }

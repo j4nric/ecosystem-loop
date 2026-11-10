@@ -111,6 +111,12 @@ function problem(data: HerdeData, s: HerdeState): string | null {
   }
   const ages = data.params.ice.ages;
   if (ages !== undefined && s.iceAges > ages) return `${s.iceAges} Eiszeiten überstanden (max. ${ages})`;
+  // Ausgang und Herde passen zusammen (darauf beruht `overCause` in der View)
+  if (s.over === null && s.herd.size <= 0) return 'Herde ausgestorben, Partie läuft';
+  if (s.over === null && ages !== undefined && s.iceAges >= ages) return 'letzte Eiszeit überstanden, Partie läuft';
+  if (s.over === 'won' && s.herd.size <= 0) return 'gewonnen ohne Herde';
+  if (s.over === 'lost' && s.herd.size > 0 && (ages === undefined || s.iceAges < ages))
+    return 'verloren mit lebender Herde vor der letzten Eiszeit';
   const card = s.hand.find((id) => !data.cards.has(id));
   if (card) return `unbekannte Karte ${card}`;
   if (s.hand.length > data.params.cards.handMax)

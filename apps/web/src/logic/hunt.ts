@@ -1,11 +1,15 @@
 /**
  * Anzeige zu Wild, Jagd, Lager, Eiszeiten und Partie-Ende (rein, ohne DOM). Die Regeln rechnet die Engine
- * (`view.prey`, `view.campSites`, `view.iceAges`, `evolution.stage.camp` …); hier wird nur gezählt und benannt.
+ * (`view.prey` mit `inReach`, `view.campSites`, `campPreview`, `evolution.stage.camp` mit `spots`, `view.overCause` …);
+ * hier wird nur benannt.
  */
-import type { CellView, HerdeData, HerdeView, Pos, StageNeedsView } from '@being-god/herde';
+import type { CampPreviewView, CellView, HerdeData, HerdeView, Pos, StageNeedsView } from '@being-god/herde';
 import type { HuntRules, Strings } from '../i18n/de.ts';
 import type { Locale } from '../i18n/locale.ts';
 import { landName, stageName, textOf } from './format.ts';
+
+const monthName = (data: HerdeData, locale: Locale, month: number) =>
+  textOf(data.months[month % data.months.length], locale, String(month + 1));
 
 /** Zahl der Wild-Tiere auf der Insel (Summe der Bestände). */
 export const preyAnimals = (view: Pick<HerdeView, 'prey'>): number => view.prey.reduce((a, p) => a + p.size, 0);
@@ -21,18 +25,6 @@ export function showPreyCounter(data: HerdeData, view: Pick<HerdeView, 'prey' | 
   if (view.prey.length > 0) return true;
   const from = stageIndex(data, data.params.prey.from);
   return from >= 0 && stageIndex(data, view.herd.stage) >= from;
-}
-
-/** Felder im Umkreis `r` (Chebyshev, nur innerhalb der Insel) – derselbe Umkreis wie in der Engine. */
-export function cellsAround(view: Pick<HerdeView, 'cells' | 'width' | 'height'>, pos: Pos, r: number): CellView[] {
-  const out: CellView[] = [];
-  for (let y = pos.y - r; y <= pos.y + r; y++)
-    for (let x = pos.x - r; x <= pos.x + r; x++) {
-      if (x < 0 || y < 0 || x >= view.width || y >= view.height) continue;
-      const cell = view.cells[y * view.width + x];
-      if (cell) out.push(cell);
-    }
-  return out;
 }
 
 const groupName = (data: HerdeData, locale: Locale, group: readonly string[], or: string) =>
@@ -79,39 +71,31 @@ export interface CampPreview {
   clear: { lands: string[]; to: string; month: string; fields: number } | null;
 }
 
-/** Vorschau eines Lagerplatzes: was im Umkreis liegt und was das Lager dort bedeutet. */
-export function campPreview(
-  data: HerdeData,
-  locale: Locale,
-  view: Pick<HerdeView, 'cells' | 'width' | 'height' | 'evolution' | 'prey' | 'herd'>,
-  pos: Pos,
-): CampPreview | null {
-  const stage = view.evolution.stage;
-  const camp = stage.camp;
-  if (!camp) return null;
-  const near = cellsAround(view, pos, camp.radius);
-  const reach = cellsAround(view, pos, stage.reach);
-  const names = campGroupNames(data, locale, camp);
-  const clear = data.stages.get(stage.id)?.camp?.clear;
+/**
+ * Vorschau eines Lagerplatzes für die Anzeige: die Zahlen rechnet die Engine (`campPreview`), hier werden nur Namen
+ * eingesetzt.
+ */
+export function campPreviewText(data: HerdeData, locale: Locale, p: CampPreviewView): CampPreview {
+  const or = locale === 'de' ? ' oder ' : ' or ';
   return {
-    pos,
-    radius: camp.radius,
-    groups: camp.near.map((group, i) => ({
-      name: names[i] ?? '',
-      short: groupName(data, locale, group, '/'),
-      count: near.filter((c) => group.includes(c.land)).length,
+    pos: { x: p.x, y: p.y },
+    radius: p.radius,
+    groups: p.near.map((g) => ({
+      name: groupName(data, locale, g.lands, or),
+      short: groupName(data, locale, g.lands, '/'),
+      count: g.count,
     })),
-    reach: stage.reach,
-    food: reach.filter((c) => stage.eats.includes(c.land)).length,
-    shelter: reach.filter((c) => stage.shelter.includes(c.land)).length,
-    prey: view.prey.filter((p) => Math.max(Math.abs(p.x - pos.x), Math.abs(p.y - pos.y)) <= stage.reach).length,
-    moves: pos.x !== view.herd.x || pos.y !== view.herd.y,
-    clear: clear
+    reach: p.reach,
+    food: p.food,
+    shelter: p.shelter,
+    prey: p.prey,
+    moves: p.moves,
+    clear: p.clear
       ? {
-          lands: clear.lands.map((id) => landName(data, locale, id)),
-          to: landName(data, locale, clear.to),
-          month: textOf(data.months[clear.month % data.months.length], locale, String(clear.month + 1)),
-          fields: near.filter((c) => clear.lands.includes(c.land)).length,
+          lands: p.clear.lands.map((id) => landName(data, locale, id)),
+          to: landName(data, locale, p.clear.to),
+          month: monthName(data, locale, p.clear.month),
+          fields: p.clear.fields,
         }
       : null,
   };
@@ -161,21 +145,6 @@ export const campShort = (t: Strings, p: CampPreview): string =>
   t.campShort(p.clear ? { lands: p.clear.lands, month: p.clear.month, fields: p.clear.fields } : null);
 
 /**
- * Mögliche Lagerplätze auf der ganzen Insel (begehbar, je eine Landschaft jeder Gruppe im Umkreis), ohne Zugweite –
- * für die Vorschau der nächsten Stufe, für die die Engine noch keine Plätze liefert.
- */
-export function campSpotsOnIsland(
-  view: Pick<HerdeView, 'cells' | 'width' | 'height'>,
-  camp: NonNullable<StageNeedsView['camp']>,
-): number {
-  return view.cells.filter((c) => {
-    if (!c.walkable) return false;
-    const lands = cellsAround(view, c, camp.radius).map((q) => q.land);
-    return camp.near.every((group) => group.some((id) => lands.includes(id)));
-  }).length;
-}
-
-/**
  * Hinweis zur Beute der nächsten Stufe: wie viel Wild auf der Insel ist bzw. wann es einwandert (Lebensraum und
  * Mindestzahl aus `params.prey`). null, wenn die Stufe nicht jagt.
  */
@@ -213,9 +182,7 @@ export function preyFieldLines(
   const prey = cell.prey === null || cell.prey === undefined ? undefined : view.prey.find((p) => p.id === cell.prey);
   if (prey) {
     lines.push(t.infoPrey(prey.size, data.params.prey.maxSize, prey.hungry));
-    const reach = view.evolution.stage.reach;
-    if (view.evolution.stage.prey && Math.max(Math.abs(prey.x - view.herd.x), Math.abs(prey.y - view.herd.y)) <= reach)
-      lines.push(t.infoPreyReach);
+    if (prey.inReach) lines.push(t.infoPreyReach);
   } else if (data.params.prey.lands.includes(cell.land) && showPreyCounter(data, view)) lines.push(t.infoPreyLand);
   return lines;
 }
@@ -252,11 +219,14 @@ export function huntRules(data: HerdeData, locale: Locale): HuntRules {
             stage: name(campStage.id),
             radius: camp.radius,
             near: camp.near.map((g) => groupName(data, locale, g, or)),
+            notOn: [...data.landscapes.values()]
+              .filter((l) => l.walk && !camp.on.includes(l.id))
+              .map((l) => landName(data, locale, l.id)),
             clear: camp.clear
               ? {
                   lands: camp.clear.lands.map((id) => landName(data, locale, id)),
                   to: landName(data, locale, camp.clear.to),
-                  month: textOf(data.months[camp.clear.month % data.months.length], locale),
+                  month: monthName(data, locale, camp.clear.month),
                 }
               : null,
           }
@@ -278,19 +248,15 @@ export interface EndSummary {
   iceAges: { survived: number; max: number | null };
 }
 
-/**
- * Ausgang aus der View: Die Engine nennt die Ursache (`gameLost.cause`) nur im Ereignis, die View kennt nur
- * `over`. Eine lebende Herde bei verlorener Partie hat die letzte Eiszeit überstanden (`lastIce`), sonst ist sie
- * ausgestorben.
- */
+/** Ausgang aus der View: gewonnen oder die Ursache der Niederlage (`overCause` der Engine). */
 export function endSummary(
   data: HerdeData,
-  view: Pick<HerdeView, 'over' | 'herd' | 'month' | 'evolution' | 'iceAges'>,
+  view: Pick<HerdeView, 'over' | 'overCause' | 'herd' | 'month' | 'evolution' | 'iceAges'>,
 ): EndSummary | null {
   if (!view.over) return null;
   const year = data.months.length;
   return {
-    kind: view.over === 'won' ? 'won' : view.herd.size > 0 ? 'lastIce' : 'extinct',
+    kind: view.over === 'won' ? 'won' : (view.overCause ?? 'extinct'),
     survivors: view.herd.size,
     years: Math.floor(view.month / year),
     months: view.month % year,

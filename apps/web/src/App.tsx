@@ -56,6 +56,9 @@ export function App({ client }: { client: GameClient }) {
   const [campConfirm, setCampConfirm] = useState(false);
   // Nur solange die Engine den Platz noch anbietet (nach einem Monat kann er außer Reichweite sein).
   const campPos = isCampSite(view, campPick) ? campPick : null;
+  // Vorschau der Engine für den gewählten Platz; `view` als Abhängigkeit, weil sie sich mit jedem Schritt ändert.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const campInfo = useMemo(() => (campPos ? client.campPreview(campPos) : null), [client, view, campPos]);
 
   const card = selectedCard === null ? undefined : view.hand[selectedCard];
   const clearSelection = useCallback(() => {
@@ -240,8 +243,8 @@ export function App({ client }: { client: GameClient }) {
             onCancel={clearSelection}
           />
         )}
-        {!card && campPos && !logOpen && (
-          <CampSheet data={data} view={view} pos={campPos} onClose={() => setCampPick(null)} />
+        {!card && campInfo && !logOpen && (
+          <CampSheet data={data} view={view} camp={campInfo} onClose={() => setCampPick(null)} />
         )}
         {!card && !campPos && infoView && !logOpen && (
           <FieldSheet data={data} view={view} cell={infoView} onClose={() => setInfoCell(null)} />
@@ -367,8 +370,8 @@ export function App({ client }: { client: GameClient }) {
         />
       )}
       {evolved && <EvolvedCard data={data} stage={evolved} onDone={closeEvolved} />}
-      {campConfirm && campPos && !running && !over && (
-        <CampConfirm data={data} view={view} pos={campPos} onConfirm={settle} onCancel={() => setCampConfirm(false)} />
+      {campConfirm && campInfo && !running && !over && (
+        <CampConfirm data={data} camp={campInfo} onConfirm={settle} onCancel={() => setCampConfirm(false)} />
       )}
 
       {helpOpen && (

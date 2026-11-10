@@ -1,6 +1,6 @@
-import type { HerdeData, HerdeView, Pos } from '@being-god/herde';
+import type { CampPreviewView, HerdeData, HerdeView } from '@being-god/herde';
 import { locale, t } from '../i18n/index.ts';
-import { campBanner, campChips, campGroupNames, campPreview, campPreviewLines, campShort } from '../logic/hunt.ts';
+import { campBanner, campChips, campGroupNames, campPreviewLines, campPreviewText, campShort } from '../logic/hunt.ts';
 import { Sheet } from './Sheets.tsx';
 import { useEscape } from './useEscape.ts';
 
@@ -32,16 +32,16 @@ export function CampBanner({ data, view, onChoose }: { data: HerdeData; view: He
 export function CampSheet({
   data,
   view,
-  pos,
+  camp,
   onClose,
 }: {
   data: HerdeData;
   view: HerdeView;
-  pos: Pos;
+  /** Vorschau der Engine (`campPreview`) */
+  camp: CampPreviewView;
   onClose: () => void;
 }) {
-  const preview = campPreview(data, locale, view, pos);
-  if (!preview) return null;
+  const preview = campPreviewText(data, locale, camp);
   const chips = campChips(t, preview);
   return (
     <Sheet title={t.campTitle} icon="⛺" onClose={onClose} className="sheet--camp">
@@ -70,21 +70,17 @@ export function CampSheet({
 /** Bestätigung im Spiel (nicht `confirm()`): Folgen und kein Zurück, dann `settle`. */
 export function CampConfirm({
   data,
-  view,
-  pos,
+  camp,
   onConfirm,
   onCancel,
 }: {
   data: HerdeData;
-  view: HerdeView;
-  pos: Pos;
+  camp: CampPreviewView;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   useEscape(onCancel);
-  const preview = campPreview(data, locale, view, pos);
-  if (!preview) return null;
-  const { effects } = campPreviewLines(t, preview);
+  const { effects } = campPreviewLines(t, campPreviewText(data, locale, camp));
   return (
     <div className="overlay" role="alertdialog" aria-modal="true" aria-labelledby="camp-title">
       <div className="overlay__panel evolve">

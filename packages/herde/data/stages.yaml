@@ -23,8 +23,9 @@
 # preyFood, huntKill       Jagd (Standard 0 = keine): nach den Pflanzen erlegt die Herde Wild im Umkreis reach, die
 #                          größten Bestände zuerst, höchstens huntKill Tiere je Monat, je Tier preyFood Futter
 # fireHunt                 so viele Tiere mehr, wenn im Umkreis eine frische Brandfläche liegt (Feuer als Werkzeug)
-# camp                     Lager (settle): gültig auf einem in diesem Monat erreichbaren Feld, in dessen Umkreis radius
-#                          je eine Landschaft jeder Gruppe aus near liegt; danach zieht die Herde nicht mehr.
+# camp                     Lager (settle): gültig auf einem in diesem Monat erreichbaren Feld mit einer Landschaft aus
+#                          on (z. B. nicht auf dem Fluss), in dessen Umkreis radius je eine Landschaft jeder Gruppe
+#                          aus near liegt; danach zieht die Herde nicht mehr.
 #                          clear: einmal im Jahr (Monat im Jahr, 0 = erster Frühlingsmonat) wird das erste Feld aus
 #                          lands (in Listen-Reihenfolge) im Umkreis radius des Lagers zu `to` gerodet
 # trail                    so viele zuletzt besuchte Felder meidet sie
@@ -183,6 +184,7 @@ stages:
     huntKill: 1
     fireHunt: 1
     camp:
+      on: [steppe, meadow, bush, forest, old, burnt]
       radius: 1
       near: [[river], [meadow], [forest, old]]
       clear: { lands: [old, forest], to: meadow, month: 2 }

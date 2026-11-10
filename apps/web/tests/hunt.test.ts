@@ -1,6 +1,15 @@
 /** Wild, Jagd, Lager, Eiszeiten und Ende in der Oberfläche: Auswahl, Vorschau, Panel-Zeilen, Bilanz, Texte. */
 import { describe, expect, it } from 'vitest';
-import { newGame, step, view, type HerdeEvent, type HerdeState, type HerdeView } from '@being-god/herde';
+import {
+  campPreview as engineCampPreview,
+  newGame,
+  step,
+  view,
+  type HerdeEvent,
+  type HerdeState,
+  type HerdeView,
+  type Pos,
+} from '@being-god/herde';
 import { loadData } from '@being-god/herde/node';
 import { HerdeClient } from '../src/client/HerdeClient.ts';
 import { MemorySaveStore } from '../src/client/SaveStore.ts';
@@ -12,11 +21,9 @@ import { ruleNumbers } from '../src/logic/format.ts';
 import {
   campBanner,
   campChips,
-  campPreview,
   campPreviewLines,
+  campPreviewText,
   campShort,
-  campSpotsOnIsland,
-  cellsAround,
   endSummary,
   firstCampSite,
   huntRules,
@@ -63,6 +70,12 @@ const addPrey = (s: HerdeState, x: number, y: number, size: number, hungry = 0) 
 };
 
 const viewOf = (s: HerdeState): HerdeView => view(data, s);
+
+/** Vorschau der Engine mit Namen der Oberfläche. */
+const campPreview = (s: HerdeState, pos: Pos, locale: 'de' | 'en' = 'de') => {
+  const p = engineCampPreview(data, s, pos);
+  return p ? campPreviewText(data, locale, p) : null;
+};
 
 describe('Wild in der Statusleiste', () => {
   it('zählt Tiere und zeigt den Zähler erst ab der Stufe, mit der Wild einwandert (oder wenn Wild da ist)', () => {
@@ -114,15 +127,13 @@ describe('Lager gründen', () => {
 
   it('Vorschau: Wasser, Wiese, Wald im Umkreis, Futter, Schutz, Wild und die Rodung aus den Daten', () => {
     const s = constructed('human', { ...CAMP_LANDS, '0,6': 'old', '0,4': 'forest' }, (x) => addPrey(x, 3, 6, 2));
-    const v = viewOf(s);
-    const p = campPreview(data, 'de', v, { x: 1, y: 6 })!;
+    const p = campPreview(s, { x: 1, y: 6 })!;
     const camp = data.stages.get('human')!.camp!;
     expect(p.radius).toBe(camp.radius);
     expect(p.groups.map((g) => g.name)).toEqual(['Fluss', 'Wiese', 'Wald oder Altwald']);
     // Umkreis 1 um (1,6): Fluss (2,5), Wiese (1,6), Wald (0,5) und Altwald (0,6)
     expect(p.groups.map((g) => g.count)).toEqual([1, 1, 2]);
-    const reach = cellsAround(v, { x: 1, y: 6 }, v.evolution.stage.reach);
-    expect(p.food).toBe(reach.filter((c) => v.evolution.stage.eats.includes(c.land)).length);
+    expect(p.food).toBe(engineCampPreview(data, s, { x: 1, y: 6 })!.food);
     expect(p.shelter).toBe(3); // Wald, Altwald, Wald (0,4) im Umkreis 2
     expect(p.prey).toBe(1);
     expect(p.moves).toBe(true);
@@ -137,8 +148,8 @@ describe('Lager gründen', () => {
       /rodet das Lager ein Feld Altwald oder Wald im Umkreis 1 zu Wiese – hier 2 Felder/,
     );
     // eigenes Feld: kein Umzug; andere Stufe: keine Vorschau
-    expect(campPreviewLines(de, campPreview(data, 'de', v, { x: 1, y: 5 })!).effects).not.toContain(de.campMoves);
-    expect(campPreview(data, 'de', viewOf(constructed('hunter')), { x: 1, y: 5 })).toBeNull();
+    expect(campPreviewLines(de, campPreview(s, { x: 1, y: 5 })!).effects).not.toContain(de.campMoves);
+    expect(campPreview(constructed('hunter'), { x: 1, y: 5 })).toBeNull();
     const chips = campChips(de, p);
     expect([...chips.near, ...chips.reach].map((c) => `${c.value} ${c.label}`)).toEqual([
       '1 Fluss',
@@ -156,21 +167,22 @@ describe('Lager gründen', () => {
     );
     expect(campChips(de, { ...p, groups: [{ name: 'Fluss', short: 'Fluss', count: 0 }] }).near[0]!.bad).toBe(true);
     expect(campShort(en, { ...p, clear: null })).toBe('The herd settles here for good.');
-    expect(campPreviewLines(en, campPreview(data, 'en', v, { x: 1, y: 6 })!).effects.at(-1)).toMatch(
+    expect(campPreviewLines(en, campPreview(s, { x: 1, y: 6 }, 'en')!).effects.at(-1)).toMatch(
       /clears one field of old forest or forest/i,
     );
   });
 
   it('jeder Platz der Engine erfüllt in der Vorschau alle Gruppen; die Inselzählung umfasst sie', () => {
-    const v = viewOf(constructed('human', { ...CAMP_LANDS, '4,2': 'river', '5,2': 'meadow', '4,3': 'forest' }));
+    const s = constructed('human', { ...CAMP_LANDS, '4,2': 'river', '5,2': 'meadow', '4,3': 'forest' });
+    const v = viewOf(s);
     for (const site of v.campSites) {
-      const p = campPreview(data, 'de', v, site)!;
+      const p = campPreview(s, site)!;
       expect(p.groups.every((g) => g.count > 0)).toBe(true);
     }
-    const spots = campSpotsOnIsland(v, v.evolution.stage.camp!);
+    const spots = v.evolution.stage.camp!.spots;
     expect(spots).toBeGreaterThanOrEqual(v.campSites.length);
     expect(spots).toBeGreaterThan(2); // auch Plätze außer Reichweite
-    expect(campSpotsOnIsland(viewOf(constructed('human', {})), v.evolution.stage.camp!)).toBe(0);
+    expect(viewOf(constructed('human', {})).evolution.stage.camp!.spots).toBe(0);
   });
 
   it('settle über den Client: Lager steht, Herde bleibt, Meldung und Effekt', () => {
@@ -287,6 +299,10 @@ describe('Feld-Info', () => {
       'In Jagdweite der Herde.',
     ]);
     expect(preyFieldLines(de, data, v, cell(5, 1))).toEqual([`Wild: 1 von ${max} Tieren.`]);
+    // Jagdweite kommt aus der Engine (`inReach`)
+    expect(v.prey.map((p) => p.inReach)).toEqual([true, false]);
+    const flipped = { ...v, prey: v.prey.map((p) => ({ ...p, inReach: !p.inReach })) };
+    expect(preyFieldLines(de, data, flipped, cell(5, 1))).toContain('In Jagdweite der Herde.');
     // leeres Wiesenfeld: Lebensraum (ab der Stufe mit Wild)
     const meadow = viewOf(constructed('hunter', { ...CAMP_LANDS, '4,4': 'meadow' }));
     expect(preyFieldLines(de, data, meadow, meadow.cells[4 * meadow.width + 4]!)).toEqual(['Lebensraum des Wilds.']);
@@ -389,11 +405,19 @@ describe('Eiszeiten und Ende', () => {
       iceAges: { survived: 3, max: data.params.ice.ages ?? null },
     });
     expect(won.traits).toEqual(base.evolution.traits);
-    expect(endSummary(data, { ...base, over: 'lost', herd: { ...base.herd, size: 0 } })!.kind).toBe('extinct');
-    const lastIce = endSummary(data, { ...base, over: 'lost' })!;
+    // Ursache aus der Engine (`overCause`), nicht aus der Herdengröße abgeleitet
+    expect(endSummary(data, { ...base, over: 'lost', overCause: 'extinct' })!.kind).toBe('extinct');
+    const lastIce = endSummary(data, { ...base, over: 'lost', overCause: 'lastIce' })!;
     expect(lastIce.kind).toBe('lastIce');
     const hunter = viewOf(constructed('hunter'));
-    expect(endSummary(data, { ...hunter, over: 'lost' })).toMatchObject({ kind: 'lastIce', lastStage: false });
+    expect(endSummary(data, { ...hunter, over: 'lost', overCause: 'lastIce' })).toMatchObject({
+      kind: 'lastIce',
+      lastStage: false,
+    });
+    // echte Partie-Enden aus der Engine
+    const extinct = viewOf(constructed('hunter', CAMP_LANDS, (s) => ((s.over = 'lost'), (s.herd.size = 0))));
+    expect(extinct.overCause).toBe('extinct');
+    expect(endSummary(data, extinct)!.kind).toBe('extinct');
     // Texte
     expect(de.wonText(4)).toBe(
       'Die Herde ist Mensch geworden, hat ein Lager gegründet und die letzte Eiszeit überstanden. 4 Menschen haben überlebt.',
@@ -422,7 +446,9 @@ describe('Hilfe und Einführung: Zahlen aus den Daten', () => {
       data.stages.get('human')!.name.de,
     ]);
     expect(h.rivals).toEqual(h.hunters.map((x) => x.name));
-    expect(h.camp).toMatchObject({ radius: 1, near: ['Fluss', 'Wiese', 'Wald oder Altwald'] });
+    expect(h.camp).toMatchObject({ radius: 1, near: ['Fluss', 'Wiese', 'Wald oder Altwald'], notOn: ['Fluss'] });
+    expect(de.helpCampText(h)).toContain('Felder mit Fluss sind kein Lagerplatz.');
+    expect(de.helpCampText({ ...h, camp: { ...h.camp!, notOn: [] } })).not.toContain('kein Lagerplatz');
     expect(h.camp!.clear!.lands).toEqual(['Altwald', 'Wald']);
   });
 

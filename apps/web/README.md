@@ -103,11 +103,11 @@ URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
 - **Feld antippen:** Landschaft, Futter, Prognose („wird in N Monaten zu Busch“ erst ab ≤ 3 Monaten, sonst „bleibt
   Wiese, solange die Herde hier grast“), Feuer, Wasser und Schutz der aktuellen Stufe mit Jahreszeiten, Wölfe,
   „für diese Stufe unpassierbar“ (`CellView.blocked`), „kein Futter für die Stufe“, Herde, Lager, Wild (Größe,
-  hungrig, in Jagdweite) bzw. Lebensraum des Wilds, Rudel.
+  hungrig, in Jagdweite aus `PreyView.inReach`) bzw. Lebensraum des Wilds, Rudel.
 - **Lager gründen** (Stufe mit `camp`, solange `view.campSites` nicht leer ist): Hinweis „⛺ Lagerplatz wählen“, die
   Plätze leuchten mit Fahne. Antippen (Hinweis oder Platz) öffnet eine kompakte Vorschau im Dock (Fluss, Wiese,
   Wald im Umkreis des Lagers; Futter, Schutz, Wild im Umkreis der Stufe; ein Satz zu Sesshaftigkeit und Rodung aus
-  den Daten), die Hand ruht. „⛺ Lager gründen“ → Bestätigung im Spiel mit den Folgen → `settle`. In der Eiszeit
+  den Daten; alle Zahlen aus `campPreview` der Engine über `GameClient.campPreview`), die Hand ruht. „⛺ Lager gründen“ → Bestätigung im Spiel mit den Folgen → `settle`. In der Eiszeit
   sagt ein Hinweis, dass kein Lager gegründet wird; ohne Platz in Zugweite, was gesucht ist.
 - **Herde und Entwicklung** (Knopf mit dem Symbol der Stufe neben 📜; Punkt mit Zahl bei einem Angebot, ⬆ bei
   Reife; dazu ein goldener bzw. grüner Hinweis unter der Absicht): aktuelle Stufe mit Bedürfnissen (Futter mit
@@ -118,7 +118,7 @@ URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
   zuerst, gold; erreichte Merkmale „im Angebot“ bzw. „kommt in einem späteren Angebot“), was zur Reife auf dieser
   Stufe fehlt (gewählt x von y), und die **Vorschau der nächsten Stufe**: was sie braucht, wie
   viele Felder die Insel heute bietet, was nicht mehr als Futter zählt, was unpassierbar wird, wie viel Wild es gibt
-  bzw. wann es einwandert, wie viele Lagerplätze die Insel hätte, und was ganz fehlt.
+  bzw. wann es einwandert, wie viele Lagerplätze die Insel hätte (`stage.camp.spots`), und was ganz fehlt.
   Alles wird aus `view.evolution` gelesen und aus `view.cells` gezählt, keine Regel nachgebaut.
 - **Merkmal-Angebot:** 1–3 Karten (Symbol, Name, Wirkung, Erfahrung und Schwelle, „hilft zur Reife“), wählen, dann
   „Merkmal annehmen“ (`pickTrait`); „Später“ lässt das Angebot liegen (zur nächsten Jahreszeit rotiert es weiter, Reife-Merkmale bleiben vorn).
@@ -130,7 +130,7 @@ URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
 - **📜 Geschehen:** Protokoll aller Meldungen mit Monat (auch Zug der Herde und wandernde Rudel, die nicht als Toast
   erscheinen).
 - **Ende:** Sieg (als Mensch mit Lager die letzte Eiszeit überstanden), ausgestorben oder letzte Eiszeit
-  überstanden, aber nicht als Mensch mit Lager (aus der View abgeleitet: lebende Herde bei verlorener Partie); Bilanz
+  überstanden, aber nicht als Mensch mit Lager (`view.overCause`); Bilanz
   mit Überlebenden, Dauer, Eiszeiten, erreichter Stufe und Merkmalen; „Insel ansehen“ oder „Neue Partie“.
 - Einführung (6 Karten, darunter „Die Herde entwickelt sich“) beim ersten Start, erneut über das Menü oder die Hilfe. `prefers-reduced-motion` kürzt
   Animationen und die Pausen zwischen den Monaten, lässt Schweben, Pulsieren, Hüpfen, flackernde Flammen und

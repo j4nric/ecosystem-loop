@@ -1,4 +1,4 @@
-import type { Action, HerdeData, HerdeView } from '@being-god/herde';
+import type { Action, CampPreviewView, HerdeData, HerdeView, Pos } from '@being-god/herde';
 import type { Locale } from '../i18n/locale.ts';
 import type { Fx, Notice } from '../logic/events.ts';
 import type { PlayPreview } from '../logic/preview.ts';
@@ -34,6 +34,8 @@ export interface GameClient {
   dispatch(action: Action): boolean;
   /** Vorschau eines Kartenzugs ohne Ausführung; null, wenn er nicht möglich ist. */
   preview(action: Action): PlayPreview | null;
+  /** Vorschau eines Lagers an einem Feld (Engine `campPreview`); null, wenn die Stufe kein Lager kennt. */
+  campPreview(pos: Pos): CampPreviewView | null;
   /** Meldet jede neue View; gibt eine Abmelde-Funktion zurück. */
   subscribe(listener: () => void): () => void;
   /** Meldungen und Effekte je Schritt; gibt eine Abmelde-Funktion zurück. */

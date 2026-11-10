@@ -45,11 +45,15 @@ export interface HuntRules {
   rivals: string[];
   /** Brandfläche gilt so lange als frisch (0 = nur in diesem Monat) */
   fresh: number;
-  /** Lager: Stufe, Umkreis, Landschafts-Gruppen (je Gruppe „Wald oder Altwald“), Rodung */
+  /**
+   * Lager: Stufe, Umkreis, Landschafts-Gruppen (je Gruppe „Wald oder Altwald“), begehbare Landschaften, auf denen kein
+   * Lager stehen darf (nicht in `camp.on`, z. B. Fluss), Rodung
+   */
   camp: {
     stage: string;
     radius: number;
     near: string[];
+    notOn: string[];
     clear: { lands: string[]; to: string; month: string } | null;
   } | null;
 }
@@ -328,7 +332,7 @@ export const de = {
   helpCamp: 'Lager',
   helpCampText: (h: HuntRules) =>
     h.camp
-      ? `Als ${h.camp.stage} lässt sich die Herde nieder. Ein Lagerplatz braucht im Umkreis ${h.camp.radius} ${list(h.camp.near)} und muss in diesem Monat erreichbar sein. Die Plätze leuchten auf der Insel; antippen zeigt eine Vorschau. Danach zieht die Herde nicht mehr und lebt aus dem Umkreis des Lagers.${h.camp.clear ? ` Jedes Jahr im ${h.camp.clear.month} rodet das Lager ein Feld ${orList(h.camp.clear.lands)} zu ${h.camp.clear.to}.` : ''} In der Eiszeit wird kein Lager gegründet.`
+      ? `Als ${h.camp.stage} lässt sich die Herde nieder. Ein Lagerplatz braucht im Umkreis ${h.camp.radius} ${list(h.camp.near)} und muss in diesem Monat erreichbar sein.${h.camp.notOn.length > 0 ? ` Felder mit ${orList(h.camp.notOn)} sind kein Lagerplatz.` : ''} Die Plätze leuchten auf der Insel; antippen zeigt eine Vorschau. Danach zieht die Herde nicht mehr und lebt aus dem Umkreis des Lagers.${h.camp.clear ? ` Jedes Jahr im ${h.camp.clear.month} rodet das Lager ein Feld ${orList(h.camp.clear.lands)} zu ${h.camp.clear.to}.` : ''} In der Eiszeit wird kein Lager gegründet.`
       : 'Keine Stufe gründet ein Lager.',
   helpIce: 'Eiszeiten und Sieg',
   helpIceText: (r: RuleNumbers) =>

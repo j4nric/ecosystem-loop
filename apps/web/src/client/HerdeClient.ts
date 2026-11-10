@@ -1,10 +1,12 @@
 import {
+  campPreview,
   newGame,
   STATE_VERSION,
   step,
   validateState,
   view,
   type Action,
+  type CampPreviewView,
   type HerdeData,
   type HerdeState,
   type HerdeView,
@@ -142,6 +144,10 @@ export class HerdeClient implements GameClient {
 
   preview(action: Action): PlayPreview | null {
     return previewPlay(this.data, this.state, action);
+  }
+
+  campPreview(pos: Pos): CampPreviewView | null {
+    return campPreview(this.data, this.state, pos);
   }
 
   newGame(): void {

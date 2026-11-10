@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  campPreview,
   legalActions,
   playRandomGame,
   RuleError,
@@ -304,12 +305,26 @@ describe('Stufe 4: Jäger und Sammler', () => {
     const v = view(data, s);
     expect(v.evolution.stage).toMatchObject({ prey: { food: 4, kill: 2, fire: 2 }, wolves: 'rival', camp: null });
     expect(v.evolution.next).toMatchObject({ id: 'human', camp: { radius: 1 } });
-    expect(v.prey).toEqual([{ id: 1, x: 5, y: 5, size: 2, hungry: true }]);
+    expect(v.prey).toEqual([{ id: 1, x: 5, y: 5, size: 2, hungry: true, inReach: true }]);
     expect(v.cells.find((c) => c.x === 5 && c.y === 5)!.prey).toBe(1);
     expect(v.campSites).toEqual([]);
     const w = view(data, inStage('wanderer'));
     expect(w.evolution.stage).toMatchObject({ prey: null, wolves: 'enemy' });
     expect(w.evolution.next!.prey).toEqual({ food: 4, kill: 2, fire: 2 });
+  });
+
+  it('view: inReach – die Stufe jagt und das Wild liegt im Umkreis reach der Herde', () => {
+    const s = inStage('hunter', season(blank(), 2));
+    addPrey(s, 5, 5, 1); // Abstand 2 = reach
+    addPrey(s, 6, 6, 1); // Abstand 3
+    expect(view(data, s).prey.map((p) => p.inReach)).toEqual([true, false]);
+    // Wanderer jagen nicht: nichts in Jagdweite.
+    s.herd.stage = 'wanderer';
+    expect(view(data, s).prey.map((p) => p.inReach)).toEqual([false, false]);
+    // Merkmale wirken auf reach (wie in der Jagd).
+    const d = tweak((x) => (x.stages.get('hunter')!.reach = 3));
+    s.herd.stage = 'hunter';
+    expect(view(d, s).prey.map((p) => p.inReach)).toEqual([true, true]);
   });
 });
 
@@ -347,6 +362,74 @@ describe('Stufe 5: Mensch und Lager', () => {
     const noWood = campSiteState();
     put(noWood, 3, 2, 'steppe');
     expect(view(data, noWood).campSites).toEqual([]);
+  });
+
+  it('kein Lager auf dem Fluss: nur Landschaften aus camp.on (datengetrieben)', () => {
+    const s = campSiteState();
+    put(s, 2, 4, 'meadow'); // jetzt hätte auch der Fluss (2,3) Wasser, Wiese und Wald im Umkreis
+    expect(view(data, s).campSites).not.toContainEqual({ x: 2, y: 3 });
+    expect(() => act(s, { type: 'settle', x: 2, y: 3 })).toThrow(/kein gültiger Lagerplatz/);
+    const d = tweak((x) => x.stages.get('human')!.camp!.on.push('river'));
+    expect(view(d, s).campSites).toContainEqual({ x: 2, y: 3 });
+  });
+
+  it('view: Lager der Stufe mit Plätzen auf der Insel (ohne Zugweite) und Rodung, auch als Vorschau', () => {
+    const s = campSiteState();
+    s.herd.x = 0;
+    s.herd.y = 6; // außer Zugweite
+    const v = view(data, s);
+    expect(v.campSites).toEqual([]);
+    expect(v.evolution.stage.camp).toEqual({
+      on: ['steppe', 'meadow', 'bush', 'forest', 'old', 'burnt'],
+      radius: 1,
+      near: [['river'], ['meadow'], ['forest', 'old']],
+      spots: 2,
+      clear: { lands: ['old', 'forest'], to: 'meadow', month: 2 },
+    });
+    // Vorschau der nächsten Stufe: Plätze für den Menschen schon auf der Jäger-Stufe
+    s.herd.stage = 'hunter';
+    expect(view(data, s).evolution.next!.camp).toMatchObject({ spots: 2 });
+    expect(view(data, s).evolution.stage.camp).toBeNull();
+  });
+
+  it('campPreview: Felder je Gruppe, Umkreis reach, nächstes Rodungsfeld', () => {
+    const s = campSiteState();
+    put(s, 4, 4, 'old');
+    put(s, 2, 2, 'forest');
+    addPrey(s, 5, 5, 1);
+    addPrey(s, 6, 6, 1);
+    const p = campPreview(data, s, { x: 3, y: 3 })!;
+    expect(p).toEqual({
+      x: 3,
+      y: 3,
+      valid: true,
+      radius: 1,
+      near: [
+        { lands: ['river'], count: 1 },
+        { lands: ['meadow'], count: 1 },
+        { lands: ['forest', 'old'], count: 3 },
+      ],
+      reach: 2,
+      food: 25 - 2, // alles außer Fluss und Altwald
+      water: 1,
+      shelter: 3,
+      prey: 1,
+      moves: false,
+      clear: { lands: ['old', 'forest'], to: 'meadow', month: 2, fields: 3, next: { x: 4, y: 4 } },
+    });
+    // dasselbe Feld, das die Rodung träfe
+    let st = act(s, { type: 'settle', x: 3, y: 3 }).state;
+    st.month = 12 + p.clear!.month;
+    st = advance(st).state;
+    expect(at(st, 4, 4).land).toBe('meadow');
+    expect(campPreview(data, s, { x: 3, y: 2 })).toMatchObject({ valid: true, moves: true });
+    // ohne Gehölz: kein Rodungsfeld; außer Zugweite bzw. ungültig: valid false
+    const far = campPreview(data, s, { x: 0, y: 0 })!;
+    expect(far).toMatchObject({ valid: false, clear: { fields: 0, next: null } });
+    expect(far.near.map((g) => g.count)).toEqual([0, 0, 0]);
+    expect(campPreview(data, s, { x: 9, y: 0 })).toBeNull();
+    s.herd.stage = 'hunter';
+    expect(campPreview(data, s, { x: 3, y: 3 })).toBeNull();
   });
 
   it('settle: nur gültig, nur mit Lager-Stufe, nicht in der Eiszeit, nur einmal', () => {
@@ -420,7 +503,8 @@ describe('Eiszeiten, Sieg und Niederlage', () => {
     expect(r.state.over).toBe('won');
     expect(ofType(r.events, 'iceAgeEnded')).toEqual([{ type: 'iceAgeEnded', survivors: 10, count: 1 }]);
     expect(ofType(r.events, 'gameWon')).toEqual([{ type: 'gameWon', survivors: 10 }]);
-    expect(view(data, r.state)).toMatchObject({ over: 'won', intent: null, campSites: [] });
+    expect(view(data, r.state)).toMatchObject({ over: 'won', overCause: null, intent: null, campSites: [] });
+    expect(view(data, s).overCause).toBeNull();
     expect(legalActions(data, r.state)).toEqual([]);
     expect(() => advance(r.state)).toThrow(/vorbei/);
   });
@@ -453,6 +537,8 @@ describe('Eiszeiten, Sieg und Niederlage', () => {
     const r = advance(s);
     expect(r.state.over).toBe('lost');
     expect(ofType(r.events, 'gameLost')).toEqual([{ type: 'gameLost', month: s.month, cause: 'lastIce' }]);
+    expect(view(data, r.state)).toMatchObject({ over: 'lost', overCause: 'lastIce' });
+    ok(r.state);
     // Ohne ice.ages geht es unbegrenzt weiter.
     const d = tweak((x) => delete x.params.ice.ages);
     expect(run(d, s).state).toMatchObject({ over: null, iceAges: data.params.ice.ages });
@@ -469,6 +555,8 @@ describe('Eiszeiten, Sieg und Niederlage', () => {
     const r = advance(s);
     expect(r.state.over).toBe('lost');
     expect(ofType(r.events, 'gameLost')).toEqual([{ type: 'gameLost', month: s.month, cause: 'extinct' }]);
+    expect(view(data, r.state)).toMatchObject({ over: 'lost', overCause: 'extinct' });
+    ok(r.state);
   });
 });
 
@@ -490,6 +578,10 @@ describe('validateState: Wild, Lager, Eiszeiten', () => {
     ['Lager außerhalb', (s) => ((s.herd.stage = 'human'), (s.camp = { x: 9, y: 3 })), /Lager außerhalb/],
     ['Herde nicht am Lager', (s) => ((s.herd.stage = 'human'), (s.camp = { x: 2, y: 3 })), /Herde nicht am Lager/],
     ['zu viele Eiszeiten', (s) => (s.iceAges = 9), /9 Eiszeiten/],
+    ['ausgestorben, Partie läuft', (s) => ((s.herd.size = 0), (s.herd.fat = 0)), /ausgestorben, Partie läuft/],
+    ['letzte Eiszeit, Partie läuft', (s) => (s.iceAges = data.params.ice.ages!), /letzte Eiszeit überstanden/],
+    ['gewonnen ohne Herde', (s) => ((s.over = 'won'), (s.herd.size = 0), (s.herd.fat = 0)), /gewonnen ohne Herde/],
+    ['verloren mit lebender Herde', (s) => (s.over = 'lost'), /verloren mit lebender Herde/],
   ])('erkennt: %s', (_, fn, reason) => {
     const s = blank();
     fn(s);

@@ -10,6 +10,7 @@ export {
   intentOf,
   forecastOf,
   evolutionOf,
+  campPreview,
 } from './game.ts';
 export { buildData, DataError, DATA_FILES, type RawData } from './data.ts';
 export type { HerdeData, Landscape, Card, Season, Stage, Island, Params, Text, Trait, Experience } from './schema.ts';

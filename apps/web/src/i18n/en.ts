@@ -249,7 +249,7 @@ export const en: Strings = {
   helpCamp: 'Camp',
   helpCampText: (h) =>
     h.camp
-      ? `As ${h.camp.stage} the herd settles down. A camp site needs ${list(h.camp.near)} within radius ${h.camp.radius} and must be reachable this month. The sites glow on the island; tap one for a preview. Afterwards the herd no longer moves and lives off the area around the camp.${h.camp.clear ? ` Every year in ${h.camp.clear.month} the camp clears one field of ${orList(h.camp.clear.lands)} into ${h.camp.clear.to}.` : ''} No camp can be founded during an ice age.`
+      ? `As ${h.camp.stage} the herd settles down. A camp site needs ${list(h.camp.near)} within radius ${h.camp.radius} and must be reachable this month.${h.camp.notOn.length > 0 ? ` Fields with ${orList(h.camp.notOn)} cannot hold a camp.` : ''} The sites glow on the island; tap one for a preview. Afterwards the herd no longer moves and lives off the area around the camp.${h.camp.clear ? ` Every year in ${h.camp.clear.month} the camp clears one field of ${orList(h.camp.clear.lands)} into ${h.camp.clear.to}.` : ''} No camp can be founded during an ice age.`
       : 'No stage founds a camp.',
   helpIce: 'Ice ages and victory',
   helpIceText: (r) =>

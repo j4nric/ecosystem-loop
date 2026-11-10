@@ -27,7 +27,7 @@ src/herd.ts           Herdenwahl (chooseMove), Fressen, Durst, Kälte, Feuer, Na
 src/traits.ts         Entwicklung: Erfahrungen zählen, Merkmale anbieten und wählen, Reife, Sprung
 src/wolves.ts         Wild fressen oder reißen, Wandern, Wachsen/Gründen/Verhungern, Einwandern
 src/prey.ts           Wild: Fressen, Wachsen/Gründen, Ziehen, Schrumpfen, Einwandern
-src/camp.ts           Lager: gültige Plätze, Niederlassen (settle), Rodung
+src/camp.ts           Lager: gültige Plätze (Zugweite und ganze Insel), Vorschau (campPreview), settle, Rodung
 src/cards.ts          Ziehen, gültige Ziele, Ausspielen
 src/view.ts           Lesemodell (Absicht, Prognosen, Hand mit Zielen)
 src/validate.ts       validateState für gespeicherte Stände (STATE_VERSION)
@@ -59,9 +59,15 @@ step(data, state, action): { state, events }      // rein, wirft RuleError bei u
                                                    // Merkmale wirken weiter, die Reife zählt neu)
          | { type: 'settle', x, y }                 // Lager gründen (Stufe mit camp, gültiger Platz in Zugweite,
                                                    // nicht in der Eiszeit); danach sesshaft
-view(data, state): HerdeView                       // Felder, Herde, Rudel, Absicht, Hand mit Zielen, Datum, Eiszeit,
-                                                   // evolution (Stufe, Merkmale, davon zählend, Angebot, verfügbar,
-                                                   // Erfahrung, Reife, was auf dieser Stufe fehlt, Vorschau)
+view(data, state): HerdeView                       // Felder, Herde, Rudel, Wild (mit inReach), Absicht, Hand mit
+                                                   // Zielen, Datum, Eiszeit, Lager und Lagerplätze, Ausgang (over,
+                                                   // overCause: extinct/lastIce), evolution (Stufe, Merkmale, davon
+                                                   // zählend, Angebot, verfügbar, Erfahrung, Reife, was fehlt,
+                                                   // Vorschau; stage.camp mit spots auf der Insel und clear)
+campPreview(data, state, pos): CampPreviewView | null
+                                                   // Vorschau eines Lagers an einem Feld: Felder je near-Gruppe,
+                                                   // Futter/Wasser/Schutz/Wild im Umkreis reach, Rodung mit dem
+                                                   // nächsten Rodungsfeld, valid (jetzt wählbar)
 legalPlays(data, state): Action[]                  // alle Kartenzüge; 'advance' geht immer
 legalActions(data, state): Action[]                // Kartenzüge, pickTrait je Angebot, evolve (wenn reif),
                                                    // settle je Lagerplatz, advance
@@ -139,7 +145,7 @@ Ereignisse tragen nur Ids und Zahlen; Texte setzt die Oberfläche zusammen (Name
   Futter auf das neue Maximum gekappt; ein Wald wächst danach mit den Werten der neuen Stufe.
 - **Stufen 4 und 5 (H3b):** Wild ist ein Spielobjekt im Zustand (`prey`, Parameter in `params.yaml → prey`). Eine
   Stufe jagt über `preyFood`/`huntKill`/`fireHunt` (Stufenwerte, also auch durch Merkmale änderbar), hat Wölfe als
-  Feinde oder Konkurrenten (`wolves`) und kann ein Lager haben (`camp` mit `near` und `clear`). Sieg: letzte Stufe
+  Feinde oder Konkurrenten (`wolves`) und kann ein Lager haben (`camp` mit `on`, `near` und `clear`; `on` nennt die Landschaften, auf denen das Lager stehen darf – nicht der Fluss). Sieg: letzte Stufe
   (ohne `next`) mit Lager, falls die Stufe eins kennt, am Ende einer Eiszeit (`wildAndIce` in `month.ts`).
 - **Wetterfelder (H4):** Die Jahreszeit wird überall über `seasonOf()` gelesen (Wachstum über `grow[season]`,
   Bedürfnisse über `water`/`shelter`, Feuer über `fire`). Ein Wetterfeld je Jahreszeit kann als Zustand
@@ -174,6 +180,11 @@ Im Code mit `// AUSLEGUNG:` markiert:
 - **Wild und Verbuschung** (`prey.ts`): Wild hält Wiese nicht offen (setzt die Beweidungs-Uhr nicht zurück).
 - **Lager in Zugweite, nicht in der Eiszeit** (`camp.ts`): Ein Lager besteht am Ende einer Eiszeit damit schon vor
   ihrem Beginn („danach die nächste Eiszeit überstehen“).
+- **Ausgang in der View** (`view.ts`): `overCause` wird aus dem Zustand abgeleitet (verloren mit lebender Herde =
+  letzte Eiszeit, sonst ausgestorben), ohne neues Zustandsfeld; `validateState` lehnt Stände ab, in denen Ausgang,
+  Herde und Eiszeiten nicht zusammenpassen.
+- **Jagdweite in der View** (`view.ts`): `prey[].inReach` misst vom Feld der Herde jetzt; `advance` jagt nach dem Zug
+  vom Ziel der Absicht aus (am Lager ist beides dasselbe).
 - **Letzte Prüfung** (`month.ts`): Nach der `ice.ages`-ten Eiszeit ist die Partie verloren, wenn die Herde dann nicht
   Mensch mit Lager ist (ohne `ice.ages` unbegrenzt).
 - **Kein Feuerverlust, kein Ereignis** (`herd.ts`): Mit `fireLoss` 0 gibt es kein `herdBurned`.

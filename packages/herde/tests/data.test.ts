@@ -52,6 +52,8 @@ describe('Spieldaten', () => {
     });
     expect(d.stages.get('human')!.next).toBeUndefined();
     expect(d.stages.get('human')!.camp).toMatchObject({ radius: 1, near: [['river'], ['meadow'], ['forest', 'old']] });
+    // kein Lager auf dem Fluss
+    expect(d.stages.get('human')!.camp!.on).not.toContain('river');
     expect(d.params.prey).toMatchObject({ from: 'wanderer', lands: ['meadow', 'bush'] });
     expect([...d.traits.keys()]).toEqual([
       'thick_fur',
@@ -125,6 +127,14 @@ describe('Spieldaten', () => {
     ['Rudel zu stark', (r) => (r.islands.islands[0].packs[0].size = 4), /stärker als/],
     ['Stufe: Jagd halb', (r) => (stage(r, 'hunter').huntKill = 0), /preyFood und huntKill nur gemeinsam/],
     ['Lager: Landschaft unbekannt', (r) => stage(r, 'human').camp.near[0].push('lava'), /camp.near.0: unbekannte/],
+    ['Lager auf: unbekannt', (r) => stage(r, 'human').camp.on.push('lava'), /camp.on: unbekannte Landschaft lava/],
+    ['Lager auf: unbegehbar', (r) => stage(r, 'human').camp.on.push('sea'), /camp.on sea ist nicht begehbar/],
+    [
+      'Lager auf: Hindernis',
+      (r) => ((stage(r, 'human').blocked = ['old']), stage(r, 'human').camp.on.push('old')),
+      /camp.on old ist für diese Stufe ein Hindernis/,
+    ],
+    ['Lager auf: fehlt', (r) => delete stage(r, 'human').camp.on, /stages.yaml: stages/],
     ['Rodung: Landschaft unbekannt', (r) => stage(r, 'human').camp.clear.lands.push('lava'), /camp.clear.lands/],
     ['Rodung: Ziel unbekannt', (r) => (stage(r, 'human').camp.clear.to = 'lava'), /camp.clear.to: unbekannte/],
     ['Rodung: Ziel unbegehbar', (r) => (stage(r, 'human').camp.clear.to = 'rock'), /rock ist nicht begehbar/],

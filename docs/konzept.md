@@ -174,8 +174,9 @@ Zu Beginn jeder Jahreszeit 2 Karten, höchstens 5 auf der Hand. Kein Ablegen. Je
      durch den Blitz), treibt das Feuer Wild auf: `fireHunt` Tiere mehr. Die Stufe kann `wolves: rival` haben: Wölfe
      greifen die Herde dann nicht an, jagen aber dasselbe Wild.
    - **Lager:** Eine Stufe mit `camp` kann sich niederlassen (`settle`, zwischen den Monaten, nicht in der Eiszeit) –
-     auf einem Feld, das sie in diesem Monat erreichen könnte und in dessen Umkreis `camp.radius` je eine Landschaft
-     aus jeder Gruppe von `camp.near` liegt (Wasser, Wiese, Wald). Danach zieht die Herde nicht mehr und frisst aus
+     auf einem Feld, das sie in diesem Monat erreichen könnte, dessen Landschaft in `camp.on` steht (nicht auf dem
+     Fluss) und in dessen Umkreis `camp.radius` je eine Landschaft aus jeder Gruppe von `camp.near` liegt (Wasser,
+     Wiese, Wald). Danach zieht die Herde nicht mehr und frisst aus
      dem Umkreis des Lagers. Einmal im Jahr (`camp.clear.month`) rodet sie das erste Gehölz-Feld aus `clear.lands`
      im Umkreis des Lagers zu Wiese (Altwald vor Wald).
    - **Eiszeiten und Sieg:** Endet eine Eiszeit mit lebender Herde, ist sie überstanden; steht die Herde dann auf der
@@ -206,10 +207,12 @@ Zu Beginn jeder Jahreszeit 2 Karten, höchstens 5 auf der Hand. Kein Ablegen. Je
    Brandfläche, auch durch den Blitz (anders als „Waldbrände überlebt“: für Jäger ist Feuer ein Werkzeug).
    Wild frisst Gras, hält eine Wiese aber nicht offen – das tut nur die Herde.
 
-mit Wetterfeldern** (Phase H4): je Jahreszeit ein Feld; eine Wetterkarte dort wirkt jedes Jahr
-wieder in dieser Jahreszeit, bis sie ersetzt wird; höchstens ein Wechsel pro Jahr. Beispiele: nasser Frühling
-(Wiesen wachsen doppelt, Gehölz auch), Gewittersommer (Wasser überall, mehr Brände), milder Herbst (längeres
-Graswachstum, satte Wölfe), strenger Winter (Altwald stirbt, Rudel verhungern, Herde braucht mehr Schutz). 4. 💡 **Größere Insel mit Wegen und Gabelungen**, mehrere Szenarien (Inseltypen), Ereignisse (Dürrejahr, Seuche). 5. **Partielänge:** Ziel 20–30 Minuten; der Prototyp liegt bei 10–15 (Wildnis-Tempo anpassen).
+3. ✅ **Jahreskreis mit Wetterfeldern** (Phase H4): je Jahreszeit ein Feld; eine Wetterkarte dort wirkt jedes Jahr
+   wieder in dieser Jahreszeit, bis sie ersetzt wird; höchstens ein Wechsel pro Jahr. Beispiele: nasser Frühling
+   (Wiesen wachsen doppelt, Gehölz auch), Gewittersommer (Wasser überall, mehr Brände), milder Herbst (längeres
+   Graswachstum, satte Wölfe), strenger Winter (Altwald stirbt, Rudel verhungern, Herde braucht mehr Schutz).
+4. 💡 **Größere Insel mit Wegen und Gabelungen**, mehrere Szenarien (Inseltypen), Ereignisse (Dürrejahr, Seuche).
+5. **Partielänge:** Ziel 20–30 Minuten; der Prototyp liegt bei 10–15 (Wildnis-Tempo anpassen).
 
 ## 10. Was bleibt vom bisherigen Projekt
 
@@ -221,7 +224,7 @@ von Konzept 0.4 (Geografien, Werte, Formen, Weltkarten) werden ersetzt; der Code
 
 - **1.5 (10.11.2026):** Kurzspezifikation H3b: Wild als Spielobjekt, Wölfe fressen zuerst Wild, Stufe 4 Jäger (Jagd,
   Feuer als Werkzeug, Wölfe als Konkurrenten), Stufe 5 Mensch (Lager, Rodung), Eiszeit als Prüfung unterwegs und
-  Sieg als Mensch mit Lager (8, 9.1, 9.2).
+  Sieg als Mensch mit Lager (8, 9.1, 9.2). Nachtrag: Lager nicht auf dem Fluss (`camp.on`, 9.2).
 - **1.4 (10.11.2026):** Korrekturen zu H3a: Für die Reife zählen nur Merkmale der aktuellen Stufe, frühere wirken
   weiter (9.2, in den Daten umschaltbar); das Angebot stellt Reife-Merkmale voran und rotiert, wenn es liegen bleibt
   (9.1); Feuer durch die Blitz-Karte zählt nicht als Erfahrung, „Brand“ heißt jetzt „Waldbrand“ (9.1).
