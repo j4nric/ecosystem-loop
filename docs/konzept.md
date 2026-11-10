@@ -1,6 +1,6 @@
 # Being God (ain't easy) – Spielkonzept
 
-Stand: 10.11.2026 · Version 0.2.1 (löst das [Handover](handover.md) als Leitdokument ab)
+Stand: 10.11.2026 · Version 0.3.0 (löst das [Handover](handover.md) als Leitdokument ab)
 
 > **Status:** Vom Inhaber am 10.11.2026 bestätigt (✅). Zahlen sind Startwerte fürs Balancing –
 > sie werden in der Simulation justiert, nicht am Schreibtisch. Umsetzung: [Entwicklungsplan](entwicklungsplan.md).
@@ -109,13 +109,13 @@ Bei mehreren passenden Formen gilt die erste in der Tabelle.
 
 **Wald** (Sonderwert Totholz)
 
-| Form                                   | Bedingung                              | Lebensraum für                            |
-| -------------------------------------- | -------------------------------------- | ----------------------------------------- |
-| Brandfläche · _verödet, vorübergehend_ | Vegetation ≤ 1, Totholz ≥ 3            | Käfer – und fruchtbar für den Neuaufwuchs |
-| Trockenwald                            | Feuchte ≤ 1, Vegetation ≥ 3            | Echsen; hohe Brandgefahr                  |
-| **Urwald** · _ideal_                   | Vegetation 5, Feuchte ≥ 4, Totholz 2–3 | Primaten, Vögel, alle Waldarten           |
-| Lichter Wald                           | Licht ≥ 3, Vegetation 2–3              | Hirsche, Vögel, Bienen                    |
-| Mischwald                              | sonst                                  | Käfer, Kleinsäuger, Wölfe                 |
+| Form                                   | Bedingung                                | Lebensraum für                            |
+| -------------------------------------- | ---------------------------------------- | ----------------------------------------- |
+| Brandfläche · _verödet, vorübergehend_ | Vegetation ≤ 1, Totholz ≥ 3              | Käfer – und fruchtbar für den Neuaufwuchs |
+| Trockenwald                            | Feuchte ≤ 1, Vegetation ≥ 3              | Echsen; hohe Brandgefahr                  |
+| **Urwald** · _ideal_                   | Vegetation ≥ 4, Feuchte ≥ 4, Totholz 2–3 | Primaten, Vögel, alle Waldarten           |
+| Lichter Wald                           | Licht ≥ 3, Vegetation 2–3                | Hirsche, Vögel, Bienen                    |
+| Mischwald                              | sonst                                    | Käfer, Kleinsäuger, Wölfe                 |
 
 **Flachland** (Sonderwert Boden)
 
@@ -135,7 +135,7 @@ Bei mehreren passenden Formen gilt die erste in der Tabelle.
 | Trockenes Flussbett · _verödet_ | Wasserstand 0                 | –                                                  |
 | Hochwasser · _Störung_          | Wasserstand 5                 | – (überflutet Nachbarn: Feuchte +1, Vegetation −1) |
 | Bach                            | Wasserstand 1–2               | Plankton, Frösche                                  |
-| **Aue** · _ideal_               | Wasserstand 3, Vegetation ≥ 4 | Fische, Frösche, Vögel, Menschen                   |
+| **Aue** · _ideal_               | Wasserstand 3, Vegetation ≥ 3 | Fische, Frösche, Vögel, Menschen                   |
 | Strom                           | sonst                         | Plankton, Fische                                   |
 
 **Küste** (Sonderwert Salz)
@@ -143,7 +143,7 @@ Bei mehreren passenden Formen gilt die erste in der Tabelle.
 | Form                   | Bedingung                             | Lebensraum für                       |
 | ---------------------- | ------------------------------------- | ------------------------------------ |
 | Salzwüste · _verödet_  | Salz 5, Feuchte ≤ 2                   | –                                    |
-| **Mangrove** · _ideal_ | Vegetation ≥ 4, Salz 2–3, Feuchte ≥ 4 | Fische (Kinderstube), Frösche, Vögel |
+| **Mangrove** · _ideal_ | Vegetation ≥ 3, Salz 2–3, Feuchte ≥ 4 | Fische (Kinderstube), Frösche, Vögel |
 | Riff                   | Licht ≥ 4, Salz ≥ 3                   | Plankton, Fische                     |
 | Watt                   | Feuchte ≥ 4, Vegetation ≤ 2           | Plankton, Vögel                      |
 | Strand                 | sonst                                 | Echsen                               |
@@ -161,12 +161,13 @@ Die Geografien hängen zusammen. Darum hat jeder Eingriff Nebenwirkungen:
 
 Jede Zone hat eine **Stufe von 1 bis 5**: ihre Reife als Lebensraum.
 
-- ✅ Sie steigt um 1, wenn die Zone 3 Runden am Stück in einer nicht verödeten Form war und genügend Arten trägt.
+- ✅ Sie steigt um 1, wenn die Zone 2 Runden am Stück in einer nicht verödeten Form war und genügend Arten trägt.
 - Stufe 4 und 5 sind **nur in der Idealform** erreichbar. Stufe 5 verlangt zusätzlich ≥ 4 Arten in der Zone.
   Das ist die schwer erreichbare Obergrenze.
 - Sie fällt um 1 bei verödeter Form, nach einer Störung (Feuer, Hochwasser …) oder beim Wechsel in eine andere Form.
 - Die Zonenstufe begrenzt die Evolution: Eine Art der Entwicklungsstufe _n_ kann nur in einer Zone mit
-  Stufe ≥ _n − 2_ entstehen. Hohes Leben braucht reife Lebensräume.
+  Stufe ≥ _n − 3_ entstehen. Hohes Leben braucht reife Lebensräume. (Bis Version 0.2.1: _n − 2_; vom Inhaber
+  nach der Balancing-Messung vom 10.11.2026 geändert.)
 
 ## 5. Das Leben
 
@@ -187,7 +188,7 @@ Jede Art hat pro Zone einen **Bestand von 0–9**.
 
 Höhere Arten **entstehen aus niedrigeren** entlang eines Stammbaums. Eine Art entwickelt sich weiter, wenn in einer Zone
 
-- ihr Bestand hoch genug ist (✅ ≥ 5),
+- ihr Bestand hoch genug ist (✅ ≥ 4),
 - die Form für die neue Art passt,
 - die Zonenstufe reicht,
 - diese Bedingungen ✅ 3 Runden lang erfüllt sind.
@@ -268,7 +269,7 @@ Die **Harmonie (0–100)** ist das Lebenszeichen der Welt. Sie startet bei ✅ 6
 | ------------------------------------- | -------------- |
 | Zone in Idealform                     | +2             |
 | Zone in verödeter Form                | −3             |
-| Arten am Leben                        | +0,5 pro Art   |
+| Arten am Leben                        | +0,25 pro Art  |
 | Art ausgestorben                      | −10 (einmalig) |
 | Hunger / Überpopulation in einer Zone | −1             |
 | Mensch-Bestand                        | −0,5 pro Tier  |
@@ -298,7 +299,7 @@ Ereignisse werden **eine Runde vorher angekündigt**. Der Spieler kann sich vorb
 | Hitzesommer          | alle Zonen Feuchte −1                                |
 | Kälteeinbruch        | Berge Schnee +2, alle Zonen Vegetation −1            |
 | Blitzschlag          | Gewitter auf zufälliger Zone (kann Feuer auslösen)   |
-| Seuche               | dichteste Population −3                              |
+| Seuche               | dichteste Population −3 (wird nicht stärker)         |
 | Sturmflut            | Küste Salz +2, Flachland Feuchte +1                  |
 | Heuschrecken         | Flachland Vegetation −2                              |
 | Meteorit (ab Jahr 8) | eine Zone fällt auf Stufe 1, starker Selektionsdruck |
@@ -369,7 +370,7 @@ entscheidet; Zahlen bleiben Platzhalter bis Phase 6.
 - Eine Störungsform (Hochwasser) stört ihre eigene Zone in jeder Runde, in der sie besteht. Die Nachbarn trifft
   sie über die Kopplung „Hochwasser“, nicht als Störung.
 - Zonenstufe: Sie fällt pro Runde höchstens um 1, auch wenn mehrere Gründe zusammenkommen. Die Runde des
-  Abstiegs zählt nicht zur Serie; die 3 Runden für den Aufstieg beginnen danach neu.
+  Abstiegs zählt nicht zur Serie; die 2 Runden für den Aufstieg beginnen danach neu.
 - „Urwald – alle Waldarten“ = jede Art, die in einer anderen Waldform lebt.
 
 **Kap. 5 – Leben**
@@ -414,3 +415,19 @@ entscheidet; Zahlen bleiben Platzhalter bis Phase 6.
 **App (Darstellung)**
 
 - Figuren richten sich nach der Arten-Gruppe aus `species.yaml` (`group`); Frösche sind Amphibien mit eigener Figur.
+
+**Balancing (Phase 6, Tuning-Runde 1 vom 10.11.2026)**
+
+- Evolution: Eine Art der Stufe _n_ entsteht in Zonen mit Stufe ≥ _n − 3_ (statt _n − 2_). Entscheidung des
+  Inhabers auf Grundlage der Messung `packages/sim/reports/2026-11-10-baseline.md` (Vorschlag 3).
+- Die Seuche wächst nicht mit der Ereignis-Stärke (`events.yaml`: `scales: false`), sie nimmt immer 3 Tiere.
+
+## Änderungsverlauf
+
+- **0.3.0 (10.11.2026)** – Tuning-Runde 1 nach der Baseline-Messung (Bericht
+  `packages/sim/reports/2026-11-10-tuning-1.md`): Zonenstufe für Evolution _n − 3_ statt _n − 2_ (4.4,
+  Inhaber-Entscheidung); Zonenstufe steigt nach 2 statt 3 Runden (4.4); Vorfahr braucht Bestand ≥ 4 statt ≥ 5
+  (5.2); Artenbonus der Harmonie +0,25 statt +0,5 je Art (7); Seuche skaliert nicht mehr (9); breitere
+  Idealformen: Urwald Vegetation ≥ 4 (statt 5), Aue und Mangrove Vegetation ≥ 3 (statt ≥ 4) (4.2). Nur in den
+  Daten: 1 Beutetier ernährt 2 Räuber, _Stille_ kostet 4 Odem, Meilenstein „Wetterfest“ nach 20 Ereignissen.
+- **0.2.1 (10.11.2026)** – vom Inhaber bestätigter Stand vor dem Balancing.

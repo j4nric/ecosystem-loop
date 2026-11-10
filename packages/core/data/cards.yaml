@@ -204,7 +204,7 @@ cards:
   - id: silence
     name: { de: Stille, en: Silence }
     category: miracle
-    cost: 3
+    cost: 4 # Balancing 2026-11-10: 3 → 4 (Freischaltung zu stark)
     effects: [{ event: cancel }]
 
   - id: ark

@@ -1,0 +1,132 @@
+{
+  "title": "Messung tuning-1: random",
+  "createdAt": "2026-11-10T12:00:00.000Z",
+  "model": "Engine v2 · Daten-Stand Tuning-Runde 1",
+  "bot": "random",
+  "runs": 200,
+  "scenario": "all",
+  "metrics": [
+    {
+      "label": "Runden (Median)",
+      "value": 42,
+      "unit": " Rd."
+    },
+    {
+      "label": "Runden P10–P90",
+      "value": "33–53.2",
+      "unit": " Rd."
+    },
+    {
+      "label": "Partien mit Stufe 6",
+      "value": 0,
+      "unit": " %"
+    },
+    {
+      "label": "Stufe 6 erreicht (Median)",
+      "value": "–",
+      "unit": ""
+    },
+    {
+      "label": "Partien mit Mensch",
+      "value": 0,
+      "unit": " %"
+    },
+    {
+      "label": "Höchste Stufe (max.)",
+      "value": 5,
+      "unit": ""
+    },
+    {
+      "label": "Punkte (Median)",
+      "value": 270,
+      "unit": " P."
+    },
+    {
+      "label": "Zonen in Idealform",
+      "value": 4.4,
+      "unit": " %"
+    },
+    {
+      "label": "Zonen verödet",
+      "value": 2.8,
+      "unit": " %"
+    },
+    {
+      "label": "Odem ungenutzt je Runde",
+      "value": 5.82,
+      "unit": " Odem"
+    },
+    {
+      "label": "Odem verfallen je Runde",
+      "value": 0.55,
+      "unit": " Odem"
+    },
+    {
+      "label": "Kollapsgrund Nr. 1 (hunger)",
+      "value": 42.5,
+      "unit": " %"
+    }
+  ],
+  "charts": [
+    {
+      "title": "Verlauf über die Jahre",
+      "xLabel": "Jahr",
+      "yFormat": "pct",
+      "x": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+      "series": [
+        {
+          "name": "Partie läuft noch",
+          "values": [1, 1, 1, 1, 1, 0.995, 0.99, 0.905, 0.75, 0.565, 0.33, 0.2, 0.105, 0.07, 0.01, 0]
+        },
+        {
+          "name": "Stufe 5 erreicht",
+          "values": [0, 0, 0, 0.005, 0.005, 0.01, 0.01, 0.025, 0.035, 0.05, 0.06, 0.075, 0.08, 0.085, 0.09, 0.09]
+        },
+        {
+          "name": "Stufe 6 erreicht",
+          "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        },
+        {
+          "name": "Mensch entstanden",
+          "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        }
+      ],
+      "caption": "Anteil aller Partien am Ende des Jahres (kumuliert für die Stufen)."
+    },
+    {
+      "title": "Harmonie am Jahresende",
+      "xLabel": "Jahr",
+      "yFormat": "num",
+      "x": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+      "series": [
+        {
+          "name": "P10",
+          "values": [41.95, 43.5, 41.18, 35.25, 28.5, 22.5, 15.35, 7.9, 3.75, 2, 0, 0, 0.15, 0, 0, 0]
+        },
+        {
+          "name": "Median",
+          "values": [59.25, 60.25, 57.5, 53, 47.13, 41.5, 34.5, 25.5, 19.75, 12.88, 9.5, 8.38, 10.63, 4.5, 1, 0]
+        },
+        {
+          "name": "P90",
+          "values": [64.5, 68.25, 67, 64.78, 61.28, 58.28, 52.9, 46.65, 36.5, 29.83, 29.4, 25.38, 20.15, 13.73, 3.4, 0]
+        }
+      ],
+      "caption": "Harmonie (0–100) der Partien, die das Jahresende erreichen."
+    },
+    {
+      "title": "Harmonie-Quellen je Runde",
+      "xLabel": "Quelle",
+      "yFormat": "num",
+      "x": ["hunger", "disturbance", "form:degraded", "extinction", "form:ideal", "species"],
+      "series": [
+        {
+          "name": "Ø Beitrag je Runde",
+          "values": [-1.14, -0.97, -0.41, -0.25, 0.44, 0.95]
+        }
+      ],
+      "caption": "Mittlerer Beitrag zur Harmonie je Runde und Quelle über alle Partien."
+    }
+  ],
+  "notes": "Partielänge im Ziel (Median 42 Runden); Stufe 6 nie erreicht (Ziel Jahr 5–7); Mensch in 0 % (Ziel 5–20 %)."
+}

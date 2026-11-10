@@ -1,0 +1,126 @@
+{
+  "title": "Tuning-Runde 1: Vorher/Nachher",
+  "createdAt": "2026-11-10T12:00:00.000Z",
+  "model": "Engine v2 · main@dd36635 → Tuning-Runde 1",
+  "bot": "random, greedy, gardener, evolver, disruptor",
+  "runs": 2000,
+  "scenario": "all",
+  "metrics": [
+    {
+      "label": "gardener: Runden (Median) vorher → nachher",
+      "value": "106.5 → 66",
+      "unit": " Rd."
+    },
+    {
+      "label": "evolver: Runden (Median) vorher → nachher",
+      "value": "84 → 56",
+      "unit": " Rd."
+    },
+    {
+      "label": "greedy: Runden (Median) vorher → nachher",
+      "value": "55 → 53",
+      "unit": " Rd."
+    },
+    {
+      "label": "random: Runden (Median) vorher → nachher",
+      "value": "43 → 42",
+      "unit": " Rd."
+    },
+    {
+      "label": "gardener: Partien mit Stufe 5 vorher → nachher",
+      "value": "0 → 62",
+      "unit": " %"
+    },
+    {
+      "label": "gardener: Partien mit Stufe 6 vorher → nachher",
+      "value": "0 → 6.5",
+      "unit": " %"
+    },
+    {
+      "label": "evolver: Partien mit Stufe 5 vorher → nachher",
+      "value": "0 → 69",
+      "unit": " %"
+    },
+    {
+      "label": "evolver: Partien mit Stufe 6 vorher → nachher",
+      "value": "0 → 7",
+      "unit": " %"
+    },
+    {
+      "label": "Kampagne gardener: Punkte mit Buch, Partien 2–5, vorher → nachher",
+      "value": "+111 → +38",
+      "unit": " %"
+    },
+    {
+      "label": "Kampagne evolver: Punkte mit Buch, Partien 2–5, vorher → nachher",
+      "value": "+15 → -0",
+      "unit": " %"
+    }
+  ],
+  "charts": [
+    {
+      "title": "Partielänge je Bot",
+      "xLabel": "Bot",
+      "yFormat": "num",
+      "x": ["random", "greedy", "gardener", "evolver", "disruptor"],
+      "series": [
+        {
+          "name": "Runden vorher",
+          "values": [43, 55, 106.5, 84, 59]
+        },
+        {
+          "name": "Runden nachher",
+          "values": [42, 53, 66, 56, 50]
+        }
+      ],
+      "caption": "Median der Runden je Partie (Rd.), 200 Partien je Bot, gleiche Seeds. Ziel: 30–60 Rd."
+    },
+    {
+      "title": "Hohes Leben je Bot",
+      "xLabel": "Bot",
+      "yFormat": "pct",
+      "x": ["random", "greedy", "gardener", "evolver", "disruptor"],
+      "series": [
+        {
+          "name": "Stufe 5 vorher",
+          "values": [0, 0, 0, 0, 0]
+        },
+        {
+          "name": "Stufe 5 nachher",
+          "values": [0.09, 0.34, 0.62, 0.69, 0.57]
+        },
+        {
+          "name": "Stufe 6 vorher",
+          "values": [0, 0, 0, 0, 0]
+        },
+        {
+          "name": "Stufe 6 nachher",
+          "values": [0, 0, 0.065, 0.07, 0.045]
+        }
+      ],
+      "caption": "Anteil der Partien (%), in denen eine Art der Stufe 5 bzw. 6 gelebt hat. Menschen: vorher und nachher 0 %."
+    },
+    {
+      "title": "Wirkung der Freischaltungen (Kampagne)",
+      "xLabel": "Bot",
+      "yFormat": "pct",
+      "x": ["gardener", "evolver"],
+      "series": [
+        {
+          "name": "vorher",
+          "values": [1.113, 0.149]
+        },
+        {
+          "name": "nachher ohne Dämpfung",
+          "values": [0.517, 0.098]
+        },
+        {
+          "name": "nachher",
+          "values": [0.382, -0.004]
+        }
+      ],
+      "caption": "Mehrpunkte (%) mit Schöpfungsbuch gegenüber leerem Buch, Mittel der Mediane über Partie 2–5, 40 Kampagnen. Dämpfung: Stille 4 Odem, Wetterfest nach 20 Ereignissen."
+    }
+  ],
+  "notes": "Mit dem Paket (#1–#7) erreichen gute Bots in 57–69 % der Partien Stufe 5 und in 4,5–7 % Stufe 6 bei 50–66 Runden, Freischaltungen bringen dem Gärtner +38 % statt +111 % Punkte; Menschen entstehen weiterhin nie."
+}

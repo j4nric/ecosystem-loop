@@ -29,7 +29,7 @@ rules:
   levels:
     min: 1
     max: 5
-    riseAfter: 3 # Runden am Stück in derselben, nicht verödeten Form
+    riseAfter: 2 # Runden am Stück in derselben, nicht verödeten Form (Balancing 2026-11-10: 3 → 2)
     idealFrom: 4 # Stufe 4 und 5 nur in der Idealform
     species:
       enabled: true
@@ -39,7 +39,7 @@ rules:
     max: 9 # Bestand je Art und Zone 0–9
     food:
       perStat: 2 # 1 Punkt Vegetation/Totholz/Licht … ernährt 2 Tiere
-      perPrey: 1 # 1 Beutetier ernährt 1 Räuber
+      perPrey: 2 # 1 Beutetier ernährt 2 Räuber (Balancing 2026-11-10: 1 → 2)
       huntNeighbors: true # Räuber jagen auch in Nachbarzonen
     growth: 1 # satt und in passender Form: +1 (nicht im Winter)
     hunger: 1 # nicht satt: −1
@@ -53,10 +53,10 @@ rules:
     hunt: 1 # Jäger (Mensch) senken jeden gejagten Bestand ihrer Zone um 1
     migration: { from: 4, amount: 1 } # ab Bestand 4 wandert 1 Tier in eine passende Nachbarzone
   evolution:
-    minAncestor: 5 # Bestand des Vorfahren in der Zone
+    minAncestor: 4 # Bestand des Vorfahren in der Zone (Balancing 2026-11-10: 5 → 4)
     rounds: 3 # Runden in Folge
     amount: 2 # so viele Tiere wechseln zur neuen Art
-    levelGap: 2 # Zonenstufe ≥ Stufe der Art − 2
+    levelGap: 3 # Zonenstufe ≥ Stufe der Art − 3 (Konzept 4.4, Inhaber 2026-11-10: 2 → 3)
     pressure: # Selektionsdruck ab Stufe 4: Störung in Zone oder Nachbarzone in den letzten 4 Runden
       fromTier: 4
       when: [{ any: [{ disturbedWithin: 4 }, { anyNeighbor: [{ disturbedWithin: 4 }] }] }]

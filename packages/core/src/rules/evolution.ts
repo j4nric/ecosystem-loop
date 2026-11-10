@@ -34,7 +34,7 @@ export function evolutionParams(data: GameData): EvolutionParams {
 
 /**
  * Lebensraum für die neue Art: die Zone selbst oder eine passende Nachbarzone mit Platz.
- * Die Zonenstufe gilt für die Zielzone (Konzept 4.4: „kann nur in einer Zone mit Stufe ≥ n − 2 entstehen“).
+ * Die Zonenstufe gilt für die Zielzone (Konzept 4.4: Stufe ≥ n − levelGap, Parameter rules.evolution.levelGap).
  */
 function settleZone(
   data: GameData,

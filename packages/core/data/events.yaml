@@ -51,6 +51,7 @@ events:
     icon: '🦠'
     weight: 2
     target: { pick: densest }
+    scales: false # Balancing 2026-11-10: immer −3, sonst löscht die späte Seuche ganze Bestände aus
     effects:
       - { population: species, by: -3, at: target }
       - { disturb: true, at: target }
