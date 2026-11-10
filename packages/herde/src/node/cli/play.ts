@@ -61,13 +61,25 @@ function render(v: HerdeView): void {
         const ch = ICON[c.land] ?? c.land[0]!.toUpperCase();
         const food = c.maxFood > 0 ? String(c.food) : ' ';
         const pack = v.packs.find((p) => p.id === c.pack);
-        const mark = c.herd ? '@' : pack ? 'w' : v.intent && v.intent.x === c.x && v.intent.y === c.y ? '*' : ' ';
+        const mark = c.herd
+          ? c.camp
+            ? 'L'
+            : '@'
+          : pack
+            ? 'w'
+            : c.prey
+              ? 'h'
+              : c.campSite
+                ? '+'
+                : v.intent && v.intent.x === c.x && v.intent.y === c.y
+                  ? '*'
+                  : ' ';
         return `${ch}${food}${mark}${pack && !c.herd ? pack.size : ' '}`;
       });
     console.log(`${String(y).padStart(2)}  ${row.join('')}`);
   }
   console.log(
-    'Legende: ~ Meer . Steppe W Wiese b Busch F Wald A Altwald x Brand R Wasser # Fels · Ziffer = Futter · @ Herde · w Wölfe · * Ziel',
+    'Legende: ~ Meer . Steppe W Wiese b Busch F Wald A Altwald x Brand R Wasser # Fels · Ziffer = Futter · @ Herde · L Lager · w Wölfe · h Wild · + Lagerplatz · * Ziel',
   );
   const evo = v.evolution;
   const name = (id: string) => data.traits.get(id)?.name.de ?? id;
@@ -81,6 +93,9 @@ function render(v: HerdeView): void {
             (evo.missing.oneOf ? `, eines aus ${evo.missing.oneOf.map(name).join('/')}` : '')
           : ''),
   );
+  if (v.campSites.length)
+    console.log(`Lagerplätze (l <x> <y>): ${v.campSites.map((p) => `${p.x},${p.y}`).join(' · ')}`);
+  console.log(`Eiszeiten überstanden: ${v.iceAges.survived}${v.iceAges.max ? ` von ${v.iceAges.max}` : ''}`);
   if (evo.offer.length) console.log(`Angebot: ${evo.offer.map((id, i) => `[${i}] ${name(id)}`).join(' · ')} (m <nr>)`);
   if (v.intent) console.log(`Die Herde ${REASON[v.intent.reason]} ${ARROW[`${v.intent.dx},${v.intent.dy}`]}`);
   v.hand.forEach((h) => {
@@ -100,7 +115,7 @@ function run(action: Action): void {
 }
 
 console.log(
-  `Being God – Die Herde · Seed ${state.seed}. Befehle: p <hand> <x> <y> · w (Monat) · s (Jahreszeit) · m <nr> · e · q`,
+  `Being God – Die Herde · Seed ${state.seed}. Befehle: p <hand> <x> <y> · w (Monat) · s (Jahreszeit) · m <nr> · e · l <x> <y> (Lager) · q`,
 );
 while (!state.over) {
   render(view(data, state));
@@ -115,6 +130,7 @@ while (!state.over) {
       const trait = state.herd.offer[Number(rest[0])];
       run({ type: 'pickTrait', trait: trait ?? '' });
     } else if (cmd === 'e') run({ type: 'evolve' });
+    else if (cmd === 'l') run({ type: 'settle', x: Number(rest[0]), y: Number(rest[1]) });
     else if (cmd === 'p') {
       const [hand, x, y] = rest.map(Number);
       run({ type: 'play', hand: hand ?? -1, ...(x !== undefined && y !== undefined ? { x, y } : {}) });

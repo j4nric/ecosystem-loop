@@ -143,6 +143,30 @@ function Island({
     body: pack.hungry ? COLORS.wolfHungry : COLORS.wolfBody,
     head: COLORS.wolfHead,
   }));
+  // Wild (H3b, vorläufig): kleine Tierfiguren, eine je Tier des Bestands.
+  const prey: FigureGroup[] = (view.prey ?? []).map((q) => ({
+    id: `prey-${q.id}`,
+    position: at(q),
+    count: q.size,
+    size: 0.8,
+    spread: 0.12,
+    body: COLORS.preyBody,
+    head: COLORS.preyHead,
+  }));
+  const preyKey = JSON.stringify(prey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const preyGroups = useMemo(() => prey, [preyKey]);
+  // Lager und gültige Lagerplätze (H3b, vorläufig): Rahmen auf dem Feld.
+  const campSquares = useMemo(
+    () => (view.camp ? [at(view.camp, 0.016)] : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [view.camp, model],
+  );
+  const campSiteSquares = useMemo(
+    () => (targets ? [] : (view.campSites ?? []).map((p) => at(p, 0.015))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [targets, view.campSites, model],
+  );
   // Gruppen nur neu anlegen, wenn sich etwas Sichtbares ändert (sonst würde jede View eine Animation prüfen).
   const herdKey = JSON.stringify(groups);
   const packKey = JSON.stringify(packs);
@@ -202,7 +226,19 @@ function Island({
   const invalidate = useThree((st) => st.invalidate);
   useEffect(() => {
     invalidate();
-  }, [invalidate, model, targets, grown, selected, previewIntent, intent, herdGroups, packGroups]);
+  }, [
+    invalidate,
+    model,
+    targets,
+    grown,
+    selected,
+    previewIntent,
+    intent,
+    herdGroups,
+    packGroups,
+    preyGroups,
+    campSquares,
+  ]);
 
   return (
     <>
@@ -237,7 +273,16 @@ function Island({
           reducedMotion={reducedMotion}
         />
 
+        <Figures
+          groups={preyGroups}
+          bodyGeometry={GEO.animalBody}
+          headGeometry={GEO.animalHead}
+          reducedMotion={reducedMotion}
+        />
+
         <Squares positions={blockedSquares} color={COLORS.blocked} opacity={0.8} frame />
+        <Squares positions={campSiteSquares} color={COLORS.campSite} opacity={0.9} frame />
+        <Squares positions={campSquares} color={COLORS.camp} opacity={1} frame />
         <Squares positions={dimSquares} color={COLORS.dim} opacity={0.38} />
         <Squares positions={targetSquares} color={COLORS.target} opacity={0.3} />
         <Squares positions={targetSquares} color={COLORS.target} opacity={0.95} pulse={!reducedMotion} frame />

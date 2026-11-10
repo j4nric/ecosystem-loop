@@ -16,6 +16,9 @@
 #                            woher das Futter im Umkreis kam, wird nicht geprüft
 #                 on         die Herde steht auf einer der Landschaften `lands` (+1)
 #                 moved      gegangene Felder in Luftlinie zwischen Start und Ziel des Monats (+ Zahl der Felder)
+#                 prey       Wild im Umkreis reach (der Stufe) um die Herde (+1)
+#                 burnt      frische Brandfläche (params fire.fresh) im Umkreis reach und kein Verlust durch Feuer in
+#                            diesem Monat (+1); anders als fire zählt auch der Blitz (Feuer als Werkzeug)
 #
 # traits        Merkmale: verfügbar, sobald die Erfahrung `from` den Wert `at` erreicht. effects ändern Zahlen der
 #               Stufe (stages.yaml): Wert × mul + add. Die Wirkungen werden in der Reihenfolge angewandt, in der
@@ -45,6 +48,12 @@ experiences:
   - id: walked
     name: { de: Gegangene Felder, en: Fields walked }
     when: { type: moved }
+  - id: tracks
+    name: { de: Monate nahe Wild, en: Months near game }
+    when: { type: prey }
+  - id: fire_tamed
+    name: { de: Feuer ohne Verlust überstanden, en: Fires weathered unharmed }
+    when: { type: burnt }
 traits:
   - id: thick_fur
     name: { de: Dichtes Fell, en: Thick fur }
@@ -95,3 +104,31 @@ traits:
     from: walked
     at: 12
     effects: [{ stat: starveRate, mul: 0.5 }]
+  - id: tracker
+    name: { de: Spurenleser, en: Tracker }
+    text: { de: Die Jagd bringt ein Tier mehr., en: The hunt yields one more animal. }
+    icon: '🐾'
+    from: tracks
+    at: 4
+    effects: [{ stat: huntKill, add: 1 }]
+  - id: fire_keeper
+    name: { de: Feuerhüter, en: Fire keeper }
+    text: { de: Jagd im Feuer bringt ein Tier mehr., en: Hunting with fire yields one more animal. }
+    icon: '🪔'
+    from: fire_tamed
+    at: 1
+    effects: [{ stat: fireHunt, add: 1 }]
+  - id: weathered
+    name: { de: Wetterfest, en: Weathered }
+    text: { de: Noch einmal halber Verlust durch Kälte., en: Half the losses to cold once more. }
+    icon: '🌨'
+    from: sheltered
+    at: 12
+    effects: [{ stat: coldLoss, mul: 0.5 }]
+  - id: seasoned_hunter
+    name: { de: Erfahrene Jäger, en: Seasoned hunters }
+    text: { de: Jedes erlegte Tier bringt mehr Futter., en: Each animal hunted yields more food. }
+    icon: '🏹'
+    from: tracks
+    at: 12
+    effects: [{ stat: preyFood, add: 1 }]

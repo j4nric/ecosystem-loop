@@ -3,6 +3,7 @@
  */
 import type { CellForecast, EvolutionView, HerdeView, IntentView, StageNeedsView } from './api.ts';
 import { getCard, targetsOf } from './cards.ts';
+import { campSites } from './camp.ts';
 import { chooseMove } from './herd.ts';
 import { runNature } from './nature.ts';
 import type { HerdeData, SeasonSet } from './schema.ts';
@@ -55,6 +56,9 @@ export function stageNeeds(data: HerdeData, s: HerdeState, stageId: string): Sta
     blocked: [...stage.blocked],
     move: stage.move,
     reach: stage.reach,
+    prey: stage.preyFood > 0 ? { food: stage.preyFood, kill: stage.huntKill, fire: stage.fireHunt } : null,
+    wolves: stage.wolves,
+    camp: stage.camp ? { radius: stage.camp.radius, near: stage.camp.near.map((g) => [...g]) } : null,
   };
 }
 
@@ -85,6 +89,7 @@ export function evolutionOf(data: HerdeData, s: HerdeState): EvolutionView {
 export function view(data: HerdeData, s: HerdeState): HerdeView {
   const island = islandOf(data, s);
   const stage = stageOf(data, s);
+  const sites = campSites(data, s);
   const year = yearLength(data);
   return {
     island: s.island,
@@ -113,6 +118,9 @@ export function view(data: HerdeData, s: HerdeState): HerdeView {
         herd: s.herd.x === x && s.herd.y === y,
         blocked: l.walk && !walkable(data, s, c.land),
         pack: s.packs.find((p) => p.x === x && p.y === y)?.id ?? null,
+        prey: s.prey.find((p) => p.x === x && p.y === y)?.id ?? null,
+        camp: s.camp !== null && s.camp.x === x && s.camp.y === y,
+        campSite: sites.some((p) => p.x === x && p.y === y),
       };
     }),
     herd: {
@@ -131,6 +139,10 @@ export function view(data: HerdeData, s: HerdeState): HerdeView {
       size: p.size,
       hungry: p.hungry >= data.params.wolves.hungryAfter,
     })),
+    prey: s.prey.map((p) => ({ id: p.id, x: p.x, y: p.y, size: p.size, hungry: p.hungry > 0 })),
+    camp: s.camp ? { x: s.camp.x, y: s.camp.y } : null,
+    campSites: sites,
+    iceAges: { survived: s.iceAges, max: data.params.ice.ages ?? null },
     intent: intentOf(data, s),
     hand: s.hand.map((id, index) => {
       const card = getCard(data, id);

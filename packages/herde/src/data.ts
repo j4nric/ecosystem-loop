@@ -149,6 +149,24 @@ export function buildData(raw: RawData): HerdeData {
       if (!traits.has(id)) problems.push(`${DATA_FILES.stages}: ${where} → mature.oneOf: unbekanntes Merkmal ${id}`);
     if (s.mature && s.mature.traits > traits.size)
       problems.push(`${DATA_FILES.stages}: ${where}: mature.traits ${s.mature.traits} > Zahl der Merkmale`);
+    if (s.preyFood > 0 !== s.huntKill > 0)
+      problems.push(`${DATA_FILES.stages}: ${where}: preyFood und huntKill nur gemeinsam (Jagd)`);
+    if (s.camp) {
+      s.camp.near.forEach((group, i) => {
+        for (const id of group) land(DATA_FILES.stages, `${where} → camp.near.${i}`, id);
+      });
+      const clear = s.camp.clear;
+      if (clear) {
+        for (const id of clear.lands) land(DATA_FILES.stages, `${where} → camp.clear.lands`, id);
+        land(DATA_FILES.stages, `${where} → camp.clear.to`, clear.to);
+        if (landscapes.has(clear.to) && !landscapes.get(clear.to)!.walk)
+          problems.push(`${DATA_FILES.stages}: ${where}: camp.clear.to ${clear.to} ist nicht begehbar`);
+        if (clear.lands.includes(clear.to))
+          problems.push(`${DATA_FILES.stages}: ${where}: camp.clear.to ${clear.to} in camp.clear.lands`);
+        if (clear.month >= yearLength)
+          problems.push(`${DATA_FILES.stages}: ${where}: camp.clear.month ${clear.month} ≥ Jahreslänge ${yearLength}`);
+      }
+    }
   }
   // Fester Weg: Von jeder Stufe aus führt `next` nie im Kreis.
   for (const s of stages.values()) {
@@ -174,6 +192,25 @@ export function buildData(raw: RawData): HerdeData {
   // Parameter
   if (!stages.has(params.herd.stage))
     problems.push(`${DATA_FILES.params}: herd.stage: unbekannte Stufe ${params.herd.stage}`);
+  // Wild: Stufe auf dem festen Weg ab der Startstufe, Landschaften bekannt und begehbar
+  const path: string[] = [];
+  for (
+    let id: string | undefined = params.herd.stage;
+    id !== undefined && !path.includes(id);
+    id = stages.get(id)?.next
+  )
+    path.push(id);
+  if (!path.includes(params.prey.from))
+    problems.push(`${DATA_FILES.params}: prey.from: Stufe ${params.prey.from} liegt nicht auf dem Weg ab herd.stage`);
+  for (const id of params.prey.lands) {
+    land(DATA_FILES.params, 'prey.lands', id);
+    if (landscapes.has(id) && !landscapes.get(id)!.walk)
+      problems.push(`${DATA_FILES.params}: prey.lands: ${id} ist nicht begehbar`);
+  }
+  for (const id of params.prey.eats) land(DATA_FILES.params, 'prey.eats', id);
+  if (params.prey.spawnSize > params.prey.maxSize) problems.push(`${DATA_FILES.params}: prey.spawnSize > prey.maxSize`);
+  if (params.ice.wildAfter >= params.wild.max)
+    problems.push(`${DATA_FILES.params}: ice.wildAfter muss kleiner als wild.max sein`);
   if (params.herd.birthMonth >= yearLength)
     problems.push(`${DATA_FILES.params}: herd.birthMonth ${params.herd.birthMonth} ≥ Jahreslänge ${yearLength}`);
   if (!seasonIds.includes(params.ice.season))

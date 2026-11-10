@@ -6,6 +6,8 @@ herd:
   birthMonth: 1 # Monat im Jahr mit Nachwuchs (0 = erster Monat des Frühlings)
 fire:
   spread: 0.45 # Chance, auf ein brennbares Nachbarfeld (4er-Nachbarschaft) überzuspringen
+  fresh: 1 # eine Brandfläche ist frisch bis zu diesem Alter (Jagd im Feuer, Erfahrung burnt): Brand in diesem
+  # oder im letzten Monat
 wolves:
   hungryAfter: 2 # ab so vielen Monaten ohne Beute zieht ein Rudel durchs Gehölz zur Herde
   fedToGrow: 4 # gerissene Tiere, damit ein Rudel wächst bzw. (in voller Stärke) ein neues gründet
@@ -15,6 +17,19 @@ wolves:
   starveReset: 4 # danach zählt der Hunger von hier aus weiter (Prototyp: starveAfter / 2)
   spawnChance: 0.04 # Chance je Monat, dass ohne Rudel neue einwandern
   spawnMinWood: 5 # dafür nötige Zahl an Gehölz-Feldern
+  preyKill: 1 # ein Rudel mit Wild im Umkreis 1 reißt so viele Wild-Tiere (statt Tiere der Herde) …
+  preyFed: 2 # … und wird davon um so viel satter (fed, siehe fedToGrow)
+prey: # Wild (Beutetiere, Konzept 9.2): Bestände der Größe 1 … maxSize, ohne Zufall außer beim Einwandern
+  from: wanderer # Wild wandert erst ein, sobald die Herde diese Stufe erreicht hat (Startphase wie im Prototyp)
+  lands: [meadow, bush] # Lebensraum
+  eats: [meadow, steppe, bush] # frisst Futter dieser Landschaften auf dem eigenen Feld und den Nachbarfeldern
+  food: 1 # Futter je Tier und Monat
+  maxSize: 3
+  fedToGrow: 3 # satte Monate bis zum Wachsen (in voller Größe: neuer Bestand auf einem Nachbarfeld)
+  starveAfter: 3 # hungrige Monate, bis der Bestand um 1 schrumpft
+  spawnChance: 0.1 # Chance je Monat, dass ohne Wild ein Bestand einwandert
+  spawnMinLand: 4 # dafür nötige Zahl an Feldern im Lebensraum
+  spawnSize: 2 # Größe des eingewanderten Bestands
 wild:
   start: 8
   perMonth: 0.5
@@ -22,6 +37,8 @@ wild:
 ice:
   months: 6
   season: winter # Jahreszeit während der Eiszeit
+  wildAfter: 50 # überstandene Eiszeit ohne Sieg: Wildnis fällt auf diesen Wert, die nächste Eiszeit kommt bei max
+  ages: 3 # die so vielte Eiszeit ist die letzte Prüfung (ohne Angabe: unbegrenzt)
 cards:
   startHand: 3
   drawPerSeason: 2

@@ -26,18 +26,23 @@ if (![runs, first, maxMonths].every(Number.isInteger) || runs < 1) {
 const data = loadData();
 const t0 = performance.now();
 let unfinished = 0;
+let camps = 0;
+let won = 0;
 const reached = new Map<string, number>();
 for (let i = 0; i < runs; i++) {
   const seed = first + i;
   const r = playRandomGame(data, { seed, maxMonths, check: true });
   if (!r.outcome) unfinished++;
+  if (r.camp) camps++;
+  if (r.outcome === 'won') won++;
   for (const st of r.stages) reached.set(st, (reached.get(st) ?? 0) + 1);
   console.log(
-    `Seed ${seed}: ${r.outcome ?? 'abgebrochen'} nach ${r.months} Monaten · ${r.survivors} Tiere · ${r.plays} Karten · ${r.events} Ereignisse · Stufen ${r.stages.join(' → ')}`,
+    `Seed ${seed}: ${r.outcome ?? 'abgebrochen'} nach ${r.months} Monaten · ${r.survivors} Tiere · ${r.plays} Karten · ${r.events} Ereignisse · Stufen ${r.stages.join(' → ')}${r.camp ? ' · Lager' : ''}`,
   );
 }
 console.log(`${runs} Partien ohne Absturz in ${Math.round(performance.now() - t0)} ms.`);
 console.log(`Erreichte Stufen: ${[...data.stages.keys()].map((id) => `${id} ${reached.get(id) ?? 0}`).join(' · ')}`);
+console.log(`Lager gegründet: ${camps} · gewonnen: ${won}`);
 if (unfinished > 0) {
   console.error(`${unfinished} Partie(n) nach ${maxMonths} Monaten nicht beendet.`);
   process.exit(1);

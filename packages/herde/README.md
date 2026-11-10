@@ -3,7 +3,8 @@
 Regel-Engine von Konzept 1.x „Die Herde“ ([Konzept](../../docs/konzept.md), Kapitel 4–8 und 9.1/9.2). Sie setzt die Regeln des
 Prototyps `prototypes/herde/index.html` um – datengetrieben, deterministisch und ohne Plattform-Abhängigkeit.
 Für denselben Seed und dieselben Züge liefert sie Schritt für Schritt denselben Zustand wie der Prototyp
-(`tests/prototype.test.ts`; Stufe 1 ohne Merkmale – die Entwicklung braucht keinen Zufall).
+(`tests/prototype.test.ts`; Stufe 1 ohne Merkmale – die Entwicklung braucht keinen Zufall – bis zum Ende der ersten
+Eiszeit, die ab H3b eine Prüfung unterwegs ist).
 
 ## Aufbau
 
@@ -14,7 +15,7 @@ data/seasons.yaml     Jahreszeiten (fire), Monate je Jahreszeit, Monatsnamen
 data/stages.yaml      Stufen der Herde: Bedürfnisse (Futter, Wasser, Schutz und wann, Futter je Landschaft, Hindernisse,
                       Schritte, Umkreis, Verluste, Gewichte der Herdenwahl), Folgestufe und Reife (mit mature.scope)
 data/traits.yaml      Erfahrungen (Zähler des Erlebten) und Merkmale (Schwelle, Wirkung auf Stufenwerte), Angebotsgröße
-data/params.yaml      Parameter (Herde zu Beginn, Feuer, Wölfe, Wildnis, Eiszeit, Karten)
+data/params.yaml      Parameter (Herde zu Beginn, Feuer, Wölfe, Wild, Wildnis, Eiszeit mit Prüfungen, Karten)
 data/islands.yaml     Inseln als Zeichenraster mit Legende, Start von Herde und Rudeln
 
 src/index.ts          öffentlicher Einstieg
@@ -24,7 +25,9 @@ src/month.ts          ein Monat in fester Reihenfolge (advance)
 src/nature.ts         Wachstum, Sukzession, Feuer
 src/herd.ts           Herdenwahl (chooseMove), Fressen, Durst, Kälte, Feuer, Nachwuchs
 src/traits.ts         Entwicklung: Erfahrungen zählen, Merkmale anbieten und wählen, Reife, Sprung
-src/wolves.ts         Reißen, Wandern, Wachsen/Gründen/Verhungern, Einwandern
+src/wolves.ts         Wild fressen oder reißen, Wandern, Wachsen/Gründen/Verhungern, Einwandern
+src/prey.ts           Wild: Fressen, Wachsen/Gründen, Ziehen, Schrumpfen, Einwandern
+src/camp.ts           Lager: gültige Plätze, Niederlassen (settle), Rodung
 src/cards.ts          Ziehen, gültige Ziele, Ausspielen
 src/view.ts           Lesemodell (Absicht, Prognosen, Hand mit Zielen)
 src/validate.ts       validateState für gespeicherte Stände (STATE_VERSION)
@@ -54,11 +57,14 @@ step(data, state, action): { state, events }      // rein, wirft RuleError bei u
          | { type: 'pickTrait', trait }             // ein angebotenes Merkmal wählen
          | { type: 'evolve' }                       // zur nächsten Stufe springen (nur wenn reif, unumkehrbar;
                                                    // Merkmale wirken weiter, die Reife zählt neu)
+         | { type: 'settle', x, y }                 // Lager gründen (Stufe mit camp, gültiger Platz in Zugweite,
+                                                   // nicht in der Eiszeit); danach sesshaft
 view(data, state): HerdeView                       // Felder, Herde, Rudel, Absicht, Hand mit Zielen, Datum, Eiszeit,
                                                    // evolution (Stufe, Merkmale, davon zählend, Angebot, verfügbar,
                                                    // Erfahrung, Reife, was auf dieser Stufe fehlt, Vorschau)
 legalPlays(data, state): Action[]                  // alle Kartenzüge; 'advance' geht immer
-legalActions(data, state): Action[]                // Kartenzüge, pickTrait je Angebot, evolve (wenn reif), advance
+legalActions(data, state): Action[]                // Kartenzüge, pickTrait je Angebot, evolve (wenn reif),
+                                                   // settle je Lagerplatz, advance
 validateState(data, unknown): { ok: true } | { ok: false, reason }
 ```
 
@@ -74,17 +80,24 @@ Daten: `buildData(raw)` (plattformunabhängig, z. B. für die App mit zur Build-
 3. **Waldbrand:** In Jahreszeiten mit `fire` brennt jedes Feld mit `fireChance` (Zeile für Zeile) mit dieser
    Chance; Feuer springt mit `fire.spread` auf brennbare 4er-Nachbarn über; Rudel im Feuer sterben. Brennt das Feld
    der Herde, verliert sie `fireLoss`.
-4. **Herde zieht** auf das beste Feld, das sie mit `move` Schritten über für ihre Stufe begehbare Felder erreicht
+4. **Herde zieht** (mit Lager: bleibt, Grund `settled`) auf das beste Feld, das sie mit `move` Schritten über für ihre Stufe begehbare Felder erreicht
    (Stufe 1: Umkreis 1) – die Absicht.
-5. **Fressen** im Umkreis `reach` (Stufe 1: eigenes und 8 Nachbarfelder), die vollsten zuerst; Überschuss → Vorrat,
-   Mangel zehrt ihn auf, danach Hungertote.
+5. **Fressen** im Umkreis `reach` (Stufe 1: eigenes und 8 Nachbarfelder), die vollsten zuerst; danach **Jagd**
+   (Stufen mit `preyFood`): Wild im Umkreis, größte Bestände zuerst, höchstens `huntKill` Tiere (+ `fireHunt` bei
+   frischer Brandfläche im Umkreis). Überschuss → Vorrat, Mangel zehrt ihn auf, danach Hungertote.
 6. **Durst** (Jahreszeiten aus `needs.water` der Stufe, ab `thirstAfter` Monaten) und **Kälte** (`needs.shelter`).
-7. **Wölfe:** reißen (Umkreis 1), hungrige ziehen durchs Gehölz zur Herde, satte wachsen bzw. gründen neue Rudel,
-   hungrige verkümmern; ohne Rudel wandern bei genug Gehölz neue ein. Danach werden die Toten abgezogen und die
+7. **Wölfe:** fressen zuerst Wild im Umkreis 1, sonst reißen sie Tiere der Herde (nur `wolves: enemy`); hungrige
+   ziehen durchs Gehölz zum nächsten Wild (ohne Wild zur Herde), satte wachsen bzw. gründen neue Rudel,
+   hungrige verkümmern; ohne Rudel wandern bei genug Gehölz neue ein. **Wild** frisst, wächst bzw. gründet, zieht zu
+   besserer Weide, schrumpft; ohne Wild wandert ab Stufe `prey.from` mit `spawnChance` neues ein. Danach werden die
+   Toten abgezogen und die
    **Erfahrungen** des Monats gezählt (aus Lage und Ereignissen des Monats, nur wenn die Herde lebt).
-8. **Nachwuchs** im Geburtsmonat (nicht in der Eiszeit), je nach Vorrat.
-9. **Wildnis** +`perMonth`; bei `max` beginnt die Eiszeit (`ice.months` Monate `ice.season`); endet sie mit
-   lebender Herde, ist die Partie gewonnen. Stirbt die Herde aus, ist sie verloren.
+8. **Nachwuchs** im Geburtsmonat (nicht in der Eiszeit), je nach Vorrat; **Rodung** am Lager im Monat
+   `camp.clear.month`.
+9. **Wildnis** +`perMonth`; bei `max` beginnt die Eiszeit (`ice.months` Monate `ice.season`). Endet sie mit
+   lebender Herde, ist sie überstanden (`iceAges`): auf der letzten Stufe mit Lager → gewonnen; nach der
+   `ice.ages`-ten Eiszeit sonst → verloren; sonst fällt die Wildnis auf `ice.wildAfter`. Stirbt die Herde aus, ist
+   die Partie verloren.
 10. **Monat +1;** zu Beginn jeder Jahreszeit `drawPerSeason` Karten ziehen, höchstens `handMax` auf der Hand, und
     bis zu `offerSize` verfügbare **Merkmale anbieten**: zuerst die aus `mature.oneOf` der aktuellen Stufe, dann die
     übrigen (je Reihenfolge der Daten). Ist ein Angebot liegen geblieben, rotiert es weiter (`herd.offerTurn`, ohne
@@ -105,8 +118,10 @@ danach die Herdenwahl folgt – also genau so wie in `advance`. Die Herdenwahl s
 
 `cardPlayed`, `cardsDrawn`, `cellChanged` (cause: succession/card/fire), `grassGrew`, `fire` (cause:
 lightning/wildfire, Felder), `herdMoved` (mit Grund), `herdAte`, `herdStarved`, `herdThirsted`, `herdFroze`,
-`herdBurned`, `herdBorn`, `traitOffered`, `traitPicked`, `matured`, `herdEvolved`, `wolvesHunted`, `packMoved`, `packGrew`, `packFounded`, `packStarved`, `packGone` (cause:
-starved/fire/driven), `packImmigrated`, `seasonBegan`, `iceAgeBegan`, `iceAgeEnded`, `gameWon`, `gameLost`.
+`herdBurned` (nur mit Verlust), `herdBorn`, `traitOffered`, `traitPicked`, `matured`, `herdEvolved`, `wolvesHunted`, `packMoved`, `packGrew`, `packFounded`, `packStarved`, `packGone` (cause:
+starved/fire/driven), `packImmigrated`, `packAtePrey`, `preyGrew`, `preyFounded`, `preyMoved`, `preyStarved`,
+`preyGone`, `preyImmigrated`, `preyHunted` (mit `fire`), `campFounded`, `fieldCleared` (dazu `cellChanged` mit cause
+clearing), `seasonBegan`, `iceAgeBegan`, `iceAgeEnded` (mit `count`), `gameWon`, `gameLost` (cause: extinct/lastIce).
 Ereignisse tragen nur Ids und Zahlen; Texte setzt die Oberfläche zusammen (Namen stehen in den Daten).
 
 ## Erweiterungspunkte
@@ -122,10 +137,10 @@ Ereignisse tragen nur Ids und Zahlen; Texte setzt die Oberfläche zusammen (Name
   Raster aus Feldern mit einem Futterwert, und Stufe 1 ohne `forage` verhält sich exakt wie der Prototyp. Getrennte
   Vorräte (Gras und Früchte) hätten jedes Feld, die Karten und die Anzeige verdoppelt. Folge: Beim Sprung wird das
   Futter auf das neue Maximum gekappt; ein Wald wächst danach mit den Werten der neuen Stufe.
-- **Stufen 4 und 5 (H3b):** Eine neue Stufe hängt sich mit `next`/`mature` an den Wanderer. Was dafür fehlt: neue
-  Spielobjekte (Beutetiere, Lagerplatz) im Zustand, ein Bedürfnis „Beute“ (z. B. `eats` auf Objekte statt
-  Landschaften), Wölfe als Konkurrenten (Stufenwert statt fester Regel in `wolves.ts`) und die neue Sieg-Regel
-  (Eiszeit als Prüfung unterwegs, Sieg auf der letzten Stufe) in `month.ts` (`wildAndIce`).
+- **Stufen 4 und 5 (H3b):** Wild ist ein Spielobjekt im Zustand (`prey`, Parameter in `params.yaml → prey`). Eine
+  Stufe jagt über `preyFood`/`huntKill`/`fireHunt` (Stufenwerte, also auch durch Merkmale änderbar), hat Wölfe als
+  Feinde oder Konkurrenten (`wolves`) und kann ein Lager haben (`camp` mit `near` und `clear`). Sieg: letzte Stufe
+  (ohne `next`) mit Lager, falls die Stufe eins kennt, am Ende einer Eiszeit (`wildAndIce` in `month.ts`).
 - **Wetterfelder (H4):** Die Jahreszeit wird überall über `seasonOf()` gelesen (Wachstum über `grow[season]`,
   Bedürfnisse über `water`/`shelter`, Feuer über `fire`). Ein Wetterfeld je Jahreszeit kann als Zustand
   `weather: Record<season, card>` diese Werte überlagern (z. B. Wachstum ×2, `fire` mit höherer Chance); Wetterkarten
@@ -148,7 +163,20 @@ Im Code mit `// AUSLEGUNG:` markiert:
 - **Fels nicht auf die Herde** (`cards.ts`): allgemein aus den Daten – keine Karte, deren Ziel unbetretbar ist.
 - **Beweidungs-Uhr** (`world.ts`): Jeder Landschaftswechsel setzt sie zurück (im Prototyp nur Säen und Brand →
   Wiese; für andere Ziele ohne Wirkung).
-- **`iceDone`** (`month.ts`) entfällt: Das Ende der Eiszeit beendet die Partie immer.
+- **`iceDone`** (`month.ts`) entfällt: Gezählt werden die überstandenen Eiszeiten (`iceAges`).
+- **Gleichheit mit dem Prototyp** (`tests/prototype.test.ts`): bis einschließlich des Monats, in dem die erste
+  Eiszeit endet. Dort gewinnt der Prototyp, die Engine geht weiter (Wildnis fällt zurück, ggf. Karten der neuen
+  Jahreszeit). Wild wandert erst ab `prey.from` ein (ohne Würfeln davor), die Startphase bleibt also exakt.
+- **Wild vor der Herde** (`wolves.ts`): Ein Rudel mit Wild in Reichweite frisst immer Wild, auch wenn die Herde
+  ebenfalls in Reichweite ist.
+- **Wild auf unbegehbarem Feld** (`world.ts`): weicht auf das erste freie Nachbarfeld im Lebensraum aus, sonst
+  verschwindet es (`preyGone`); auf begehbaren Feldern außerhalb des Lebensraums bleibt es und zieht weiter.
+- **Wild und Verbuschung** (`prey.ts`): Wild hält Wiese nicht offen (setzt die Beweidungs-Uhr nicht zurück).
+- **Lager in Zugweite, nicht in der Eiszeit** (`camp.ts`): Ein Lager besteht am Ende einer Eiszeit damit schon vor
+  ihrem Beginn („danach die nächste Eiszeit überstehen“).
+- **Letzte Prüfung** (`month.ts`): Nach der `ice.ages`-ten Eiszeit ist die Partie verloren, wenn die Herde dann nicht
+  Mensch mit Lager ist (ohne `ice.ages` unbegrenzt).
+- **Kein Feuerverlust, kein Ereignis** (`herd.ts`): Mit `fireLoss` 0 gibt es kein `herdBurned`.
 - **Prognose** (`view.ts`): `inMonths` ist die genaue Zahl der Monatsschritte; der Prototyp zeigte bei der
   Verbuschung einen Monat zu wenig an.
 - **Eigenes Feld** (`herd.ts`): Die Herde darf immer bleiben, auch auf einem Feld, das ihre Stufe sonst nicht betritt

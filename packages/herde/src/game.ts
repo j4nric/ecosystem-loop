@@ -3,6 +3,7 @@
  * `step` ist rein: Der Eingangszustand wird nie verändert, Zufall läuft über den Seed im Zustand.
  */
 import type { Action, NewGameOptions, StepResult } from './api.ts';
+import { campSites, settle } from './camp.ts';
 import { drawCard, getCard, playCard, targetsOf } from './cards.ts';
 import { advance } from './month.ts';
 import { nextInt, seedFrom, type RngHolder } from './rng.ts';
@@ -49,6 +50,10 @@ export function newGame(data: HerdeData, options: NewGameOptions): HerdeState {
     },
     packs: [],
     nextPackId: 1,
+    prey: [],
+    nextPreyId: 1,
+    camp: null,
+    iceAges: 0,
     hand: [],
   };
   // Startfelder Zeile für Zeile; Zufall je Feld in der Reihenfolge Futter, Beweidung, Alter (wie im Prototyp).
@@ -69,7 +74,8 @@ export function newGame(data: HerdeData, options: NewGameOptions): HerdeState {
 }
 
 /**
- * Eine Aktion ausführen: Karte ausspielen, einen Monat weiter, Merkmal wählen oder zur nächsten Stufe springen.
+ * Eine Aktion ausführen: Karte ausspielen, einen Monat weiter, Merkmal wählen, zur nächsten Stufe springen oder ein
+ * Lager gründen.
  * Wirft RuleError bei ungültigen Zügen.
  */
 export function step(data: HerdeData, state: HerdeState, action: Action): StepResult {
@@ -90,6 +96,9 @@ export function step(data: HerdeData, state: HerdeState, action: Action): StepRe
     case 'evolve':
       evolve(data, next, emit);
       break;
+    case 'settle':
+      settle(data, next, { x: action.x, y: action.y }, emit);
+      break;
     default:
       throw new RuleError(`Unbekannte Aktion: ${(action as { type: unknown }).type}`);
   }
@@ -109,14 +118,15 @@ export function legalPlays(data: HerdeData, state: HerdeState): Action[] {
 }
 
 /**
- * Alle gültigen Aktionen: Kartenzüge (wie `legalPlays`), jedes angebotene Merkmal, der Sprung (wenn reif) und
- * `advance`. Leer, wenn die Partie vorbei ist.
+ * Alle gültigen Aktionen: Kartenzüge (wie `legalPlays`), jedes angebotene Merkmal, der Sprung (wenn reif), jeder
+ * gültige Lagerplatz (`settle`) und `advance`. Leer, wenn die Partie vorbei ist.
  */
 export function legalActions(data: HerdeData, state: HerdeState): Action[] {
   if (state.over) return [];
   const out = legalPlays(data, state);
   for (const trait of state.herd.offer) out.push({ type: 'pickTrait', trait });
   if (maturityOf(data, state).mature) out.push({ type: 'evolve' });
+  for (const p of campSites(data, state)) out.push({ type: 'settle', x: p.x, y: p.y });
   out.push({ type: 'advance' });
   return out;
 }

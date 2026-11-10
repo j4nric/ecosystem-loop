@@ -7,6 +7,7 @@ export const REASON: Record<ReasonId, string> = {
   seekShelter: 'sucht Schutz vor der Kälte',
   freshGrass: 'zieht zu frischem Gras',
   stay: 'grast hier weiter',
+  settled: 'bleibt am Lager',
 };
 
 export const ARROW: Record<string, string> = {
@@ -74,11 +75,13 @@ export function describe(data: HerdeData, e: HerdeEvent): string | null {
     case 'iceAgeBegan':
       return `Die Eiszeit beginnt: ${e.months} Monate Winter`;
     case 'iceAgeEnded':
-      return 'Die Eiszeit ist vorbei';
+      return `Die Eiszeit ist vorbei (${e.count}. überstanden)`;
     case 'gameWon':
       return `Geschafft: ${e.survivors} Tiere haben überlebt`;
     case 'gameLost':
-      return 'Die Herde ist ausgestorben';
+      return e.cause === 'lastIce'
+        ? 'Die letzte Eiszeit ist vorbei – ohne Lager als Mensch'
+        : 'Die Herde ist ausgestorben';
     case 'traitOffered':
       return `Merkmale im Angebot: ${e.traits.map(trait).join(', ')}`;
     case 'traitPicked':
@@ -87,5 +90,25 @@ export function describe(data: HerdeData, e: HerdeEvent): string | null {
       return `Die Herde ist reif für die nächste Stufe: ${stage(e.next)}`;
     case 'herdEvolved':
       return `Die Herde wird zu: ${stage(e.to)}`;
+    case 'preyGrew':
+      return `Ein Wildbestand wächst auf ${e.size}`;
+    case 'preyFounded':
+      return `Neues Wild bei (${e.x},${e.y})`;
+    case 'preyMoved':
+      return null;
+    case 'preyStarved':
+      return e.size > 0 ? 'Wild hungert' : 'Ein Wildbestand ist verhungert';
+    case 'preyGone':
+      return 'Ein Wildbestand ist verschwunden';
+    case 'preyImmigrated':
+      return `Wild wandert ein (${e.x},${e.y})`;
+    case 'preyHunted':
+      return `Die Herde jagt ${e.killed} Wild${e.fire ? ' (Feuer treibt es auf)' : ''}`;
+    case 'packAtePrey':
+      return `Wölfe reißen ${e.killed} Wild`;
+    case 'campFounded':
+      return `Die Herde gründet ein Lager bei (${e.x},${e.y})`;
+    case 'fieldCleared':
+      return `Rodung: ${land(e.from)} wird ${land(e.to)} (${e.x},${e.y})`;
   }
 }
