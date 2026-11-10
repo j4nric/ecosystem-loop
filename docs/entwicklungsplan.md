@@ -2,16 +2,22 @@
 
 Stand: 10.11.2026 · Grundlage: [Konzept 0.2](konzept.md) (vom Inhaber bestätigt)
 
-Der Plan folgt einer Regel: **Erst muss die Simulation zeigen, dass die Entscheidungen tragen, dann kommt
-Grafik.** Jede Phase endet mit messbaren Abnahmekriterien. Die Messwerte landen im Cockpit
-(Simulationsergebnisse), offene Fragen ebenfalls dort.
+Der Plan folgt zwei Regeln:
+
+1. **Logik vor Balancing.** Die Regeln werden zuerst vollständig und testbar umgesetzt. Grundlegende Dinge
+   können sich in der Entwicklung noch ändern, deshalb wird erst balanciert, wenn das Spiel steht (Phase 6).
+   Bis dahin laufen Bots nur als Absturz-Test, nicht als Messinstrument.
+2. **Logik vor Grafik.** Die App baut auf einer fertigen, getesteten Engine auf.
+
+Jede Phase endet mit prüfbaren Abnahmekriterien. Offene Fragen und Feedback laufen über das Cockpit.
 
 ## Arbeitsweise
 
 - Jede Phase besteht aus mehreren kleinen PRs. Claude erstellt sie, wartet auf grüne CI und merged selbst.
-- Nach jedem PR aktualisiert Claude das Cockpit: Meilenstein-Status, neue Fragen, neue Simulationsläufe.
+- Mehrere spezialisierte Agenten arbeiten parallel (siehe `.claude/agents/` und CLAUDE.md).
+- Nach jedem PR aktualisiert Claude das Cockpit: Meilenstein-Status, neue Fragen, Entscheidungen.
 - Produktentscheidungen werden im Cockpit oder im Chat gestellt. Antworten fließen in `docs/konzept.md`.
-- Balancing-Zahlen stehen in YAML (`packages/core/data`), nie im Code.
+- Zahlenwerte stehen in YAML (`packages/core/data`), nie im Code. Sie sind bis Phase 6 Platzhalter.
 
 ## Phasen
 
@@ -35,15 +41,15 @@ Umfang:
 - Odem: Zufluss, Obergrenze, Kartenkosten; Kartenzwang mit Gratis-Naturgewalten
 - Harmonie und Kollaps; Ablage wird neu gemischt
 - Neue Kartensätze: Naturgewalten (mit Schwellen aus 0.1), Gaben, erste Wunder
-- Bots für das Überlebensmodell (zufällig, gierig, „Gärtner“: hält Werte nahe an der Idealform)
-- Simulation misst: überlebte Runden, Zeit in Idealform, Odem-Verlauf, Kollapsgründe
+- Zufalls-Bot für das Überlebensmodell (nur als Absturz-Test)
 - Konsolen-Prototyp auf das neue Modell umgestellt
 
 Abnahme:
 
-- Zufalls-Bot kollabiert im Median vor Runde 16 (Jahr 4)
-- Gärtner-Bot überlebt im Median deutlich länger (≥ 2×), aber nicht unbegrenzt
-- Jede Geografie erreicht in der Simulation alle Formen, auch Ideal- und verödete Form
+- Jede Regel aus Konzept Kap. 3, 4, 6 und 7 ist durch mindestens einen Test belegt
+- Jede Form jeder Geografie ist in einem Test erreichbar
+- Eine Partie ist in der Konsole von Runde 1 bis zum Kollaps spielbar
+- Der Zufalls-Bot spielt Partien ohne Absturz
 
 ### Phase 2 – Leben: Populationen, Evolution, Mensch
 
@@ -56,15 +62,14 @@ Umfang:
 - Gaben der Arten als Karten; der Mensch mit eigenen Karten und laufenden Harmoniekosten
 - Harmonie-Beiträge aus Artenvielfalt, Aussterben und Hunger
 - Wertung (Punkte pro Runde, doppelt mit Menschen)
-- Bots erweitert: Evolutionsziel, absichtliche Störung für Selektionsdruck
 
 Abnahme:
 
-- Guter Bot erreicht Stufe 6 im Median in Jahr 5–7
-- Der Mensch entsteht in 5–20 % der Partien des guten Bots
-- Kein Stammbaumzweig ist unerreichbar; keine einzelne Strategie dominiert (Messung über mehrere Bots)
+- Jede Art des Stammbaums entsteht in einem konstruierten Test-Szenario (auch der Mensch)
+- Fressketten, Hunger, Wanderung, Aussterben und Selektionsdruck sind durch Tests belegt
+- Eine Partie mit Leben ist in der Konsole spielbar
 
-### Phase 3 – Ereignisse, Meta-Progression, Balancing
+### Phase 3 – Ereignisse und Meta-Progression
 
 **Ziel:** Jede Partie fühlt sich anders an. Es gibt einen Grund, die nächste zu spielen.
 
@@ -73,12 +78,11 @@ Umfang:
 - Ereignispool mit Ankündigung, Skalierung über die Jahre, Gegenkarten (Stille, Späherblick)
 - Schöpfungsbuch: Freischaltung von Bedingungen, Gaben und Wundern über Meilensteine
 - Startdeck-Auswahl, variierende Startwelten
-- Balancing-Runden mit Cockpit-Feedback, Kampagnen-Simulation über mehrere Partien
 
 Abnahme:
 
-- Partien dauern im Median 30–60 Runden (≈ 10–20 Minuten)
-- Freischaltungen verbessern das Ergebnis messbar, aber nicht stark (Progression = Zugang statt Macht)
+- Ereignisse, Ankündigung, Gegenkarten und Freischaltungen sind durch Tests belegt
+- Das Schöpfungsbuch bleibt zwischen Partien erhalten
 
 ### Phase 4 – App-Gerüst
 
@@ -108,7 +112,19 @@ Umfang:
 - Tutorial / geführte erste Partie; Englisch und Deutsch
 - Feedback-Runde im Cockpit pro Feature
 
-### Phase 6 – Grafik und Ton
+### Phase 6 – Balancing
+
+**Ziel:** Das fertige Regelwerk fühlt sich fair und spannend an.
+
+Umfang:
+
+- Bots mit Strategien (Gärtner, Evolutionsjäger, Störer), Kampagnen-Simulation über mehrere Partien
+- Messreihen im Cockpit, Feedback aus eigenen Testpartien
+- Zielwerte: Partien im Median 30–60 Runden (≈ 10–20 Minuten); guter Spieler erreicht Stufe 6 in Jahr 5–7;
+  der Mensch entsteht in 5–20 % der guten Partien; keine Strategie dominiert; Freischaltungen helfen spürbar, aber
+  nicht stark
+
+### Phase 7 – Grafik und Ton
 
 Umfang:
 
@@ -116,7 +132,7 @@ Umfang:
 - Farbstimmung reagiert auf Harmonie (blasser, Nebel)
 - Sound und Musik
 
-### Phase 7 – Veröffentlichung
+### Phase 8 – Veröffentlichung
 
 Umfang:
 

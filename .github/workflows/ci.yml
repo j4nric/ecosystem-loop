@@ -56,10 +56,10 @@ jobs:
       - run: npm ci
       - name: Spieldaten validieren
         run: npm run validate
-      - name: Simulation (random, alle Szenarien)
-        run: npm run sim -- --bot random --runs 200 --scenario random
-      - name: Simulation (greedy)
-        run: npm run sim -- --bot greedy --runs 20 --scenario random
+      - name: Absturz-Test (Zufalls-Bot, alle Szenarien)
+        run: npm run sim -- --bot random --runs 20 --scenario random
+      - name: Absturz-Test (gieriger Bot)
+        run: npm run sim -- --bot greedy --runs 3 --scenario random
 
   audit:
     name: Abhängigkeiten (Sicherheit)
