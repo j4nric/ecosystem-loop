@@ -202,21 +202,36 @@ describe('Aussterben und Neuentstehung in derselben Runde (Konzept 7)', () => {
 });
 
 describe('Fassade für die App', () => {
+  /** Gezielte Testkarte mit Zone und frei wählbarer Nachbarzone (wie der frühere gezielte Sturm). */
+  const fell = dataWith((r) =>
+    r.cards.cards.push({
+      id: 'fell',
+      name: { de: 'Fällen', en: 'Fell' },
+      category: 'gift',
+      cost: 1,
+      slots: [
+        { id: 'zone', kind: 'zone' },
+        { id: 'fall', kind: 'neighbor', of: 'zone', label: { de: 'Fallrichtung', en: 'Direction of fall' } },
+      ],
+      effects: [{ adjust: 'vegetation', by: -1, at: 'fall' }],
+    }),
+  );
+
   it('slotOptions: Werte für den nächsten offenen Slot, nur vollständig belegbare', () => {
-    const s = game({ hand: ['storm', 'decomposition'] });
-    const storm = uidOf(s, 'storm');
-    expect(slotOptions(data, s, storm, {})).toEqual(['mountains', 'forest', 'plains', 'river', 'coast']);
-    expect(slotOptions(data, s, storm, { zone: 'coast' })).toEqual(['river', 'plains']); // Reihenfolge der Nachbarn
-    expect(slotOptions(data, s, storm, { zone: 'coast', fall: 'river' })).toEqual([]);
-    expect(slotOptions(data, s, storm, { zone: 'moon' })).toEqual([]);
-    expect(slotOptions(data, s, 999, {})).toEqual([]);
+    const s = game({ d: fell, hand: ['fell', 'decomposition'] });
+    const f = uidOf(s, 'fell');
+    expect(slotOptions(fell, s, f, {})).toEqual(['mountains', 'forest', 'plains', 'river', 'coast']);
+    expect(slotOptions(fell, s, f, { zone: 'coast' })).toEqual(['river', 'plains']); // Reihenfolge der Nachbarn
+    expect(slotOptions(fell, s, f, { zone: 'coast', fall: 'river' })).toEqual([]);
+    expect(slotOptions(fell, s, f, { zone: 'moon' })).toEqual([]);
+    expect(slotOptions(fell, s, 999, {})).toEqual([]);
     // Zersetzung: nur der Wald hat Totholz, und nur mit Flachland nebenan.
-    expect(slotOptions(data, s, uidOf(s, 'decomposition'), {})).toEqual(['forest']);
+    expect(slotOptions(fell, s, uidOf(s, 'decomposition'), {})).toEqual(['forest']);
   });
 
   it('CardView.slots nennt den bezogenen Slot (of)', () => {
-    const s = game({ hand: ['storm'] });
-    expect(view(data, s, 'de').hand[0]!.slots).toEqual([
+    const s = game({ d: fell, hand: ['fell'] });
+    expect(view(fell, s, 'de').hand[0]!.slots).toEqual([
       { id: 'zone', kind: 'zone', label: 'Zone' },
       { id: 'fall', kind: 'neighbor', label: 'Fallrichtung', of: 'zone' },
     ]);
@@ -249,7 +264,11 @@ describe('Datenprüfung Phase 3', () => {
       /Effektziel target/,
     ],
     ['Ereignis: Karte', (r: Loose) => (ev(r, 'lightning').card = 'nope'), /unbekannte Karte nope/],
-    ['Ereignis: Karte mit zwei Slots', (r: Loose) => (ev(r, 'lightning').card = 'storm'), /genau einen Zonen-Slot/],
+    [
+      'Ereignis: Karte mit zwei Slots',
+      (r: Loose) => (ev(r, 'lightning').card = 'decomposition'),
+      /genau einen Zonen-Slot/,
+    ],
     ['Ereignis: Karte ohne Zufallsziel', (r: Loose) => (ev(r, 'plague').card = 'rain'), /target\.pick: random/],
     ['Ereignis doppelt', (r: Loose) => r.events.events.push(ev(r, 'heatwave')), /Ereignis doppelt: heatwave/],
     ['Meta: Grundpool', (r: Loose) => r.meta.basePool.push('nope'), /basePool: unbekannte Karte nope/],

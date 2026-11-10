@@ -13,7 +13,6 @@
 # Der Kartentext wird aus Effekten und Schwellen erzeugt.
 
 categories:
-  - { id: force, name: { de: Naturgewalt, en: Force of nature } }
   - { id: weather, name: { de: Wetter, en: Weather } }
   - { id: gift, name: { de: Gabe, en: Gift } }
   - { id: miracle, name: { de: Wunder, en: Miracle } }
@@ -21,94 +20,124 @@ categories:
   - { id: human, name: { de: Menschenkarte, en: Human card } }
 
 cards:
-  # ---------- Naturgewalten (0 Odem, grob, mit Schwellen) ----------
+  # ---------- Wetter (Weltkarten, Konzept 6.2 Variante C) ----------
+  # Wetter wirkt ohne Zielwahl auf alle Zonen, jede Geografie reagiert anders. Jeder Wetterzug ist ein Tausch:
+  # Die Idealformen wollen Verschiedenes (Wald und Küste viel Feuchte, Flachland höchstens 3, Berge wenig Schnee,
+  # Fluss Wasserstand genau 3), also hilft dieselbe Karte in einer Zone und schadet in einer anderen.
+  # Naturgewalten (Gewitter, Dürre, Sturm, Frost) kosten 0 Odem und tragen Schwellen (Risiko);
+  # Wettergaben (Regen, Trockenwind, Sonne, Schneefall) kosten 1–2 Odem.
+  # Schwellen gelten je Zone und sind mit geography-Bedingungen auf die Lagen begrenzt, in denen sie
+  # thematisch passen, damit eine Karte nicht überall zugleich eine Katastrophe auslöst.
+
+  # Gewitter: Starkregen überall (Feuchte +2), der Fluss schwillt an. Blitz entzündet trockenes Land
+  # (nur Wald und Flachland: dort gibt es Brennstoff); Sturzflut nur in Bergen (Mure) und Flachland
+  # (Überschwemmung), nicht am Fluss, der sonst schon im Ruhezustand bei jedem Gewitter überliefe.
+  # Hilft Wald und Küste (Urwald, Mangrove brauchen Feuchte ≥ 4), schadet dem Flachland (Moor statt Wiese).
   - id: thunderstorm
     name: { de: Gewitter, en: Thunderstorm }
-    category: force
+    category: weather
     cost: 0
-    slots: [{ id: zone, kind: zone }]
+    reach: world
     effects:
-      - { adjust: moisture, by: 2, at: zone }
+      - { adjust: moisture, by: 2 }
+    byGeography:
+      river: [{ adjust: water, by: 1 }]
     triggers:
       - id: fire
         name: { de: Feuer, en: Fire }
         icon: '🔥'
-        at: zone
-        when: [{ stat: moisture, lte: 1 }, { stat: vegetation, gte: 1 }]
+        when:
+          - { any: [{ geography: forest }, { geography: plains }] }
+          - { stat: moisture, lte: 1 }
+          - { stat: vegetation, gte: 1 }
         disturbance: true
         effects:
-          - { set: vegetation, value: 0, at: zone }
-          - { adjust: deadwood, by: 3, at: zone }
+          - { set: vegetation, value: 0 }
+          - { adjust: deadwood, by: 3 } # nur im Wald; im Flachland verpufft es
       - id: deluge
         name: { de: Flut, en: Deluge }
         icon: '🌊'
-        at: zone
-        when: [{ stat: moisture, gte: 4 }]
+        when:
+          - { any: [{ geography: mountains }, { geography: plains }] }
+          - { stat: moisture, gte: 4 }
         disturbance: true
         effects:
-          - { adjust: vegetation, by: -1, at: zone }
-          - { adjust: moisture, by: 1, at: zone, scope: neighbors }
+          - { adjust: vegetation, by: -1 }
+          - { adjust: moisture, by: 1, scope: neighbors }
 
+  # Dürre: überall Feuchte −1; ohne Niederschlag schwindet der Schnee der Berge, der Fluss sinkt, im Wald stirbt
+  # Holz ab, an der Küste verdunstet Wasser und das Salz bleibt. Welke, wo die Feuchte danach auf 0 fällt.
+  # Hilft verschneiten Bergen, nassem Flachland (Feuchte ≤ 3 für die Blumenwiese) und einem Hochwasser-Fluss;
+  # schadet Wald und Küste.
   - id: drought
     name: { de: Dürre, en: Drought }
-    category: force
+    category: weather
     cost: 0
-    slots: [{ id: zone, kind: zone }]
+    reach: world
     effects:
-      - { adjust: moisture, by: -2, at: zone }
-      - { adjust: water, by: -1, at: zone }
+      - { adjust: moisture, by: -1 }
+    byGeography:
+      mountains: [{ adjust: snow, by: -1 }]
+      forest: [{ adjust: deadwood, by: 1 }]
+      river: [{ adjust: water, by: -1 }]
+      coast: [{ adjust: salt, by: 1 }]
     triggers:
       - id: wilting
         name: { de: Welke, en: Wilting }
         icon: '🥀'
-        at: zone
         check: after
         when: [{ stat: moisture, eq: 0 }]
         effects:
-          - { adjust: vegetation, by: -1, at: zone }
+          - { adjust: vegetation, by: -1 }
 
+  # Sturm: Bäume brechen im Wald (Vegetation −1, Totholz +1), Gischt trägt Salz an die Küste, der Wind
+  # verweht den Schnee der Berge. Baumsturz nur, wo dichter Wald steht (Wald, Bergwald): Lichtung und Totholz.
+  # Hilft verschneiten Bergen (Alm braucht Schnee 1–2) und einem zu dünnen Totholz-Wald; schadet Urwald und Mangrove.
   - id: storm
     name: { de: Sturm, en: Storm }
-    category: force
+    category: weather
     cost: 0
-    slots:
-      - { id: zone, kind: zone }
-      - { id: fall, kind: neighbor, of: zone, label: { de: Fallrichtung, en: Direction of fall } }
-    effects:
-      - { adjust: vegetation, by: -1, at: zone }
-      - { adjust: deadwood, by: 1, at: zone }
+    reach: world
+    byGeography:
+      mountains: [{ adjust: snow, by: -1 }]
+      forest: [{ adjust: vegetation, by: -1 }, { adjust: deadwood, by: 1 }]
+      coast: [{ adjust: salt, by: 1 }]
     triggers:
       - id: windthrow
         name: { de: Baumsturz, en: Windthrow }
         icon: '🌲'
-        at: zone
-        when: [{ stat: vegetation, gte: 4 }]
+        when:
+          - { any: [{ geography: forest }, { geography: mountains }] }
+          - { stat: vegetation, gte: 4 }
         disturbance: true
         effects:
-          - { adjust: light, by: 2, at: zone }
-          - { adjust: vegetation, by: -1, at: fall }
-          - { adjust: deadwood, by: 1, at: fall }
+          - { adjust: light, by: 2 }
+          - { adjust: deadwood, by: 1 } # nur im Wald; im Bergwald verpufft es
 
+  # Frost: in den Bergen fällt Schnee; im Flachland erfriert die Wiese (Vegetation −1), aber der Frost lockert
+  # den Boden (Frostgare, Boden +1); Eis bindet Flusswasser (Wasserstand −1). Eisbruch nur im nassen Wald:
+  # Äste brechen unter der Eislast.
+  # Hilft dem Boden des Flachlands, einem Hochwasser-Fluss und schneearmen Bergen (Geröll); schadet Alm und Aue.
   - id: frost
     name: { de: Frost, en: Frost }
-    category: force
+    category: weather
     cost: 0
-    slots: [{ id: zone, kind: zone }]
-    effects:
-      - { adjust: vegetation, by: -1, at: zone }
-      - { adjust: snow, by: 1, at: zone }
+    reach: world
+    byGeography:
+      mountains: [{ adjust: snow, by: 1 }]
+      plains: [{ adjust: vegetation, by: -1 }, { adjust: soil, by: 1 }]
+      river: [{ adjust: water, by: -1 }]
     triggers:
       - id: ice_break
         name: { de: Eisbruch, en: Ice break }
         icon: '🧊'
-        at: zone
-        when: [{ stat: moisture, gte: 4 }]
+        when: [{ geography: forest }, { stat: moisture, gte: 4 }]
         effects:
-          - { adjust: vegetation, by: -1, at: zone }
-          - { adjust: deadwood, by: 1, at: zone }
+          - { adjust: vegetation, by: -1 }
+          - { adjust: deadwood, by: 1 }
 
-  # ---------- Gaben (1–2 Odem, präzise: ein Wert ±1) ----------
-  # Weltkarte (reach: world): wirkt ohne Ziel auf alle Zonen, je Geografie unterschiedlich.
+  # Regen: Berge Schnee, Wald und Flachland Feuchte, Fluss Wasserstand, Küste wird ausgesüßt.
+  # Hilft Wald, Küste und einem niedrigen Fluss; schadet nassem Flachland und verschneiten Bergen.
   - id: rain
     name: { de: Regen, en: Rain }
     category: weather
@@ -121,19 +150,43 @@ cards:
       river: [{ adjust: water, by: 1 }]
       coast: [{ adjust: salt, by: -1 }]
 
+  # Trockenwind: überall Feuchte −1; als Föhn taut er in den Bergen Schnee weg.
+  # Hilft nassem Flachland (Moor) und verschneiten Bergen; schadet Wald und Küste.
   - id: dry_wind
     name: { de: Trockenwind, en: Dry wind }
-    category: gift
+    category: weather
     cost: 1
-    slots: [{ id: zone, kind: zone }]
-    effects: [{ adjust: moisture, by: -1, at: zone }]
+    reach: world
+    effects: [{ adjust: moisture, by: -1 }]
+    byGeography:
+      mountains: [{ adjust: snow, by: -1 }]
 
+  # Sonne: überall Licht +1; Schneeschmelze in den Bergen (Schnee −1), an der Küste verdunstet Wasser (Salz +1).
+  # Die Karte, die Schnee senkt. Hilft Alm und Blumenwiese (Licht ≥ 3), schadet der Mangrove (Salz 2–3).
   - id: sun
     name: { de: Sonne, en: Sun }
-    category: gift
+    category: weather
     cost: 1
-    slots: [{ id: zone, kind: zone }]
-    effects: [{ adjust: light, by: 1, at: zone }]
+    reach: world
+    effects: [{ adjust: light, by: 1 }]
+    byGeography:
+      mountains: [{ adjust: snow, by: -1 }]
+      coast: [{ adjust: salt, by: 1 }]
+
+  # Schneefall: dichte Wolken überall (Licht −1), Schnee in den Bergen, im Wald schmilzt die Schneedecke
+  # langsam ins Unterholz (Feuchte +1). Hilft schneearmen Bergen und dem Wald; schadet Riff und Alm (Licht).
+  - id: snowfall
+    name: { de: Schneefall, en: Snowfall }
+    category: weather
+    cost: 2
+    reach: world
+    effects: [{ adjust: light, by: -1 }]
+    byGeography:
+      mountains: [{ adjust: snow, by: 1 }]
+      forest: [{ adjust: moisture, by: 1 }]
+
+  # ---------- Gaben (1–2 Odem, gezielt: ein Wert ±1 auf einer gewählten Zone) ----------
+  # Schatten und Quelle bleiben gezielt: Sie sind örtlich (eine Baumgruppe, eine Quelle), kein Wetter.
 
   - id: shade
     name: { de: Schatten, en: Shade }
@@ -155,13 +208,6 @@ cards:
     cost: 1
     slots: [{ id: zone, kind: zone, when: [{ hasStat: soil }] }]
     effects: [{ adjust: soil, by: 1, at: zone }]
-
-  - id: snowfall
-    name: { de: Schneefall, en: Snowfall }
-    category: gift
-    cost: 2
-    slots: [{ id: zone, kind: zone, when: [{ hasStat: snow }] }]
-    effects: [{ adjust: snow, by: 1, at: zone }]
 
   - id: spring_water
     name: { de: Quelle, en: Spring }

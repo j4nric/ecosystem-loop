@@ -1,6 +1,6 @@
 # Being God (ain't easy) – Spielkonzept
 
-Stand: 10.11.2026 · Version 0.3.0 (löst das [Handover](handover.md) als Leitdokument ab)
+Stand: 10.11.2026 · Version 0.4.0 (löst das [Handover](handover.md) als Leitdokument ab)
 
 > **Status:** Vom Inhaber am 10.11.2026 bestätigt (✅). Zahlen sind Startwerte fürs Balancing –
 > sie werden in der Simulation justiert, nicht am Schreibtisch. Umsetzung: [Entwicklungsplan](entwicklungsplan.md).
@@ -31,6 +31,10 @@ Jede Mechanik muss mindestens eines davon tragen und darf keines verletzen:
    kosten viel Odem.
 5. **Zerstörung kann Absicht sein.** Evolution braucht Selektionsdruck. Wer gezielt stört, kann
    Sprünge erzwingen – und riskiert den Kollaps.
+6. **Jeder Wetterzug ist ein Tausch.** Wetter wirkt auf die ganze Insel, und die Geografien wollen
+   Verschiedenes: Wald und Küste brauchen Feuchte, das Flachland verträgt höchstens mittlere Feuchte, die Berge
+   wenig Schnee, der Fluss einen mittleren Wasserstand. Dieselbe Wetterkarte hilft deshalb einer Zone und schadet
+   einer anderen. Der Spieler wählt nicht das Ziel, sondern den Zeitpunkt.
 
 ## 3. Ablauf einer Partie
 
@@ -39,7 +43,7 @@ Eine **Runde ist eine Jahreszeit** ✅, vier Runden sind ein Jahr. Jede Runde ha
 1. **Vorschau:** Die kommende Jahreszeit und ein angekündigtes Ereignis werden gezeigt ✅.
 2. **Eingriffe:** Der Spieler spielt Karten aus seiner Hand und bezahlt sie mit Odem.
    ✅ Kartenzwang bleibt: mindestens eine Karte pro Runde. Naturgewalten kosten 0 Odem, man ist also nie blockiert –
-   aber sie sind grob und haben Nebenwirkungen.
+   aber sie treffen die ganze Insel und haben Nebenwirkungen.
 3. **Natur:** in fester Reihenfolge
    1. Jahreszeit wirkt auf die Werte
    2. Ereignis tritt ein
@@ -248,16 +252,59 @@ am dringendsten bräuchte. Das ist der zentrale Tausch.
 
 Hand mit 4 Karten, nach jeder Runde wird auf 4 nachgezogen. Ist der Stapel leer, wird die Ablage gemischt.
 
-| Kategorie       | Odem | Charakter                                        | Beispiele                                                                                                                 |
-| --------------- | ---- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| Naturgewalten   | 0    | grob, mit Schwellen und Nebenwirkungen           | Gewitter, Dürre, Sturm, Frost                                                                                             |
-| Gaben           | 1–2  | präzise, ein Wert ±1                             | Regen, Sonne, Samen, Dünger                                                                                               |
-| Wunder          | 3–5  | Korrektur von Fehlern                            | _Heilung_ (Zone zum Ruhewert), _Arche_ (Art vor dem Aussterben retten: Bestand +2), _Stille_ (nächstes Ereignis entfällt) |
-| Gaben der Arten | 0–2  | kommen ins Deck, wenn eine Art erstmals entsteht | siehe Stammbaum                                                                                                           |
-| Menschenkarten  | 0–2  | stark, mit Langzeitkosten                        | Feuer, Ackerbau, Siedlung                                                                                                 |
+✅ **Reichweite (Variante C, Entscheidung des Inhabers):** Jede Karte hat eine Reichweite.
 
-Die Schwellen-Logik aus Prototyp 0.1 bleibt: Gewitter auf trockener Zone wird Feuer, Sturm auf dichter Zone wird Baumsturz.
-Gefahren werden **sichtbar angezeigt** (🔥 auf der Zone), nie als versteckte Prozentzahl.
+- **Welt:** _Wetter_ wirkt ohne Zielwahl auf **alle Zonen** gleichzeitig, und jede Geografie reagiert anders
+  (Regen bringt den Bergen Schnee, dem Fluss Wasser und süßt die Küste aus). Schwellen (🔥, 🌊 …) gelten je Zone,
+  aber nur in den Geografien, in denen sie passen. Wetter fragt also nicht „wo?“, sondern „jetzt?“ (Prinzip 6).
+- **Zone:** _Gaben_, _Wunder_, _Gaben der Arten_ und _Menschenkarten_ bleiben gezielt. Der Spieler wählt die Zone
+  (und ggf. Art oder Nachbarzone). Örtliche Gaben wie _Schatten_ und _Quelle_ sind kein Wetter und bleiben gezielt.
+
+| Kategorie       | Reichweite | Odem | Charakter                                                           | Beispiele                                                                                                                 |
+| --------------- | ---------- | ---- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Wetter          | Welt       | 0–2  | Naturgewalten (0 Odem): grob, mit Schwellen; Wettergaben (1–2 Odem) | Naturgewalten: Gewitter, Dürre, Sturm, Frost · Wettergaben: Regen, Trockenwind, Sonne, Schneefall                         |
+| Gaben           | Zone       | 1–2  | präzise, ein Wert ±1                                                | Samen, Dünger, Schatten, Quelle, Ebbe, Laubfall                                                                           |
+| Wunder          | Zone       | 3–5  | Korrektur von Fehlern                                               | _Heilung_ (Zone zum Ruhewert), _Arche_ (Art vor dem Aussterben retten: Bestand +2), _Stille_ (nächstes Ereignis entfällt) |
+| Gaben der Arten | Zone       | 0–2  | kommen ins Deck, wenn eine Art erstmals entsteht                    | siehe Stammbaum                                                                                                           |
+| Menschenkarten  | Zone       | 0–2  | stark, mit Langzeitkosten                                           | Feuer, Ackerbau, Siedlung                                                                                                 |
+
+✅ **Wetterkarten** (Wirkung je Geografie; „Alle“ = in jeder Zone; Zahlen sind Platzhalter bis zum Balancing):
+
+| Karte       | Odem | Alle       | Berge     | Wald                      | Flachland               | Fluss          | Küste   |
+| ----------- | ---- | ---------- | --------- | ------------------------- | ----------------------- | -------------- | ------- |
+| Gewitter    | 0    | Feuchte +2 |           |                           |                         | Wasserstand +1 |         |
+| Dürre       | 0    | Feuchte −1 | Schnee −1 | Totholz +1                |                         | Wasserstand −1 | Salz +1 |
+| Sturm       | 0    |            | Schnee −1 | Vegetation −1, Totholz +1 |                         |                | Salz +1 |
+| Frost       | 0    |            | Schnee +1 |                           | Vegetation −1, Boden +1 | Wasserstand −1 |         |
+| Regen       | 1    |            | Schnee +1 | Feuchte +1                | Feuchte +1              | Wasserstand +1 | Salz −1 |
+| Trockenwind | 1    | Feuchte −1 | Schnee −1 |                           |                         |                |         |
+| Sonne       | 1    | Licht +1   | Schnee −1 |                           |                         |                | Salz +1 |
+| Schneefall  | 2    | Licht −1   | Schnee +1 | Feuchte +1                |                         |                |         |
+
+Schwellen der Wetterkarten (je Zone, nur in den genannten Geografien):
+
+| Karte    | Schwelle     | Wo                     | Wann                                  | Folge                                           |
+| -------- | ------------ | ---------------------- | ------------------------------------- | ----------------------------------------------- |
+| Gewitter | 🔥 Feuer     | Wald, Flachland        | vorher Feuchte ≤ 1 und Vegetation ≥ 1 | Vegetation auf 0, Totholz +3, Störung           |
+| Gewitter | 🌊 Flut      | Berge, Flachland       | vorher Feuchte ≥ 4                    | Vegetation −1, Nachbarzonen Feuchte +1, Störung |
+| Dürre    | 🥀 Welke     | überall                | nachher Feuchte = 0                   | Vegetation −1                                   |
+| Sturm    | 🌲 Baumsturz | Wald, Berge (Bergwald) | vorher Vegetation ≥ 4                 | Licht +2, Totholz +1, Störung                   |
+| Frost    | 🧊 Eisbruch  | Wald                   | vorher Feuchte ≥ 4                    | Vegetation −1, Totholz +1                       |
+
+Die Idee je Karte:
+
+- **Gewitter** nässt Wald und Küste (gut für Urwald und Mangrove) und macht das Flachland zum Moor; der Fluss steigt.
+- **Dürre** lässt Schnee schwinden und trocknet nasses Flachland, schadet aber Wald, Küste und Fluss.
+- **Sturm** verweht den Schnee der Berge, bricht Bäume im Wald und trägt Salz an die Küste.
+- **Frost** lockert den Boden des Flachlands (Frostgare), lässt aber die Wiese erfrieren und bindet Flusswasser.
+- **Regen** hilft dem Wald und einem niedrigen Fluss, verschneit aber die Berge und nässt das Flachland.
+- **Trockenwind** (Föhn) taut Schnee und trocknet nasses Flachland, schadet Wald und Küste.
+- **Sonne** ist die Schneeschmelze der Berge, lässt aber die Küste versalzen.
+- **Schneefall** befeuchtet den Wald, verschneit aber die Berge und dämpft überall das Licht.
+
+Die Schwellen-Logik aus Prototyp 0.1 bleibt: Gewitter auf trockenem Land wird Feuer, Sturm auf dichtem Wald wird
+Baumsturz. Gefahren werden **sichtbar angezeigt** (🔥 auf jeder Zone, in der die Schwelle beim Ausspielen
+auslösen würde), nie als versteckte Prozentzahl.
 
 ## 7. Harmonie ✅
 
@@ -294,15 +341,15 @@ Ereignisse werden **eine Runde vorher angekündigt**. Der Spieler kann sich vorb
 
 ✅ Pool (mit jedem Jahr wahrscheinlicher und stärker):
 
-| Ereignis             | Wirkung                                              |
-| -------------------- | ---------------------------------------------------- |
-| Hitzesommer          | alle Zonen Feuchte −1                                |
-| Kälteeinbruch        | Berge Schnee +2, alle Zonen Vegetation −1            |
-| Blitzschlag          | Gewitter auf zufälliger Zone (kann Feuer auslösen)   |
-| Seuche               | dichteste Population −3 (wird nicht stärker)         |
-| Sturmflut            | Küste Salz +2, Flachland Feuchte +1                  |
-| Heuschrecken         | Flachland Vegetation −2                              |
-| Meteorit (ab Jahr 8) | eine Zone fällt auf Stufe 1, starker Selektionsdruck |
+| Ereignis             | Wirkung                                                |
+| -------------------- | ------------------------------------------------------ |
+| Hitzesommer          | alle Zonen Feuchte −1                                  |
+| Kälteeinbruch        | Berge Schnee +2, alle Zonen Vegetation −1              |
+| Blitzschlag          | Gewitter nur auf einer zufälligen Zone (Feuer möglich) |
+| Seuche               | dichteste Population −3 (wird nicht stärker)           |
+| Sturmflut            | Küste Salz +2, Flachland Feuchte +1                    |
+| Heuschrecken         | Flachland Vegetation −2                                |
+| Meteorit (ab Jahr 8) | eine Zone fällt auf Stufe 1, starker Selektionsdruck   |
 
 **Jahreszeiten** ✅ (wirken jede Runde):
 
@@ -397,6 +444,25 @@ entscheidet; Zahlen bleiben Platzhalter bis Phase 6.
 
 - Startodem = Zufluss bei Start-Harmonie: 1 + ⌊60 / 25⌋ = 3.
 
+**Kap. 6.2 – Weltkarten (Wetter, Variante C)**
+
+- Gleichzeitige Wirkung: Eine Wetterkarte wirkt in allen Zonen „zugleich“. Schwellen mit Prüfung _vorher_ sehen
+  den Zustand vor der Karte, Schwellen mit Prüfung _nachher_ den Zustand nach der Grundwirkung aller Zonen.
+  Wirkungen auf Nachbarzonen (z. B. Flut: Nachbarn Feuchte +1) werden je Zone summiert und einmal angewendet,
+  so dass die Reihenfolge der Zonen das Ergebnis nicht entscheidet.
+- Reihenfolge: Schwellen „vorher“ → Grundwirkung (erst die Wirkung auf alle Zonen, dann die der Geografie) →
+  Ziehen, Odem und Ereignis-Effekte genau einmal → Schwellen „nachher“ → Folgen der Schwellen (je Schwelle in allen
+  Zonen, in denen sie auslöst). Im Protokoll erscheinen die Zonen in Kartenreihenfolge.
+- Ereignis mit Weltkarte: _Blitzschlag_ spielt das Gewitter nur auf die ausgeloste Zielzone (mit der Wirkung
+  dieser Geografie). Ein Ereignis ohne Zielzone ließe die Karte auf allen Zonen wirken.
+- Schwellen gelten je Zone, sind aber auf die Geografien begrenzt, in denen sie thematisch passen (Feuer nur in
+  Wald und Flachland, Flut nur in Bergen und Flachland, Baumsturz nur in Wald und Bergwald, Eisbruch nur im Wald),
+  damit eine Weltkarte nicht in allen Zonen zugleich eine Katastrophe auslöst. Der Fluss (Ruhewert Feuchte 5)
+  löst die Flut nicht aus; das Gewitter hebt dort den Wasserstand.
+- Der frühere Sturm mit wählbarer Fallrichtung wird zum Weltsturm: Der Baumsturz trifft nur die eigene Zone
+  (Licht +2, Totholz +1), keine Nachbarzone mehr.
+- Alte Spielstände mit Zielen für Wetterkarten bleiben gültig; die Ziele werden ignoriert.
+
 **Kap. 7 und 8 – Harmonie und Störungen**
 
 - Der „Harmonie-Einbruch“ einer gezielten Störung (Kap. 8) ist ein eigener Beitrag je gestörter Zone und Runde
@@ -423,6 +489,14 @@ entscheidet; Zahlen bleiben Platzhalter bis Phase 6.
 - Die Seuche wächst nicht mit der Ereignis-Stärke (`events.yaml`: `scales: false`), sie nimmt immer 3 Tiere.
 
 ## Änderungsverlauf
+
+- **0.4.0 (10.11.2026)** – Kartenreichweite nach Variante C (Inhaber-Entscheidung): Wetter wirkt ohne Zielwahl auf
+  alle Zonen, je Geografie unterschiedlich; Gaben, Wunder, Arten und Menschen bleiben gezielt (6.2). Die Kategorie
+  „Naturgewalt“ geht im _Wetter_ auf: Gewitter, Dürre, Sturm, Frost (0 Odem) und Regen, Trockenwind, Sonne,
+  Schneefall (1–2 Odem) sind Weltkarten mit einer Wirkungstabelle je Geografie. Neues Prinzip 6 „Jeder Wetterzug
+  ist ein Tausch“ (2). Schwellen gelten je Zone und sind auf passende Geografien begrenzt; Blitzschlag trifft nur
+  seine Zielzone (9). Neue Auslegungen im Anhang (Kap. 6.2). Dürre jetzt Feuchte −1 (statt −2) auf allen Zonen;
+  Sonne und Trockenwind senken den Schnee der Berge.
 
 - **0.3.0 (10.11.2026)** – Tuning-Runde 1 nach der Baseline-Messung (Bericht
   `packages/sim/reports/2026-11-10-tuning-1.md`): Zonenstufe für Evolution _n − 3_ statt _n − 2_ (4.4,
