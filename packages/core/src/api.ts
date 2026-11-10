@@ -97,8 +97,14 @@ export interface CardView {
   uid: number;
   card: string;
   name: string;
-  /** Kategorie aus den Daten, z. B. "force", "gift", "miracle", "species", "human". */
+  /** Kategorie aus den Daten, z. B. "weather", "gift", "miracle", "species", "human". */
   category: string;
+  /**
+   * Reichweite (Konzept 6.2, Variante C): "zone" = wirkt auf gewählte Ziele (Slots),
+   * "world" = wirkt ohne Zielwahl auf alle Zonen, je Geografie unterschiedlich. Fehlt = "zone". Weltkarten haben keine Zonen-Slots;
+   * `preview` liefert dann Änderungen, Schwellen und `idealDistance` für alle betroffenen Zonen zugleich.
+   */
+  reach?: 'zone' | 'world';
   cost: number;
   /** Lesbarer Kartentext in der gewählten Sprache: Wirkungen, Schwellen, dann Bedingung als kurzer Zusatz. */
   text: string;

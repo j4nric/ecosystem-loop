@@ -115,6 +115,7 @@ export function view(data: GameData, state: GameState, locale: Locale = 'de'): G
       card: card.id,
       name: card.name[locale],
       category: card.category,
+      reach: 'zone', // Platzhalter bis Weltkarten im Schema stehen (engine-dev)
       cost: card.cost,
       text: cardText(data, card, locale),
       short: cardShort(data, card, locale),
