@@ -2,8 +2,8 @@
  * Reine Text- und Rechenhilfen für die Oberfläche (ohne DOM): Pfeile, Absicht, Jahreszeit, Feld-Prognose.
  * Namen kommen aus den Spieldaten, Sätze aus `src/i18n`.
  */
-import type { CellView, HerdeData, HerdeView, IntentView, Text } from '@being-god/herde';
-import type { Strings } from '../i18n/de.ts';
+import type { CellView, HandCardView, HerdeData, HerdeView, IntentView, Text } from '@being-god/herde';
+import type { RuleNumbers, Strings } from '../i18n/de.ts';
 import type { Locale } from '../i18n/locale.ts';
 
 const ARROWS: Record<string, string> = {
@@ -50,11 +50,35 @@ export function monthsToNextSeason(data: HerdeData, month: number): number {
   return data.monthsPerSeason - (month % data.monthsPerSeason);
 }
 
-/** Kurzer Hinweis zur Jahreszeit; in der Eiszeit die Restmonate. */
-export function seasonHint(t: Strings, view: HerdeView): string {
-  if (view.ice.active) return t.iceHint(view.ice.monthsLeft);
-  return t.seasonHint[view.season] ?? t.seasonHintFallback;
+/**
+ * Die Herde frisst im Umkreis 1 (Engine: `herd.ts`, `around` ohne Radius). Der Umkreis ist kein Datenparameter;
+ * die Zahl der Nachbarfelder folgt aus ihm.
+ */
+const HERD_REACH = 1;
+
+/** Regelzahlen für Texte aus den Parametern der Daten. */
+export function ruleNumbers(data: HerdeData): RuleNumbers {
+  const p = data.params;
+  const season = data.seasons[Math.floor(p.herd.birthMonth / data.monthsPerSeason) % data.seasons.length];
+  return {
+    birthSeason: season?.id ?? '',
+    birthMonth: (p.herd.birthMonth % data.monthsPerSeason) + 1,
+    wildMax: p.wild.max,
+    iceMonths: p.ice.months,
+    handMax: p.cards.handMax,
+    neighbors: (2 * HERD_REACH + 1) ** 2 - 1,
+  };
 }
+
+/** Kurzer Hinweis zur Jahreszeit; in der Eiszeit die Restmonate. */
+export function seasonHint(t: Strings, data: HerdeData, view: HerdeView): string {
+  if (view.ice.active) return t.iceHint(view.ice.monthsLeft);
+  return t.seasonHint(view.season, ruleNumbers(data)) ?? t.seasonHintFallback;
+}
+
+/** Lässt sich die Karte gerade spielen? Globale Karten immer, sonst nur mit mindestens einem gültigen Ziel. */
+export const isPlayable = (card: Pick<HandCardView, 'global' | 'targets'>): boolean =>
+  card.global || card.targets.length > 0;
 
 /** Summe der Rudelstärken. */
 export const wolvesTotal = (view: HerdeView): number => view.packs.reduce((a, p) => a + p.size, 0);

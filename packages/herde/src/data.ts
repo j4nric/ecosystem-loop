@@ -128,6 +128,9 @@ export function buildData(raw: RawData): HerdeData {
   if (!seasonIds.includes(params.ice.season))
     problems.push(`${DATA_FILES.params}: ice.season: unbekannte Jahreszeit ${params.ice.season}`);
   if (params.cards.startHand > params.cards.handMax) problems.push(`${DATA_FILES.params}: cards.startHand > handMax`);
+  // Sonst verkümmert ein Rudel nach dem ersten Mal jeden Monat (der Hunger stünde schon wieder auf der Schwelle).
+  if (params.wolves.starveReset >= params.wolves.starveAfter)
+    problems.push(`${DATA_FILES.params}: wolves.starveReset muss kleiner als starveAfter sein`);
 
   // Inseln
   const islands = new Map<string, Island>();

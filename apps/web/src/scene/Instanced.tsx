@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import type { ThreeEvent } from '@react-three/fiber';
+import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { Color, Matrix4, Quaternion, Vector3, type BufferGeometry, type InstancedMesh } from 'three';
 import type { InstanceSpec } from './islandModel.ts';
 
@@ -41,13 +41,16 @@ interface Props {
 export function Instanced({ geometry, items, onClick }: Props) {
   const ref = useRef<InstancedMesh>(null);
   const capacity = useMemo(() => capacityFor(items.length), [items.length]);
+  const invalidate = useThree((st) => st.invalidate);
 
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
     writeInstances(mesh, items);
     mesh.computeBoundingSphere();
-  }, [items, capacity]);
+    // Bei frameloop="demand" (reduzierte Bewegung) zeichnet die Szene nur auf Anforderung neu.
+    invalidate();
+  }, [items, capacity, invalidate]);
 
   return (
     <instancedMesh

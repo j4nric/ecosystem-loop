@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { Color, Matrix4, Quaternion, Vector3, type InstancedMesh, type Mesh, type MeshBasicMaterial } from 'three';
 import type { Fx, StepReport } from '../client/GameClient.ts';
 import { GEO } from './geometries.ts';
@@ -12,6 +12,10 @@ const STREAKS = 48;
 const RING_SECONDS = 0.9;
 const FIRE_SECONDS = 1.6;
 const RAIN_SECONDS = 1.3;
+/** Reduzierte Bewegung: statt Flammen und Regen ein kurzes, ruhiges Einfärben der Felder */
+const TINTS = 64;
+const TINT_SECONDS = 1.4;
+const TINT_OPACITY = 0.5;
 
 interface Ring {
   x: number;
@@ -32,6 +36,13 @@ interface Flame {
   start: number | null;
 }
 
+interface Tint {
+  x: number;
+  y: number;
+  z: number;
+  color: string;
+}
+
 const m = new Matrix4();
 const q = new Quaternion();
 const p = new Vector3();
@@ -40,7 +51,9 @@ const c = new Color();
 
 /**
  * Kurze Effekte aus den Ereignissen eines Schritts: Ringe (Feldwechsel, Wölfe reißen, Nachwuchs, Verluste),
- * Flammen (Feuer) und Regen. Feste Pools ohne Neuanlegen; gearbeitet wird nur, solange ein Effekt läuft.
+ * Flammen (Feuer) und Regen. Bei reduzierter Bewegung entfallen das Flackern der Flammen und der fallende Regen;
+ * stattdessen färben sich die betroffenen Felder kurz und ruhig ein. Feste Pools ohne Neuanlegen; gearbeitet
+ * (und bei frameloop="demand" neu gezeichnet) wird nur, solange ein Effekt läuft.
  */
 export function FxLayer({
   grid,
@@ -59,16 +72,20 @@ export function FxLayer({
   const ringMeshes = useRef<(Mesh | null)[]>([]);
   const flameMesh = useRef<InstancedMesh>(null);
   const rainMesh = useRef<InstancedMesh>(null);
-  const geo = useRef({ grid, topY });
+  const tints = useRef<Tint[]>([]);
+  const tintStart = useRef<number | null | undefined>(undefined);
+  const tintMesh = useRef<InstancedMesh>(null);
+  const geo = useRef({ grid, topY, reducedMotion });
   useEffect(() => {
-    geo.current = { grid, topY };
-  }, [grid, topY]);
+    geo.current = { grid, topY, reducedMotion };
+  }, [grid, topY, reducedMotion]);
+  const invalidate = useThree((st) => st.invalidate);
 
   useEffect(
     () =>
       subscribe((report) => {
         if (report.fx.length === 0) return;
-        const { grid: g, topY: tops } = geo.current;
+        const { grid: g, topY: tops, reducedMotion: calm } = geo.current;
         const at = (x: number, y: number): [number, number, number] => {
           const [cx, cz] = cellCenter(g, x, y);
           return [cx, (tops[y * g.width + x] ?? 0) + 0.03, cz];
@@ -77,12 +94,25 @@ export function FxLayer({
           const [px, py, pz] = at(x, y);
           rings.current = [...rings.current, { x: px, y: py, z: pz, color, grow, delay, start: null }].slice(-RINGS);
         };
+        const tint = (cells: readonly { x: number; y: number }[], color: string) => {
+          const fresh = cells.map((cell) => {
+            const [px, py, pz] = at(cell.x, cell.y);
+            return { x: px, y: py + 0.01, z: pz, color };
+          });
+          // Ein gemeinsamer, sanfter Verlauf für alle Felder eines Schritts.
+          tints.current = (tintStart.current === undefined ? fresh : [...tints.current, ...fresh]).slice(-TINTS);
+          tintStart.current = null;
+        };
         for (const fx of report.fx as Fx[]) {
           switch (fx.type) {
             case 'change':
               ring(fx.x, fx.y, COLORS.change, 1.4);
               break;
             case 'fire':
+              if (calm) {
+                tint(fx.cells, COLORS.fire);
+                break;
+              }
               fx.cells.forEach((cell, n) => {
                 const [px, py, pz] = at(cell.x, cell.y);
                 for (let k = 0; k < 3; k++)
@@ -101,12 +131,14 @@ export function FxLayer({
               ring(fx.x, fx.y, COLORS.loss, 1.8, 0.2);
               break;
             case 'rain':
-              rainStart.current = null;
+              if (calm) tint(fx.cells, COLORS.grown);
+              else rainStart.current = null;
               break;
           }
         }
+        invalidate();
       }),
-    [subscribe],
+    [subscribe, invalidate],
   );
 
   useFrame(({ clock }) => {
@@ -174,6 +206,37 @@ export function FxLayer({
         rm.instanceMatrix.needsUpdate = true;
       }
     }
+
+    // Einfärben (reduzierte Bewegung): einmal einblenden und wieder aus, ohne Bewegung
+    const tm = tintMesh.current;
+    if (tm && tintStart.current !== undefined) {
+      if (tintStart.current === null) {
+        tintStart.current = now;
+        tints.current.forEach((t, i) => {
+          tm.setMatrixAt(i, m.makeTranslation(t.x, t.y, t.z));
+          tm.setColorAt(i, c.set(t.color));
+        });
+        tm.count = tints.current.length;
+        tm.instanceMatrix.needsUpdate = true;
+        if (tm.instanceColor) tm.instanceColor.needsUpdate = true;
+      }
+      const k = (now - tintStart.current) / TINT_SECONDS;
+      const mat = tm.material as MeshBasicMaterial;
+      if (k >= 1) {
+        tintStart.current = undefined;
+        tints.current = [];
+        tm.count = 0;
+      } else mat.opacity = TINT_OPACITY * Math.sin(k * Math.PI);
+    }
+
+    // Bei frameloop="demand" weiterzeichnen, solange ein Effekt läuft.
+    const active =
+      rings.current.length > 0 ||
+      flames.current.length > 0 ||
+      (fm?.count ?? 0) > 0 ||
+      rainStart.current !== undefined ||
+      tintStart.current !== undefined;
+    if (active) invalidate();
   });
 
   return (
@@ -196,6 +259,16 @@ export function FxLayer({
       </instancedMesh>
       <instancedMesh ref={rainMesh} args={[GEO.streak, undefined, STREAKS]} count={0} frustumCulled={false}>
         <meshBasicMaterial color={COLORS.rain} transparent opacity={0.7} depthWrite={false} fog={false} />
+      </instancedMesh>
+      <instancedMesh
+        ref={tintMesh}
+        args={[GEO.square, undefined, TINTS]}
+        count={0}
+        frustumCulled={false}
+        renderOrder={2}
+        raycast={() => null}
+      >
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} fog={false} />
       </instancedMesh>
     </>
   );

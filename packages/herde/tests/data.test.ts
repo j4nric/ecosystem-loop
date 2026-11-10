@@ -62,6 +62,11 @@ describe('Spieldaten', () => {
     ['Geburtsmonat', (r) => (r.params.herd.birthMonth = 12), /birthMonth 12/],
     ['Eiszeit-Jahreszeit', (r) => (r.params.ice.season = 'monsoon'), /unbekannte Jahreszeit monsoon/],
     ['Starthand', (r) => (r.params.cards.startHand = 6), /startHand > handMax/],
+    [
+      'Hunger-Rücksetzung',
+      (r) => (r.params.wolves.starveReset = r.params.wolves.starveAfter),
+      /starveReset muss kleiner/,
+    ],
     ['Legende', (r) => (r.islands.islands[0].legend.W = 'lava'), /legend W: unbekannte Landschaft/],
     ['Zeichen fehlt', (r) => (r.islands.islands[0].rows[0] = '~..Q..~'), /Zeichen „Q“/],
     ['Zeilenlänge', (r) => (r.islands.islands[0].rows[1] = '.WW.FF'), /Zeile 1 hat 6 statt 7/],

@@ -122,7 +122,7 @@ export function StatusBar({ data, view, onHelp, onNewGame, onTutorial }: Props) 
       <section className="year" aria-label={t.date(view.year, monthName)}>
         <div className="year__line">
           <b>{t.date(view.year, monthName)}</b>
-          <span>{seasonHint(t, view)}</span>
+          <span>{seasonHint(t, data, view)}</span>
         </div>
         <div className="year__months" aria-hidden>
           {data.months.map((m, i) => {

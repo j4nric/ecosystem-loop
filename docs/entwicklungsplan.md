@@ -12,8 +12,8 @@ Regeln und Zahlen in YAML, Fortschritt im Cockpit.
 | Phase                                | Status      |
 | ------------------------------------ | ----------- |
 | H0 – Prototyp „Die Herde“            | ✅ erledigt |
-| H1 – Engine: Insel, Herde, Wölfe     | offen       |
-| H2 – App: Insel und Herde            | offen       |
+| H1 – Engine: Insel, Herde, Wölfe     | ✅ erledigt |
+| H2 – App: Insel und Herde            | ✅ erledigt |
 | H3 – Entwicklung der Herde, Meta     | offen       |
 | H4 – Jahreskreis, Ereignisse, Inseln | offen       |
 | H5 – Balancing                       | offen       |
@@ -30,8 +30,8 @@ Gehölz-Korridoren, sechs Karten, Wildnis und Eiszeit. Ergebnis: Richtung vom In
 ### H1 – Engine: Insel, Herde, Wölfe
 
 Neue Engine als eigenes Paket `packages/herde` (`@being-god/herde`) nach Konzept 1.0, Kapitel 4–8, mit derselben
-Bauweise wie bisher (Fassade, reine Schritte, Daten in YAML, Seed-Zufall). So bleiben App und Deploy bis H2 lauffähig;
-mit dem Umstieg der App in H2 wird die alte Engine (`packages/core`, Konzept 0.4) entfernt.
+Bauweise wie bisher (Fassade, reine Schritte, Daten in YAML, Seed-Zufall). So blieben App und Deploy bis H2 lauffähig;
+nach dem Umstieg der App in H2 ist die alte Engine (Konzept 0.4) samt Bots entfernt worden (nur noch im Git-Verlauf).
 
 - Abnahme: Tests belegen Sukzession, Feuer, Herdenwahl (deterministisch), Fressen/Vorrat/Jahreszeiten, Wölfe,
   Karten, Wildnis und Eiszeit; Absturz-Test der Bots in der CI; Konsole spielbar.
@@ -54,7 +54,8 @@ Wetterfelder je Jahreszeit, Ereignisse, mehrere Inseltypen bzw. größere Insel 
 
 ### H5 – Balancing
 
-Bots und Messreihen (Werkzeuge aus Phase 6 des alten Plans wiederverwenden), Ziel 20–30 Minuten pro Partie.
+Bots und Messreihen (ausgehend vom Zufalls-Bot in `packages/herde/src/bot.ts`; die Werkzeuge der alten Engine
+liegen im Git-Verlauf), Ziel 20–30 Minuten pro Partie.
 
 ### H6 – Grafik und Ton · H7 – Veröffentlichung
 

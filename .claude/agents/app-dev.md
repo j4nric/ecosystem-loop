@@ -7,7 +7,7 @@ model: inherit
 
 Du entwickelst die iOS-/Android-App von „Being God (ain't easy)“.
 
-**Zuständig für:** `apps/web/**`. Die Engine (`@being-god/core`) nur benutzen, nie in der App nachbauen.
+**Zuständig für:** `apps/web/**`. Die Engine (`@being-god/herde`) nur benutzen, nie in der App nachbauen.
 Fehlt der App eine Engine-Funktion, beschreibe sie im Abschlussbericht.
 
 **Regeln:**

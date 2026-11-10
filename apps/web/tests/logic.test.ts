@@ -9,7 +9,9 @@ import {
   arrowOf,
   forecastLines,
   intentText,
+  isPlayable,
   monthsToNextSeason,
+  ruleNumbers,
   seasonHint,
   wolvesTotal,
 } from '../src/logic/format.ts';
@@ -19,6 +21,13 @@ import { landStyle, mix } from '../src/scene/palette.ts';
 
 const data = loadData();
 const at = { x: 2, y: 3 };
+
+/** Kopie der Daten mit geänderten Parametern. */
+function tweaked(fn: (d: typeof data) => void): typeof data {
+  const d = structuredClone(data);
+  fn(d);
+  return d;
+}
 
 const describeDe = (events: HerdeEvent[], packs = new Map<number, { x: number; y: number }>()) =>
   describeEvents(data, 'de', de, events, at, packs);
@@ -195,13 +204,72 @@ describe('Texte', () => {
   });
 
   it('Hinweis zur Jahreszeit, in der Eiszeit mit Restmonaten', () => {
-    const v = view(data, newGame(data, { seed: 1 }));
-    expect(seasonHint(de, v)).toBe(de.seasonHint['spring']);
-    expect(seasonHint(de, { ...v, ice: { active: true, monthsLeft: 4, months: 6 } })).toBe(
+    const d = tweaked((x) => {
+      x.params.herd.birthMonth = 1;
+    });
+    const v = view(d, newGame(d, { seed: 1 }));
+    expect(seasonHint(de, d, v)).toBe('Gras wächst, Nachwuchs im 2. Monat');
+    expect(seasonHint(en, d, v)).toBe('Grass grows, calves in the 2nd month');
+    expect(seasonHint(de, d, { ...v, season: 'summer' })).toBe('Die Herde braucht Wasser, Altwald kann brennen');
+    expect(seasonHint(de, data, { ...v, ice: { active: true, monthsLeft: 4, months: 6 } })).toBe(
       'Eiszeit: noch 4 Monate Winter',
     );
-    expect(seasonHint(de, { ...v, season: 'unbekannt' })).toBe(de.seasonHintFallback);
+    expect(seasonHint(de, data, { ...v, season: 'unbekannt' })).toBe(de.seasonHintFallback);
     expect(wolvesTotal(v)).toBe(v.packs.reduce((a, p) => a + p.size, 0));
+  });
+});
+
+describe('Karte ohne Ziel', () => {
+  it('ist nur mit gültigem Ziel oder als globale Karte spielbar', () => {
+    expect(isPlayable({ global: false, targets: [] })).toBe(false);
+    expect(isPlayable({ global: false, targets: [{ x: 1, y: 1 }] })).toBe(true);
+    expect(isPlayable({ global: true, targets: [] })).toBe(true);
+  });
+});
+
+describe('Regelzahlen in Texten kommen aus den Daten', () => {
+  it('ruleNumbers liest die Parameter', () => {
+    const p = data.params;
+    expect(ruleNumbers(data)).toEqual({
+      birthSeason: data.seasons[Math.floor(p.herd.birthMonth / data.monthsPerSeason)]!.id,
+      birthMonth: (p.herd.birthMonth % data.monthsPerSeason) + 1,
+      wildMax: p.wild.max,
+      iceMonths: p.ice.months,
+      handMax: p.cards.handMax,
+      neighbors: 8,
+    });
+  });
+
+  it('geänderte Parameter ändern Hilfe, Einführung und Jahreszeit-Hinweis', () => {
+    const d = tweaked((x) => {
+      x.params.wild.max = 77;
+      x.params.ice.months = 4;
+      x.params.cards.handMax = 7;
+      x.params.herd.birthMonth = 2; // dritter Monat des Frühlings
+    });
+    const r = ruleNumbers(d);
+    for (const t of [de, en]) {
+      expect(t.helpGoalText(r)).toContain('77');
+      expect(t.helpCardsText(r)).toContain('7');
+      expect(t.helpHerdText(r)).toContain('8');
+      const ice = t.tutorial(r).find((c) => c.icon === '❄️')!.text;
+      expect(ice).toContain('77');
+      expect(ice).toMatch(/4 mon/i);
+    }
+    const v = view(d, newGame(d, { seed: 1 }));
+    expect(seasonHint(de, d, v)).toBe('Gras wächst, Nachwuchs im 3. Monat');
+    expect(seasonHint(en, d, v)).toBe('Grass grows, calves in the 3rd month');
+  });
+
+  it('Nachwuchs in einer anderen Jahreszeit wandert im Hinweis mit', () => {
+    const d = tweaked((x) => {
+      x.params.herd.birthMonth = 3; // erster Monat des Sommers
+    });
+    const v = view(d, newGame(d, { seed: 1 }));
+    expect(seasonHint(de, d, v)).toBe('Gras wächst');
+    expect(seasonHint(de, d, { ...v, season: 'summer' })).toBe(
+      'Die Herde braucht Wasser, Altwald kann brennen, Nachwuchs im 1. Monat',
+    );
   });
 });
 
