@@ -45,8 +45,8 @@ Low-Poly-Insel aus Feldern, laufende Herde, Absicht als Pfeil, Karten legen, Jah
 
 ### H3 – Entwicklung der Herde und Meta-Progression
 
-Merkmale aus dem Erlebten, Schöpfungsbuch als Abstammung bis zur ersten Menschengruppe (Konzept 9.1, 9.2 –
-erst nach Entscheidung des Inhabers).
+Merkmale aus dem Erlebten und Entwicklung in fünf Stufen bis zum Menschen innerhalb einer Partie, jede Stufe mit
+eigenen Bedürfnissen (Konzept 9.1, 9.2). Eiszeit als Prüfung unterwegs; Sieg mit dem Menschen.
 
 ### H4 – Jahreskreis, Ereignisse, Inseln
 
