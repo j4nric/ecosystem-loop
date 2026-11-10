@@ -88,7 +88,7 @@ Web-Inspektor: Bei Debug-Builds lässt sich die WebView in Safari auf dem Mac un
 
 ## Was die native Hülle anders macht
 
-- **Hochformat** auf dem iPhone fest (`UISupportedInterfaceOrientations` in `Info.plist`); iPad unverändert.
+- **Nur iPhone, nur Hochformat** (`TARGETED_DEVICE_FAMILY = 1`, `UISupportedInterfaceOrientations` in `Info.plist`); Architektur `arm64`. iPad kann später freigeschaltet werden.
 - **Statusleiste:** dunkle Schrift auf dem hellen Himmel (`SystemBars.style: 'LIGHT'` in `capacitor.config.ts` und
   `UIStatusBarStyleDarkContent`), auch im Dunkelmodus des iPhones.
 - **Safe Areas:** Die WebView rückt nichts ein (`ios.contentInset: 'never'`); die Seite nutzt wie im Browser
