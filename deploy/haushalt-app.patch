@@ -1,0 +1,40 @@
+diff --git a/infra/production/Caddyfile b/infra/production/Caddyfile
+index 6a47ba2..63930f6 100644
+--- a/infra/production/Caddyfile
++++ b/infra/production/Caddyfile
+@@ -56,3 +56,10 @@ uhrturm-62-83-23-90.sslip.io {
+ 	encode zstd gzip
+ 	reverse_proxy uhrturm-web:80
+ }
++
++# Being God (Repo j4nric/ecosystem-loop): Container im eigenen Netzwerk beinggod-proxy
++# mit dem Alias beinggod-web.
++beinggod-62-83-23-90.sslip.io {
++	encode zstd gzip
++	reverse_proxy beinggod-web:80
++}
+diff --git a/infra/production/docker-compose.yml b/infra/production/docker-compose.yml
+index 774f12a..00a83e1 100644
+--- a/infra/production/docker-compose.yml
++++ b/infra/production/docker-compose.yml
+@@ -31,7 +31,7 @@ services:
+     # („Vom Samen zum Wald“, Container vszw-sync). Der Sync-Server sieht so weder
+     # Postgres noch die App. Das Netz legt dessen deploy/setup.sh an – es muss
+     # existieren, bevor dieser Stand ausgerollt wird.
+-    networks: [intern, vszw-proxy, tee-proxy, stammtisch-proxy, uhrturm-proxy]
++    networks: [intern, vszw-proxy, tee-proxy, stammtisch-proxy, uhrturm-proxy, beinggod-proxy]
+     depends_on:
+       - app
+       - powersync
+@@ -123,6 +123,11 @@ networks:
+   uhrturm-proxy:
+     name: uhrturm-proxy
+     external: true
++  # Netz des Spiels Being God (j4nric/ecosystem-loop); nur Caddy hängt zusätzlich darin.
++  # Muss vor dem Deploy existieren: docker network create beinggod-proxy
++  beinggod-proxy:
++    name: beinggod-proxy
++    external: true
+ 
+ volumes:
+   postgres_data:

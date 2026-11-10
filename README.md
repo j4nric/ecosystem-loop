@@ -40,7 +40,7 @@ npm run check       # Format, Lint, Typecheck, Tests mit Coverage, Datenprüfung
 
 Bis Phase 6 (Balancing) laufen die Bots nur als Absturz-Test; Zahlen in den YAML-Daten sind Platzhalter.
 Details zur App (URL-Schalter, Bedienung, Tests): [apps/web/README.md](apps/web/README.md).
-Deploy auf den eigenen vServer: [docs/deploy.md](docs/deploy.md).
+Deploy auf den eigenen vServer: [deploy/README.md](deploy/README.md).
 
 ## Entwicklung
 
@@ -63,4 +63,4 @@ Die CI (`.github/workflows/ci.yml`) prüft jeden PR in fünf parallelen Jobs:
 
 Der Sammel-Check **„CI ok“** ist nur grün, wenn alle Jobs grün sind. Dependabot hält Abhängigkeiten aktuell.
 Nach einem Merge auf `main` baut `.github/workflows/deploy.yml` die App und spielt sie auf den vServer
-(siehe [docs/deploy.md](docs/deploy.md)).
+(siehe [deploy/README.md](deploy/README.md)).

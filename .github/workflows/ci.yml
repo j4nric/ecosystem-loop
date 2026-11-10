@@ -2,8 +2,8 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches: [main]
+  # Auf main ruft der Deploy-Workflow diese CI auf und liefert genau ihren Build aus.
+  workflow_call:
   workflow_dispatch:
 
 # Neuere Pushes auf denselben Branch brechen ältere Läufe ab.
@@ -73,6 +73,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Build für den Deploy aufbewahren
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
+          retention-days: 7
+      - name: Caddyfile des Deploys prüfen
+        run: docker run --rm -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.11-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: docker-compose des Deploys prüfen
+        run: docker compose -f deploy/docker-compose.yml config -q
 
   audit:
     name: Abhängigkeiten (Sicherheit)

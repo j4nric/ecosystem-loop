@@ -18,7 +18,7 @@ npm run -w apps/web typecheck
 ```
 
 Deploy: Nach jedem Merge auf `main` baut `.github/workflows/deploy.yml` die App und kopiert `dist` auf den
-vServer, siehe [docs/deploy.md](../../docs/deploy.md). Icons und Manifest (Home-Bildschirm) liegen in `public/`.
+vServer, siehe [deploy/README.md](../../deploy/README.md). Icons und Manifest (Home-Bildschirm) liegen in `public/`.
 
 ## Aufbau
 
