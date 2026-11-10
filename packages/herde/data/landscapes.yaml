@@ -1,0 +1,89 @@
+# Landschaften der Insel (Konzept 4). Zahlen sind Platzhalter aus dem Prototyp (Logik vor Balancing).
+#
+# food          Futter-Maximum
+# fertileBonus  zusätzliches Futter-Maximum, solange das Feld fruchtbar ist (nach einem Brand)
+# grow          Futter-Wachstum je Monat und Jahreszeit (Ids aus seasons.yaml)
+# walk          die Herde kann das Feld betreten
+# wood          Gehölz: Lebensraum und Wege der Wölfe, zählt für das Einwandern
+# den           Wölfe können hier einwandern
+# burnsTo       brennbar: wird durch Feuer zu dieser Landschaft; Feuer springt nur auf brennbare Felder über
+# fireChance    Chance je Monat, in einer Feuer-Jahreszeit (seasons.yaml → fire) von selbst zu brennen
+# succession    wird von selbst zu `to` nach `months` Monaten; clock: age (seit Entstehung) oder ungrazed
+#               (seit der letzten Beweidung); food setzt das Futter (sonst gekappt), fertile = Monate fruchtbar
+# start         Startzustand auf einer Insel: food + Zufall(0 … foodRandom-1), Alter Zufall(0 … ageRandom-1),
+#               zuletzt beweidet vor Zufall(0 … ungrazedRandom-1) Monaten
+#
+# Welche Landschaften für die Herde als Futter, Wasser und Schutz zählen, steht in stages.yaml.
+landscapes:
+  - id: sea
+    name: { de: Meer, en: Sea }
+    icon: ''
+    walk: false
+    food: 0
+    grow: { spring: 0, summer: 0, autumn: 0, winter: 0 }
+  - id: steppe
+    name: { de: Steppe, en: Steppe }
+    icon: ''
+    walk: true
+    food: 1
+    grow: { spring: 1, summer: 0, autumn: 0, winter: 0 }
+    start: { food: 1 }
+  - id: meadow
+    name: { de: Wiese, en: Meadow }
+    icon: '🌾'
+    walk: true
+    food: 6
+    fertileBonus: 2
+    grow: { spring: 3, summer: 2, autumn: 1, winter: 0 }
+    succession: { to: bush, months: 12, clock: ungrazed }
+    start: { food: 3, foodRandom: 3, ungrazedRandom: 8 }
+  - id: bush
+    name: { de: Busch, en: Bush }
+    icon: '🌿'
+    walk: true
+    food: 2
+    grow: { spring: 1, summer: 1, autumn: 1, winter: 0 }
+    wood: true
+    burnsTo: burnt
+    succession: { to: forest, months: 18, clock: age }
+    start: { ageRandom: 10 }
+  - id: forest
+    name: { de: Wald, en: Forest }
+    icon: '🌲'
+    walk: true
+    food: 1
+    grow: { spring: 1, summer: 1, autumn: 0, winter: 0 }
+    wood: true
+    den: true
+    burnsTo: burnt
+    succession: { to: old, months: 36, clock: age }
+    start: { food: 1, ageRandom: 30 }
+  - id: old
+    name: { de: Altwald, en: Old forest }
+    icon: '🌳'
+    walk: true
+    food: 0
+    grow: { spring: 0, summer: 0, autumn: 0, winter: 0 }
+    wood: true
+    den: true
+    burnsTo: burnt
+    fireChance: 0.05
+  - id: burnt
+    name: { de: Brandfläche, en: Burnt land }
+    icon: '▪'
+    walk: true
+    food: 0
+    grow: { spring: 0, summer: 0, autumn: 0, winter: 0 }
+    succession: { to: meadow, months: 4, clock: age, food: 3, fertile: 24 }
+  - id: river
+    name: { de: Fluss, en: River }
+    icon: '💧'
+    walk: true
+    food: 0
+    grow: { spring: 0, summer: 0, autumn: 0, winter: 0 }
+  - id: rock
+    name: { de: Fels, en: Rock }
+    icon: '🪨'
+    walk: false
+    food: 0
+    grow: { spring: 0, summer: 0, autumn: 0, winter: 0 }

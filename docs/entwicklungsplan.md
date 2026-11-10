@@ -29,8 +29,9 @@ Gehölz-Korridoren, sechs Karten, Wildnis und Eiszeit. Ergebnis: Richtung vom In
 
 ### H1 – Engine: Insel, Herde, Wölfe
 
-Neue Regeln in `packages/core` nach Konzept 1.0, Kapitel 4–8, mit derselben Bauweise wie bisher (Fassade, reine
-Schritte, Daten in YAML, Seed-Zufall). Die alten Regelmodule werden entfernt.
+Neue Engine als eigenes Paket `packages/herde` (`@being-god/herde`) nach Konzept 1.0, Kapitel 4–8, mit derselben
+Bauweise wie bisher (Fassade, reine Schritte, Daten in YAML, Seed-Zufall). So bleiben App und Deploy bis H2 lauffähig;
+mit dem Umstieg der App in H2 wird die alte Engine (`packages/core`, Konzept 0.4) entfernt.
 
 - Abnahme: Tests belegen Sukzession, Feuer, Herdenwahl (deterministisch), Fressen/Vorrat/Jahreszeiten, Wölfe,
   Karten, Wildnis und Eiszeit; Absturz-Test der Bots in der CI; Konsole spielbar.
@@ -44,8 +45,8 @@ Low-Poly-Insel aus Feldern, laufende Herde, Absicht als Pfeil, Karten legen, Jah
 
 ### H3 – Entwicklung der Herde und Meta-Progression
 
-Merkmale aus dem Erlebten, Schöpfungsbuch als Abstammung bis zur ersten Menschengruppe (Konzept 9.1, 9.2 –
-erst nach Entscheidung des Inhabers).
+Merkmale aus dem Erlebten und Entwicklung in fünf Stufen bis zum Menschen innerhalb einer Partie, jede Stufe mit
+eigenen Bedürfnissen (Konzept 9.1, 9.2). Eiszeit als Prüfung unterwegs; Sieg mit dem Menschen.
 
 ### H4 – Jahreskreis, Ereignisse, Inseln
 

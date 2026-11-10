@@ -1,4 +1,4 @@
-# Being God (ain't easy) – Konzept 1.0 „Die Herde“
+# Being God (ain't easy) – Konzept 1.2 „Die Herde“
 
 Stand: 10.11.2026 · Status: **Richtung bestätigt** (Prototyp gespielt), Details als Entwurf.
 Vorgänger: [Konzept 0.4](archiv/konzept-0.4.md) (Werte-Optimierung mit fünf Geografien, verworfen).
@@ -86,13 +86,30 @@ Zu Beginn jeder Jahreszeit 2 Karten, höchstens 5 auf der Hand. Kein Ablegen. Je
 - Übersteht die Herde die Eiszeit, ist das Zeitalter (die Partie) gewonnen. Wertung: Zahl der Überlebenden.
 - Wer viel eingreift, ist besser vorbereitet, ruft die Prüfung aber früher herbei.
 
-## 9. Offene Punkte (Vorschläge 💡, noch nicht entschieden)
+## 9. Entscheidungen und offene Punkte
 
-1. 💡 **Entwicklung der Herde:** Merkmale aus dem Erlebten (viele Winter im Wald → dichtes Fell; viele Wölfe →
-   Wachsamkeit; viel Wasser → Schwimmer). Wahl aus 2–3 Angeboten, wenn die Herde eine Größe erreicht.
-2. 💡 **Meta-Progression als Abstammung:** Merkmale und entdeckte Landschaften gehen ins Schöpfungsbuch; über viele
-   Zeitalter entwickelt sich die Herde bis zur ersten Menschengruppe.
-3. 💡 **Jahreskreis:** Je Jahreszeit ein Wetterfeld, dessen Karte jedes Jahr wiederkehrt (z. B. nasser Frühling).
+1. ✅ **Entwicklung der Herde** (Phase H3): Merkmale aus dem Erlebten (viele Winter im Wald → dichtes Fell; viele
+   Wölfe → Wachsamkeit; viel Wasser → Schwimmer). Wahl aus 2–3 Angeboten, wenn die Herde eine Größe erreicht.
+2. ✅ **Entwicklung bis zum Menschen innerhalb einer Partie, fester Weg** (Phase H3, ersetzt „Herde bleibt
+   Herde“). Jede Stufe bringt neue Bedürfnisse; was der einen Stufe half, kann der nächsten schaden, und Landschaft
+   braucht Jahre – der Spieler muss die Welt für die nächste Stufe vorbereiten. Entwurf der fünf Stufen:
+
+   | Stufe                              | Braucht                                               | Was sich umdreht                                     |
+   | ---------------------------------- | ----------------------------------------------------- | ---------------------------------------------------- |
+   | 1. Grasende Herde                  | Wiese, Wasser im Sommer, Gehölz im Winter             | Wölfe sind Feinde, Feuer ist Gefahr                  |
+   | 2. Waldsammler                     | Früchte in Wald und Busch, Wasser                     | Wald wird Nahrung, Wiese unwichtig                   |
+   | 3. Wanderer der offenen Landschaft | Wechsel aus offener Fläche und Wasser, weite Wege     | dichter Wald wird Hindernis                          |
+   | 4. Jäger und Sammler               | Beute (andere Tiere), Wasser                          | Wölfe werden Konkurrenten, Feuer wird Werkzeug       |
+   | 5. Mensch                          | Lagerplatz mit Wasser, Wiese und Wald nah beieinander | die Herde formt die Insel selbst mit (Rodung, Feuer) |
+
+   Auslöser: Merkmale aus dem Erlebten (9.1) machen die Herde reif für die nächste Stufe; der Spieler entscheidet,
+   wann sie den Sprung macht, ohne Rückweg. Die Eiszeit wird eine Prüfung unterwegs statt des Partie-Endes; Sieg =
+   Menschen erreicht und letzte Prüfung überstanden. Bedürfnisse je Stufe stehen in den Daten (`herd.stage`).
+
+3. ✅ **Jahreskreis mit Wetterfeldern** (Phase H4): je Jahreszeit ein Feld; eine Wetterkarte dort wirkt jedes Jahr
+   wieder in dieser Jahreszeit, bis sie ersetzt wird; höchstens ein Wechsel pro Jahr. Beispiele: nasser Frühling
+   (Wiesen wachsen doppelt, Gehölz auch), Gewittersommer (Wasser überall, mehr Brände), milder Herbst (längeres
+   Graswachstum, satte Wölfe), strenger Winter (Altwald stirbt, Rudel verhungern, Herde braucht mehr Schutz).
 4. 💡 **Größere Insel mit Wegen und Gabelungen**, mehrere Szenarien (Inseltypen), Ereignisse (Dürrejahr, Seuche).
 5. **Partielänge:** Ziel 20–30 Minuten; der Prototyp liegt bei 10–15 (Wildnis-Tempo anpassen).
 
@@ -104,5 +121,8 @@ von Konzept 0.4 (Geografien, Werte, Formen, Weltkarten) werden ersetzt; der Code
 
 ## Änderungsverlauf
 
+- **1.2 (10.11.2026):** Entwicklung in fünf Stufen bis zum Menschen innerhalb einer Partie, fester Weg.
+- **1.1 (10.11.2026):** Entscheidungen: Merkmale aus dem Erlebten (H3), Herde bleibt Herde, Wetterfelder im
+  Jahreskreis (H4).
 - **1.0 (10.11.2026):** Neuausrichtung „Die Herde“ nach Prototyp-Test. Loop-Hero-Grundidee (indirekte Steuerung,
   selbst gewählte Reibung) mit lebender Welt und selbst wählender Herde. Konzept 0.4 archiviert.

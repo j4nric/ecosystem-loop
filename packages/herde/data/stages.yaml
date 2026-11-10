@@ -1,0 +1,39 @@
+# Entwicklungsstufen der Herde und ihre Bedürfnisse. H1 kennt nur die Stufe des Prototyps; weitere Stufen
+# (Phase H3) kommen hier dazu, ohne dass die Engine umgebaut werden muss. Zahlen sind Platzhalter.
+#
+# eats / water / shelter   Landschaften, die als Futter, Wasser bzw. Schutz zählen
+# foodPerAnimal            Futterbedarf je Tier und Monat
+# eatFactor                frisst bis zu Bedarf × eatFactor (aufgerundet); Überschuss über den Bedarf wird Vorrat
+# fatCap                   Vorrat höchstens fatCap × Herdengröße
+# starveRate               vom Mangel, den der Vorrat nicht deckt, sterben Mangel × starveRate Tiere (aufgerundet)
+# birthRate                Nachwuchs im Geburtsmonat: Größe × birthRate × min(1, Vorrat / Größe) (abgerundet)
+# thirstAfter, thirstLoss  ab so vielen Monaten ohne Wasser in einer Wasser-Jahreszeit sterben Größe × thirstLoss
+# coldLoss                 ohne Schutz in einer Schutz-Jahreszeit sterben Größe × coldLoss
+# fireLoss                 brennt das Feld der Herde, sterben Größe × fireLoss
+# trail                    so viele zuletzt besuchte Felder meidet sie
+# choice                   Gewichte der Herdenwahl (Konzept 5): food × Futter in Reichweite (gedeckelt auf den
+#                          Fressbedarf); water, shelter, wolves (je Rudelstärke) und recent jeweils × Herdengröße;
+#                          stay ist ein kleiner Bonus für das eigene Feld
+stages:
+  - id: herd
+    name: { de: Herde, en: Herd }
+    eats: [steppe, meadow, bush, forest]
+    water: [river]
+    shelter: [bush, forest, old]
+    foodPerAnimal: 1
+    eatFactor: 1.5
+    fatCap: 2
+    starveRate: 0.5
+    birthRate: 0.3
+    thirstAfter: 2
+    thirstLoss: 0.1
+    coldLoss: 0.1
+    fireLoss: 0.2
+    trail: 4
+    choice:
+      food: 1
+      water: 0.6
+      shelter: 0.6
+      wolves: 0.8
+      recent: 0.3
+      stay: 0.01
