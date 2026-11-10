@@ -3,8 +3,8 @@
 ## Projekt
 
 „Being God (ain't easy)“ – Ökosystem-Spiel für iOS/Android. Leitdokument: `docs/konzept.md`.
-Regel-Engine in `packages/core` (plattformunabhängig, datengetrieben über YAML in `packages/core/data`),
-Bots/Simulation/Konsole in `packages/sim`, App später in `apps/web`.
+Regel-Engine „Die Herde“ in `packages/herde` (plattformunabhängig, datengetrieben über YAML in
+`packages/herde/data`, mit Zufalls-Bot, Konsole und Absturz-Test), App in `apps/web`.
 
 ## Workflow (vom Projektinhaber so festgelegt)
 
@@ -25,13 +25,13 @@ lässt den Reviewer prüfen und merged den PR.
 
 | Agent           | Bereich                    | Wann                                            |
 | --------------- | -------------------------- | ----------------------------------------------- |
-| `engine-dev`    | `packages/core/src`        | Regeln und Schema umsetzen                      |
-| `game-data`     | `packages/core/data`       | Konzept-Tabellen als YAML                       |
+| `engine-dev`    | `packages/herde/src`       | Regeln und Schema umsetzen                      |
+| `game-data`     | `packages/herde/data`      | Konzept-Tabellen als YAML                       |
 | `test-engineer` | `packages/*/tests`         | Regeln testgetrieben belegen                    |
 | `docs-cockpit`  | `docs/`, Cockpit-Datenbank | Antworten/Feedback lesen, Fortschritt eintragen |
 | `reviewer`      | nur lesend                 | vor jedem Merge eines größeren PRs              |
 | `app-dev`       | `apps/web`                 | ab Phase 4                                      |
-| `sim-analyst`   | `packages/sim`             | ab Phase 6 oder auf Wunsch                      |
+| `sim-analyst`   | `packages/herde` (Bots)    | ab H5 (Balancing) oder auf Wunsch               |
 
 Regeln für parallele Läufe:
 

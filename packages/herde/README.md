@@ -3,7 +3,7 @@
 Regel-Engine von Konzept 1.x „Die Herde“ ([Konzept](../../docs/konzept.md), Kapitel 4–8). Sie setzt die Regeln des
 Prototyps `prototypes/herde/index.html` um – datengetrieben, deterministisch und ohne Plattform-Abhängigkeit.
 Für denselben Seed und dieselben Züge liefert sie Schritt für Schritt denselben Zustand wie der Prototyp
-(`tests/prototype.test.ts`). Die alte Engine `packages/core` (Konzept 0.4) bleibt bis H2 daneben bestehen.
+(`tests/prototype.test.ts`).
 
 ## Aufbau
 
@@ -39,7 +39,7 @@ tests/                Vitest mit konstruierten Zuständen (Testinsel 7 × 7 aus 
 ```sh
 npm run herde -- --seed 7          # Konsole: p <hand> <x> <y> · w (Monat) · s (Jahreszeit) · q
 npm run herde:smoke -- --runs 20   # Zufalls-Bots bis zum Ende, jeder Zustand wird geprüft
-npm run validate                   # Datenprüfung (core und herde)
+npm run validate                   # Datenprüfung
 ```
 
 ## Fassade
@@ -113,7 +113,7 @@ Im Code mit `// AUSLEGUNG:` markiert:
   hier wird beides nach den Schritten 1–3 berechnet. Folge: Ein Waldbrand im nächsten Monat kann sich in der Absicht
   andeuten.
 - **Zufall** (`rng.ts`): Der Zustand schreitet wie im Prototyp fort (Mischung auf dem Zustand, dann
-  `+0x9e3779b9`), nicht wie in core – dadurch ist der Verlauf identisch zum Prototyp.
+  `+0x9e3779b9`), nicht wie in der alten Engine – dadurch ist der Verlauf identisch zum Prototyp.
 - **Rudelgründung** (`wolves.ts`): Felder, auf denen sich im selben Monat schon ein Rudel gegründet hat, gelten als
   besetzt (im Prototyp könnten zwei neue Rudel auf einem Feld landen).
 - **Fels nicht auf die Herde** (`cards.ts`): allgemein aus den Daten – keine Karte, deren Ziel unbetretbar ist.

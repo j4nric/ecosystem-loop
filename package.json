@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "description": "Being God (ain't easy) \u2013 \u00d6kosystem-Spiel f\u00fcr iOS/Android",
   "scripts": {
-    "play": "tsx packages/sim/src/cli/play.ts",
-    "sim": "tsx packages/sim/src/cli/simulate.ts",
-    "validate": "tsx packages/sim/src/cli/validate.ts && tsx packages/herde/src/node/cli/validate.ts",
+    "validate": "tsx packages/herde/src/node/cli/validate.ts",
     "herde": "tsx packages/herde/src/node/cli/play.ts",
     "herde:smoke": "tsx packages/herde/src/node/cli/smoke.ts",
     "test": "vitest run",

@@ -5,7 +5,7 @@ vServer. Dieselbe App läuft als native iOS-App in einer Capacitor-Hülle, siehe
 
 Stack: Vite + React + TypeScript, Three.js über React Three Fiber (+ drei), Low-Poly-Insel. Die App spricht mit der
 Engine nur über `@being-god/herde` (Konzept 1.2 „Die Herde“, [packages/herde](../../packages/herde/README.md)):
-`newGame`, `step`, `view`, `validateState`, `buildData`. Die alte Engine `@being-god/core` wird nicht mehr benutzt.
+`newGame`, `step`, `view`, `validateState`, `buildData`.
 
 ## Starten
 

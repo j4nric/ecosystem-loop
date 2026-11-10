@@ -1,11 +1,12 @@
 # Regeln im Prototyp 0.1 (Expeditions-Modell)
 
 > **Historisch.** Beschreibt die Engine aus PR #1, die noch dem Handover folgt. Das aktuelle Konzept steht in
-> [konzept.md](konzept.md); die Engine wird in den nächsten PRs darauf umgebaut.
+> [konzept.md](konzept.md). Die hier beschriebene Engine ist inzwischen entfernt und nur noch im Git-Verlauf
+> zu finden; die aktuelle Engine ist `packages/herde`.
 
 Dieses Dokument hält fest, wie das Konzept aus dem [Handover](handover.md) umgesetzt ist – inklusive
 der Auslegungen, die beim Programmieren nötig waren. Alles, was als **Parameter** markiert ist,
-steht in `packages/core/data/config.yaml` und lässt sich ohne Code ändern.
+stand in der Datei `data/config.yaml` der alten Engine und ließ sich ohne Code ändern.
 
 ## Zugablauf
 
