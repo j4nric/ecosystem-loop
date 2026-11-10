@@ -16,6 +16,8 @@ export const TEXT_KEYS = [
   'effect.transfer',
   'effect.draw',
   'effect.breath',
+  'effect.population',
+  'effect.move',
   'scope.neighbors',
   'scope.area',
   'scope.all',
@@ -30,6 +32,7 @@ export const TEXT_KEYS = [
   'cond.formKind',
   'cond.season',
   'cond.disturbedWithin',
+  'cond.minLevel',
   'cond.anyNeighbor',
   'cond.not',
   'join.and',
@@ -40,6 +43,7 @@ export const TEXT_KEYS = [
   'slot.when',
   'slot.zone',
   'slot.neighbor',
+  'slot.species',
   'kind.ideal',
   'kind.normal',
   'kind.degraded',
@@ -65,17 +69,30 @@ function statName(data: GameData, id: string, locale: Locale): string {
   return s ? s.name[locale] : id;
 }
 
+function speciesName(data: GameData, id: string, locale: Locale): string {
+  const s = data.species.get(id);
+  return s ? s.name[locale] : id;
+}
+
+/** Name einer Art im Kartentext: Art-Slot der Karte (dessen Bezeichnung) oder Art-Id. */
+function speciesRefName(data: GameData, card: Card | null, ref: string, locale: Locale): string {
+  const slot = card?.slots.find((s) => s.id === ref);
+  return slot ? slotLabel(data, slot, locale) : speciesName(data, ref, locale);
+}
+
+function rangeText(data: GameData, c: { gte?: number; lte?: number; eq?: number }, stat: string, locale: Locale) {
+  if (c.eq !== undefined) return tpl(data, 'cond.eq', locale, { stat, n: c.eq });
+  if (c.gte !== undefined && c.lte !== undefined) return tpl(data, 'cond.range', locale, { stat, a: c.gte, b: c.lte });
+  if (c.gte !== undefined) return tpl(data, 'cond.gte', locale, { stat, n: c.gte });
+  return tpl(data, 'cond.lte', locale, { stat, n: c.lte! });
+}
+
 export function describeCondition(data: GameData, c: Condition, locale: Locale): string {
   const list = (cs: readonly Condition[], join: 'join.and' | 'join.or') =>
     cs.map((x) => describeCondition(data, x, locale)).join(tpl(data, join, locale));
-  if ('stat' in c) {
-    const stat = statName(data, c.stat, locale);
-    if (c.eq !== undefined) return tpl(data, 'cond.eq', locale, { stat, n: c.eq });
-    if (c.gte !== undefined && c.lte !== undefined)
-      return tpl(data, 'cond.range', locale, { stat, a: c.gte, b: c.lte });
-    if (c.gte !== undefined) return tpl(data, 'cond.gte', locale, { stat, n: c.gte });
-    return tpl(data, 'cond.lte', locale, { stat, n: c.lte! });
-  }
+  if ('stat' in c) return rangeText(data, c, statName(data, c.stat, locale), locale);
+  if ('population' in c) return rangeText(data, c, speciesName(data, c.population, locale), locale);
+  if ('minLevel' in c) return tpl(data, 'cond.minLevel', locale, { n: c.minLevel });
   if ('hasStat' in c) return tpl(data, 'cond.hasStat', locale, { stat: statName(data, c.hasStat, locale) });
   if ('geography' in c)
     return tpl(data, 'cond.geography', locale, {
@@ -114,6 +131,13 @@ export function describeEffect(data: GameData, card: Card | null, e: Effect, loc
       into: statName(data, e.into, locale),
       n: e.amount,
     });
+  else if ('population' in e)
+    text = tpl(data, 'effect.population', locale, {
+      species: speciesRefName(data, card, e.population, locale),
+      n: signed(e.by),
+    });
+  else if ('move' in e)
+    text = tpl(data, 'effect.move', locale, { species: speciesRefName(data, card, e.move, locale), n: e.amount });
   else if ('draw' in e) return tpl(data, 'effect.draw', locale, { n: e.draw });
   else return tpl(data, 'effect.breath', locale, { n: signed(e.breath) });
 
@@ -145,7 +169,7 @@ export function cardText(data: GameData, card: Card, locale: Locale): string {
     parts.push(line);
   }
   const text = parts.join(sep);
-  const when = card.slots.flatMap((s) => s.when);
+  const when = card.slots.flatMap((s) => (s.kind === 'species' ? [] : s.when));
   if (when.length === 0) return text;
   const conds = when.map((c) => describeCondition(data, c, locale)).join(tpl(data, 'join.and', locale));
   return tpl(data, 'slot.when', locale, { conds, text });

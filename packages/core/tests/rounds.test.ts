@@ -13,7 +13,11 @@ describe('Partie-Aufbau', () => {
     expect(s.harmony).toBe(60);
     expect(s.breath).toBe(3);
     expect(s.hand).toHaveLength(4);
-    expect(s.hand.length + s.drawPile.length).toBe(data.config.starterDeck.length);
+    // Startdeck plus die Gaben des Startlebens (Algenblüte, Zersetzung)
+    expect(s.hand.length + s.drawPile.length).toBe(data.config.starterDeck.length + 2);
+    expect([...s.hand, ...s.drawPile].map((c) => c.card)).toEqual(
+      expect.arrayContaining(['algal_bloom', 'decomposition']),
+    );
     expect(s.zones.map((z) => z.id)).toEqual(['mountains', 'forest', 'plains', 'river', 'coast']);
     expect(s.zones.every((z) => z.level === 1)).toBe(true);
   });
@@ -81,7 +85,7 @@ describe('Rundenablauf (Konzept 3)', () => {
   });
 
   it('eine Runde ist eine Jahreszeit, vier Runden sind ein Jahr', () => {
-    let s = game({ hand: [], draw: [] });
+    let s = game({ hand: [], draw: [], life: false });
     const seasons: string[] = [];
     for (let i = 0; i < 5; i++) {
       const r = endTurn(s);

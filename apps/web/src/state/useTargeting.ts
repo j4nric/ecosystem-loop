@@ -1,62 +1,76 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { CardView, GameView, Targets } from '@core/api';
+import type { GameClient, PreviewView } from '../client/index.ts';
 
-export interface Targeting {
-  card: CardView;
+interface Selection {
+  uid: number;
   targets: Targets;
-  slotIndex: number;
 }
 
 /** Slot-Arten, die durch Antippen einer Zone gefüllt werden. */
 const ZONE_KINDS = new Set(['zone', 'neighbor']);
 
 /**
- * Führt durch die Zielwahl einer Karte: Slot für Slot wird eine Zone angetippt.
- * `neighbor` erlaubt nur Nachbarn der zuvor gewählten Zone (der Slot sagt noch nicht, wovon – siehe Engine-Wunsch).
+ * Führt durch einen Kartenzug: Karte wählen → Slot für Slot eine gültige Zone antippen → Vorschau → „Spielen“.
+ * Gültige Zonen kommen vom Client (`legalTargets`, in der Engine über `legalPlays`), nie aus App-Regeln.
+ * Sind alle Slots belegt, ersetzt ein weiteres Antippen die Wahl des letzten Slots (Vorschauen vergleichen).
  */
-export function useTargeting(view: GameView, onComplete: (uid: number, targets: Targets) => void) {
-  const [targeting, setTargeting] = useState<Targeting | null>(null);
+export function useTargeting(client: GameClient, view: GameView, onComplete: (uid: number, targets: Targets) => void) {
+  const [selection, setSelection] = useState<Selection | null>(null);
 
-  const start = useCallback(
-    (card: CardView) => {
-      if (!card.playable) return;
-      if (card.slots.length === 0) {
-        onComplete(card.uid, {});
-        return;
-      }
-      setTargeting({ card, targets: {}, slotIndex: 0 });
-    },
-    [onComplete],
-  );
-
-  const cancel = useCallback(() => setTargeting(null), []);
-
-  const slot = targeting ? targeting.card.slots[targeting.slotIndex] : undefined;
+  // Karte immer aus der aktuellen View lesen; ist sie nicht mehr auf der Hand, endet die Auswahl.
+  const active = useMemo(() => {
+    const card = selection ? view.hand.find((c) => c.uid === selection.uid) : undefined;
+    return card && selection ? { card, targets: selection.targets } : null;
+  }, [selection, view.hand]);
+  const slot = active?.card.slots.find((s) => active.targets[s.id] === undefined);
+  const complete = active !== null && slot === undefined;
+  /** Slot, den ein Antippen gerade füllt: der nächste offene oder (wenn vollständig) der letzte. */
+  const editSlot = slot ?? (complete ? active.card.slots.at(-1) : undefined);
 
   const validZones = useMemo<Set<string>>(() => {
-    if (!targeting || !slot || !ZONE_KINDS.has(slot.kind)) return new Set();
-    if (slot.kind === 'neighbor') {
-      const previous = Object.values(targeting.targets).at(-1);
-      const zone = view.zones.find((z) => z.id === previous);
-      return new Set(zone ? zone.neighbors : []);
-    }
-    return new Set(view.zones.map((z) => z.id));
-  }, [targeting, slot, view.zones]);
+    if (!active || !editSlot || !ZONE_KINDS.has(editSlot.kind)) return new Set();
+    const chosen = { ...active.targets };
+    delete chosen[editSlot.id];
+    return new Set(client.legalTargets(active.card.uid, chosen));
+  }, [client, active, editSlot]);
+
+  const preview = useMemo<PreviewView | null>(() => {
+    if (!active || !complete) return null;
+    return client.preview(active.card.uid, active.targets);
+  }, [client, active, complete]);
+
+  const start = useCallback((c: CardView) => {
+    if (!c.playable) return;
+    setSelection({ uid: c.uid, targets: {} });
+  }, []);
+
+  const cancel = useCallback(() => setSelection(null), []);
 
   const pickZone = useCallback(
     (zoneId: string) => {
-      if (!targeting || !slot || !validZones.has(zoneId)) return;
-      const targets = { ...targeting.targets, [slot.id]: zoneId };
-      const nextIndex = targeting.slotIndex + 1;
-      if (nextIndex >= targeting.card.slots.length) {
-        setTargeting(null);
-        onComplete(targeting.card.uid, targets);
-      } else {
-        setTargeting({ ...targeting, targets, slotIndex: nextIndex });
-      }
+      if (!active || !editSlot || !validZones.has(zoneId)) return;
+      setSelection({ uid: active.card.uid, targets: { ...active.targets, [editSlot.id]: zoneId } });
     },
-    [targeting, slot, validZones, onComplete],
+    [active, editSlot, validZones],
   );
 
-  return { targeting, slot, validZones, start, cancel, pickZone, slotSupported: !slot || ZONE_KINDS.has(slot.kind) };
+  const confirm = useCallback(() => {
+    if (!active || !complete) return;
+    setSelection(null);
+    onComplete(active.card.uid, active.targets);
+  }, [active, complete, onComplete]);
+
+  return {
+    targeting: active,
+    slot,
+    complete,
+    validZones,
+    preview,
+    start,
+    cancel,
+    pickZone,
+    confirm,
+    slotSupported: !slot || ZONE_KINDS.has(slot.kind),
+  };
 }

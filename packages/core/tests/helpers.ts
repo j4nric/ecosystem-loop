@@ -20,12 +20,27 @@ export function dataWith(patch: (r: Loose) => void): GameData {
   return buildGameData(r as RawData);
 }
 
-/** Partie mit kontrollierter Hand, kontrolliertem Stapel und Odem. Zonen behalten die Ruhewerte. */
+/**
+ * Partie mit kontrollierter Hand, kontrolliertem Stapel und Odem. Zonen behalten die Ruhewerte.
+ * life: false entfernt das Startleben (Welt ohne Arten wie in Phase 1).
+ */
 export function game(
-  opts: { hand?: string[]; draw?: string[]; breath?: number; d?: GameData; seed?: string; scenario?: string } = {},
+  opts: {
+    hand?: string[];
+    draw?: string[];
+    breath?: number;
+    d?: GameData;
+    seed?: string;
+    scenario?: string;
+    life?: boolean;
+  } = {},
 ): GameState {
   const d = opts.d ?? data;
   const s = newGame(d, { seed: opts.seed ?? 'test', scenario: opts.scenario });
+  if (opts.life === false) {
+    for (const z of s.zones) z.populations = {};
+    s.species = {};
+  }
   let uid = 1000;
   if (opts.hand) s.hand = opts.hand.map((card) => ({ uid: uid++, card }));
   if (opts.draw) s.drawPile = opts.draw.map((card) => ({ uid: uid++, card }));
@@ -68,4 +83,28 @@ export function runRules(s: GameState, ids: string[], d: GameData = data): GameE
 /** Ruhewerte einer Geografie als Kopie. */
 export function rest(geography: string): Record<string, number> {
   return { ...data.geographies.get(geography)!.rest };
+}
+
+/** Welt ohne Startleben, leere Hand und leerer Stapel (für Lebens-Tests). */
+export function bare(round = 1, d: GameData = data): GameState {
+  const s = game({ hand: [], draw: [], life: false, d });
+  s.round = round;
+  return s;
+}
+
+/** Setzt Bestände einer Zone (ohne Ereignisse) und merkt die Arten als lebend. */
+export function setPops(s: GameState, id: string, pops: Record<string, number>): void {
+  const z = getZone(s, id);
+  for (const [sp, n] of Object.entries(pops)) {
+    if (n > 0) {
+      z.populations[sp] = n;
+      s.species[sp] ??= { since: 0, extinct: null };
+    } else delete z.populations[sp];
+  }
+}
+
+/** Setzt Werte einer Zone und bestimmt die Form neu (wie die Natur-Phase). */
+export function shape(s: GameState, id: string, v: Record<string, number>, d: GameData = data): void {
+  setStats(s, id, v);
+  runRules(s, ['forms'], d);
 }

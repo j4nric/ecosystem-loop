@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import type { GameData } from '../schema/index.ts';
 import type { GameEvent, GameState } from '../state.ts';
+import { totalPopulation } from '../population.ts';
 import { clamp, formKindOf, livingSpecies } from '../world.ts';
 import { defineRule } from './module.ts';
 
@@ -9,7 +10,7 @@ export const HarmonyParams = z.strictObject({});
 
 type Part = Extract<GameEvent, { type: 'harmonyChanged' }>['parts'][number];
 
-/** Einzelbeiträge dieser Runde (ohne Aussterben/Hunger/Mensch – die kommen mit Phase 2). */
+/** Einzelbeiträge dieser Runde: Formen, Störungen, Hunger je Zone, Arten, Aussterben, Menschen. */
 export function harmonyParts(data: GameData, state: GameState): Part[] {
   const w = data.harmony.perRound;
   const parts: Part[] = [];
@@ -20,9 +21,18 @@ export function harmonyParts(data: GameData, state: GameState): Part[] {
     // Daher ein eigener Beitrag je gestörter Zone (Platzhalter in harmony.yaml).
     if (zone.lastDisturbance === state.round && w.disturbance !== 0)
       parts.push({ source: 'disturbance', zone: zone.id, amount: w.disturbance });
+    if (zone.lastHunger === state.round && w.hungerPerZone !== 0)
+      parts.push({ source: 'hunger', zone: zone.id, amount: w.hungerPerZone });
   }
   const species = livingSpecies(state);
   if (species > 0 && w.perSpecies !== 0) parts.push({ source: 'species', zone: null, amount: species * w.perSpecies });
+  for (const [id, rec] of Object.entries(state.species))
+    if (rec.extinct === state.round && w.extinction !== 0)
+      parts.push({ source: `extinction:${id}`, zone: null, amount: w.extinction });
+  const humans = [...data.species.values()]
+    .filter((s) => s.human)
+    .reduce((n, s) => n + totalPopulation(state, s.id), 0);
+  if (humans > 0 && w.perHuman !== 0) parts.push({ source: 'humans', zone: null, amount: humans * w.perHuman });
   return parts;
 }
 

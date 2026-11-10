@@ -4,10 +4,10 @@ import { cardText, describeCondition, describeEffect } from '../src/cards/text.t
 import { holds } from '../src/conditions.ts';
 import { preview, view } from '../src/game.ts';
 import type { Condition } from '../src/schema/index.ts';
-import { data, dataWith, game, play, setStats, uidOf, zone } from './helpers.ts';
+import { data, dataWith, endTurn, game, play, setStats, uidOf, zone } from './helpers.ts';
 
 describe('view', () => {
-  it('liefert alle Felder von GameView (Phase-2/3-Felder leer)', () => {
+  it('liefert alle Felder von GameView (Phase-3-Felder leer)', () => {
     const s = game({ hand: ['thunderstorm', 'healing'], draw: ['rain'], breath: 3 });
     const v = view(data, s, 'de');
     expect(v).toMatchObject({
@@ -25,7 +25,7 @@ describe('view', () => {
       minPlays: 1,
       canEndTurn: false,
       forecast: null,
-      highestTier: 0,
+      highestTier: 1,
     });
     expect(v.zones).toHaveLength(5);
     const forest = v.zones.find((z) => z.id === 'forest')!;
@@ -35,9 +35,10 @@ describe('view', () => {
       form: { id: 'mixed_forest', name: 'Mischwald', kind: 'normal' },
       level: 1,
       levelProgress: 0,
-      populations: [],
+      populations: [{ species: 'beetle', name: 'Käfer', tier: 1, count: 3 }],
       tags: [],
     });
+    expect(v.zones.find((z) => z.id === 'mountains')!.populations).toEqual([]);
     expect(forest.stats.map((x) => x.id)).toEqual(['light', 'moisture', 'vegetation', 'deadwood']);
     expect(forest.stats[3]).toEqual({ id: 'deadwood', name: 'Totholz', value: 2, max: 5 });
     expect(forest.neighbors).toEqual(['mountains', 'river', 'plains']);
@@ -83,9 +84,26 @@ describe('view', () => {
     ]);
     expect(v.zones.find((z) => z.id === 'river')!.warnings.map((w) => w.trigger)).toEqual(['deluge']);
     expect(v.zones.find((z) => z.id === 'plains')!.warnings).toEqual([]);
-    // Welke prüft erst nach dem Effekt – keine Vorab-Warnung
+    // Welke prüft erst nach dem Effekt – kein Feld mit Feuchte ≤ 2 ⇒ keine Warnung
     const t = game({ hand: ['drought', 'inspiration'] });
+    setStats(t, 'mountains', { moisture: 3 });
     expect(view(data, t).zones.every((z) => z.warnings.length === 0)).toBe(true);
+  });
+
+  it('Schwellen mit check "after" warnen anhand der Grundeffekte: Dürre auf Feuchte 2 ⇒ Welke', () => {
+    const s = game({ hand: ['drought'] });
+    setStats(s, 'plains', { moisture: 2 });
+    setStats(s, 'forest', { moisture: 3 });
+    const before = structuredClone(s);
+    const v = view(data, s, 'de');
+    expect(s).toEqual(before);
+    expect(v.zones.find((z) => z.id === 'plains')!.warnings).toEqual([
+      { card: 'drought', trigger: 'wilting', name: 'Welke', icon: '🥀' },
+    ]);
+    expect(v.zones.find((z) => z.id === 'forest')!.warnings).toEqual([]);
+    // Sturm: Grundeffekte auf den zweiten Slot (Fallrichtung) bleiben bei der Warnung außen vor
+    const t = game({ hand: ['storm'] });
+    expect(() => view(data, t)).not.toThrow();
   });
 
   it('Formen ohne Daten werden mit ihrer Id angezeigt', () => {
@@ -96,6 +114,42 @@ describe('view', () => {
       name: 'mystery',
       kind: 'normal',
     });
+  });
+});
+
+describe('view: nächster Odem-Zufluss', () => {
+  it('rechnet die Harmonie-Bilanz der Natur-Phase ein', () => {
+    const s = game({ life: false });
+    s.harmony = 74; // vor der Bilanz: 1 + ⌊74/25⌋ = 3
+    // Frühling: Schneeschmelze und Wachstum machen die Berge zur Alm (ideal +2) ⇒ 76 ⇒ 4
+    expect(view(data, s).breath.nextIncome).toBe(4);
+    setStats(s, 'plains', { vegetation: 0, moisture: 0 }); // Ödland −3 ⇒ 73 ⇒ 3
+    expect(view(data, s).breath.nextIncome).toBe(3);
+  });
+
+  it('ist auf max − aktueller Odem gekappt und 0 nach dem Kollaps', () => {
+    const s = game({ life: false });
+    s.breath = 9;
+    expect(view(data, s).breath.nextIncome).toBe(1);
+    s.breath = 10;
+    expect(view(data, s).breath.nextIncome).toBe(0);
+    s.breath = 0;
+    s.harmony = 1;
+    setStats(s, 'plains', { vegetation: 0, moisture: 0 }); // Ödland −3, Alm +2 ⇒ Kollaps, kein Zufluss
+    expect(view(data, s).breath.nextIncome).toBe(0);
+    s.phase = 'over';
+    expect(view(data, s).breath.nextIncome).toBe(0);
+  });
+
+  it('stimmt mit dem tatsächlichen Zufluss beim Rundenende überein', () => {
+    let s = game({ hand: ['thunderstorm'] });
+    for (let i = 0; i < 12; i++) {
+      s.hand = [];
+      const expected = view(data, s).breath.nextIncome;
+      const before = s.breath;
+      s = endTurn(s).state;
+      expect(s.breath - before, `Runde ${i + 1}`).toBe(expected);
+    }
   });
 });
 

@@ -24,6 +24,8 @@ describe('Spieldaten', () => {
     expect(data.config.starterDeck.length).toBeLessThanOrEqual(10);
     for (const c of ['thunderstorm', 'drought', 'storm', 'frost', 'rain', 'sun', 'seeds', 'fertilizer', 'healing'])
       expect(data.cards.has(c), c).toBe(true);
+    expect(data.species.size).toBe(13);
+    expect(data.config.pipeline).toEqual(expect.arrayContaining(['life', 'evolution', 'score', 'harmony', 'breath']));
     expect(Object.keys(DATA_FILES).sort()).toEqual(Object.keys(raw).sort());
   });
 
@@ -93,6 +95,87 @@ describe('Spieldaten', () => {
     ],
     ['Szenario: Zone', (r) => (r.scenarios.scenarios[0].zones = { moon: {} }), /unbekannte Zone moon/],
     ['Szenario: Wert', (r) => (r.scenarios.scenarios[0].adjust = { heat: 1 }), /unbekannter Wert heat/],
+    [
+      'Szenario: Zone ohne diesen Wert',
+      (r) => (r.scenarios.scenarios[0].zones = { river: { stats: { salt: 2 } } }),
+      /Zone river hat keinen Wert salt/,
+    ],
+    [
+      'Szenario: Wert außerhalb der Skala',
+      (r) => (r.scenarios.scenarios[0].zones = { river: { stats: { water: 7 } } }),
+      /river\.water: 7 außerhalb/,
+    ],
+    ['Szenario: Harmonie 0', (r) => (r.scenarios.scenarios[0].harmony = 0), /Harmonie 0 außerhalb 1–100/],
+    ['Szenario: Harmonie über max', (r) => (r.scenarios.scenarios[0].harmony = 101), /Harmonie 101 außerhalb/],
+    ['Szenario: Odem über max', (r) => (r.scenarios.scenarios[0].breath = 11), /Odem 11 außerhalb 0–10/],
+    [
+      'Szenario: Startleben Art',
+      (r) => (r.scenarios.scenarios[0].populations = { river: { dragon: 1 } }),
+      /unbekannte Art dragon/,
+    ],
+    [
+      'Szenario: Startleben Zone',
+      (r) => (r.scenarios.scenarios[0].populations = { moon: { fish: 1 } }),
+      /unbekannte Zone moon/,
+    ],
+    [
+      'Szenario: Bestand',
+      (r) => (r.scenarios.scenarios[0].populations = { river: { fish: 10 } }),
+      /river\.fish=10 außerhalb 0–9/,
+    ],
+    ['Art: Vorfahr unbekannt', (r) => (r.species.species[2].ancestor = 'amoeba'), /unbekannter Vorfahr amoeba/],
+    ['Art: Vorfahr nicht niedriger', (r) => (r.species.species[2].ancestor = 'frog'), /keine niedrigere Stufe/],
+    ['Art: Lebensraum', (r) => r.species.species[0].habitat.push('ocean'), /unbekannte Form ocean/],
+    ['Art: Nahrung', (r) => r.species.species[0].diet.push('rocks'), /Nahrung rocks ist weder Wert noch Art/],
+    ['Art: Gabe', (r) => r.species.species[0].gift.push('nope'), /unbekannte Gabe nope/],
+    ['Art: Jagd', (r) => (r.species.species[0].hunts = ['dragon']), /jagt unbekannte Art dragon/],
+    [
+      'Art: Bedingung',
+      (r) => (r.species.species[0].evolve = [{ population: 'dragon', gte: 1 }]),
+      /unbekannte Art dragon/,
+    ],
+    ['Art: Id ist Wert', (r) => (r.species.species[0].id = 'light'), /Id ist schon ein Wert/],
+    ['Art doppelt', (r) => r.species.species.push(r.species.species[0]), /Art doppelt: plankton/],
+    [
+      'Art-Slot: Zone',
+      (r) =>
+        (r.cards.cards[0].slots = [
+          { id: 'x', kind: 'species', in: 'zone' },
+          { id: 'zone', kind: 'zone' },
+        ]),
+      /Slot x verweist/,
+    ],
+    [
+      'Art-Slot: eats',
+      (r) => r.cards.cards[0].slots.push({ id: 'x', kind: 'species', in: 'zone', eats: 'rocks' }),
+      /eats=rocks/,
+    ],
+    [
+      'Art-Slot: Arten',
+      (r) => r.cards.cards[0].slots.push({ id: 'x', kind: 'species', in: 'zone', species: ['dragon'] }),
+      /unbekannte Art dragon/,
+    ],
+    [
+      'Slot-Id ist Art',
+      (r) => r.cards.cards[0].slots.push({ id: 'fish', kind: 'zone' }),
+      /Slot-Id fish ist schon eine Art/,
+    ],
+    [
+      'Effekt: Art',
+      (r) => r.cards.cards[0].effects.push({ population: 'dragon', by: 1, at: 'zone' }),
+      /unbekannte Art dragon/,
+    ],
+    [
+      'Effekt: move from',
+      (r) => r.cards.cards[0].effects.push({ move: 'fish', amount: 1, from: 'x', at: 'zone' }),
+      /move from=x/,
+    ],
+    ['rules.life.overuse: Wert', (r) => (r.config.rules.life.overuse = { heat: [] }), /unbekannter Wert heat/],
+    [
+      'rules.evolution.pressure',
+      (r) => (r.config.rules.evolution.pressure.when = [{ form: 'castle' }]),
+      /unbekannte Form castle/,
+    ],
     ['Szenario standard fehlt', (r) => (r.scenarios.scenarios[0].id = 'other'), /standard/],
     ['Pipeline: Modul', (r) => r.config.pipeline.push('weather'), /unbekanntes Modul weather/],
     ['rules: Modul', (r) => (r.config.rules.weather = {}), /rules: unbekanntes Modul weather/],

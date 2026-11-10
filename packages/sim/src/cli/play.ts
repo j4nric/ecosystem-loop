@@ -51,7 +51,7 @@ function render(v: GameView): void {
   console.log(
     `\n══ Runde ${v.round} · Jahr ${v.year} · ${v.season.name} ══  Harmonie ${fmt(v.harmony.value)}/${v.harmony.max} ` +
       `(${signed(Number(fmt(v.harmony.trend)))}) · Odem ${v.breath.value}/${v.breath.max} (+${v.breath.nextIncome} zur Bilanz)` +
-      ` · Stapel ${v.drawPile} · Ablage ${v.discardPile}`,
+      ` · Stapel ${v.drawPile} · Ablage ${v.discardPile} · Punkte ${v.score}`,
   );
   v.zones.forEach((z, i) => {
     const stats = z.stats.map((s) => `${short(s.id)}${s.value}`).join(' ');
@@ -60,6 +60,7 @@ function render(v: GameView): void {
       `  ${i + 1}) ${z.geographyName.padEnd(10)} ${z.form.name.padEnd(20)} ${KIND[z.form.kind].padEnd(10)} ` +
         `Stufe ${z.level} ${bar(z.levelProgress)}  ${stats.padEnd(16)} ${warn}`,
     );
+    if (z.populations.length > 0) console.log(`       ${z.populations.map((p) => `${p.name} ${p.count}`).join(' · ')}`);
   });
   console.log(`  Hand (gespielt ${v.playsThisTurn}, Pflicht ${v.minPlays}):`);
   v.hand.forEach((c, i) => {
@@ -75,6 +76,8 @@ function describe(d: GameData, e: GameEvent): string | null {
   const stat = (id: string) => d.stats.get(id)?.name.de ?? id;
   const zone = (id: string) => d.geographies.get(d.zones.find((z) => z.id === id)?.geography ?? '')?.name.de ?? id;
   const form = (id: string) => d.forms.get(id)?.form.name.de ?? id;
+  const sp = (id: string) => d.species.get(id)?.name.de ?? id;
+  const food = (id: string) => d.stats.get(id)?.name.de ?? sp(id);
   switch (e.type) {
     case 'cardPlayed':
       return `  ▶ ${d.cards.get(e.card)?.name.de ?? e.card} auf ${Object.values(e.targets).map(zone).join(' → ') || 'alle'}`;
@@ -100,6 +103,22 @@ function describe(d: GameData, e: GameEvent): string | null {
       return `  ~ ${d.seasons.find((s) => s.id === e.season)?.name.de ?? e.season} wirkt`;
     case 'couplingApplied':
       return `  ~ ${d.couplings.find((c) => c.id === e.coupling)?.name.de ?? e.coupling}: ${zone(e.from)} → ${zone(e.to)}`;
+    case 'populationChanged':
+      return `    ${zone(e.zone)}: ${sp(e.species)} ${e.from} → ${e.to}  (${POP_CAUSE[e.cause] ?? cause(d, e.cause)})`;
+    case 'hunger':
+      return `  ⚠ Hunger: ${sp(e.species)} in ${zone(e.zone)}`;
+    case 'overpopulation':
+      return `  ⚠ Überpopulation in ${zone(e.zone)}: ${food(e.food)} leergefressen`;
+    case 'migrated':
+      return `  ➜ ${e.count} ${sp(e.species)} wandert: ${zone(e.from)} → ${zone(e.to)}`;
+    case 'speciesEmerged':
+      return `  ✶ ${e.first ? 'Neue Art' : 'Evolution'}: ${sp(e.species)} aus ${sp(e.ancestor)} in ${zone(e.zone)}`;
+    case 'speciesExtinct':
+      return `  ✝ ${sp(e.species)} ist ausgestorben`;
+    case 'giftAdded':
+      return `  ✚ Gabe ins Deck: ${d.cards.get(e.card)?.name.de ?? e.card}`;
+    case 'scored':
+      return `  ★ ${e.points} Punkte${e.doubled ? ' (doppelt: Menschen)' : ''} · gesamt ${e.total}`;
     case 'roundStarted':
     case 'cardDrawn':
     case 'disturbance':
@@ -107,6 +126,16 @@ function describe(d: GameData, e: GameEvent): string | null {
       return null;
   }
 }
+
+const POP_CAUSE: Record<string, string> = {
+  growth: 'Wachstum',
+  hunger: 'Hunger',
+  degraded: 'verödet',
+  overhunted: 'zu viele Räuber',
+  hunted: 'gejagt',
+  migration: 'Wanderung',
+  evolution: 'Evolution',
+};
 
 const LEVEL_REASON = { rise: 'Aufstieg', disturbance: 'Störung', degraded: 'verödet', formChanged: 'Formwechsel' };
 
@@ -117,6 +146,7 @@ function cause(d: GameData, c: string): string {
   if (kind === 'season') return d.seasons.find((s) => s.id === id)?.name.de ?? id;
   if (kind === 'coupling') return d.couplings.find((x) => x.id === id)?.name.de ?? id;
   if (kind === 'healing') return 'Selbstheilung';
+  if (kind === 'overpopulation') return 'Überpopulation';
   return c;
 }
 
@@ -127,7 +157,10 @@ async function chooseTargets(v: GameView, s: GameState, uid: number): Promise<Ta
   const chosen: Targets = {};
   for (const slot of card.slots) {
     const values = [...new Set(options.map((p) => p.targets[slot.id]!))];
+    // Zonen werden mit ihrer Nummer gewählt, Arten mit ihrer Position in der Auswahl.
+    const isSpecies = slot.kind === 'species';
     const label = (id: string) => {
+      if (isSpecies) return `${values.indexOf(id) + 1}=${data.species.get(id)?.name.de ?? id}`;
       const z = v.zones.find((x) => x.id === id)!;
       return `${v.zones.indexOf(z) + 1}=${z.geographyName}`;
     };
@@ -138,7 +171,7 @@ async function chooseTargets(v: GameView, s: GameState, uid: number): Promise<Ta
     } else {
       const a = await ask(`  ${slot.label}? ${values.map(label).join('  ')}  (leer = abbrechen): `);
       if (!a) return null;
-      pickd = v.zones[Number(a) - 1]?.id;
+      pickd = isSpecies ? values[Number(a) - 1] : v.zones[Number(a) - 1]?.id;
       if (!pickd || !values.includes(pickd)) {
         console.log('  Ungültige Auswahl.');
         return null;

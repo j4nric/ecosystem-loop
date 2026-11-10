@@ -4,6 +4,9 @@
  */
 import type { z } from 'zod';
 import { TEXT_KEYS } from './cards/text.ts';
+import { lifeParams } from './population.ts';
+import { breathParams } from './rules/breath.ts';
+import { evolutionParams } from './rules/evolution.ts';
 import { RULES } from './rules/index.ts';
 import {
   CardsFile,
@@ -14,6 +17,8 @@ import {
   MapFile,
   ScenariosFile,
   SeasonsFile,
+  SpeciesFile,
+  type Card,
   type Condition,
   type Effect,
   type FormRef,
@@ -29,6 +34,7 @@ export interface RawData {
   couplings: unknown;
   cards: unknown;
   harmony: unknown;
+  species: unknown;
   scenarios: unknown;
 }
 
@@ -41,6 +47,7 @@ export const DATA_FILES: Readonly<Record<keyof RawData, string>> = {
   couplings: 'couplings.yaml',
   cards: 'cards.yaml',
   harmony: 'harmony.yaml',
+  species: 'species.yaml',
   scenarios: 'scenarios.yaml',
 };
 
@@ -66,8 +73,9 @@ export function buildGameData(raw: RawData): GameData {
   const couplings = parse('couplings', CouplingsFile);
   const cards = parse('cards', CardsFile);
   const harmony = parse('harmony', HarmonyFile);
+  const species = parse('species', SpeciesFile);
   const scenarios = parse('scenarios', ScenariosFile);
-  if (!config || !geo || !map || !seasons || !couplings || !cards || !harmony || !scenarios)
+  if (!config || !geo || !map || !seasons || !couplings || !cards || !harmony || !species || !scenarios)
     throw new DataError(problems);
 
   const geographies = indexById('Geografie', geo.geographies, problems);
@@ -100,6 +108,7 @@ export function buildGameData(raw: RawData): GameData {
     couplings: couplings.couplings,
     categories: indexById('Kategorie', cards.categories, problems),
     cards: indexById('Karte', cards.cards, problems),
+    species: indexById('Art', species.species, problems),
     harmony,
     scenarios: indexById('Szenario', scenarios.scenarios, problems),
   };
@@ -130,6 +139,7 @@ function checkReferences(d: GameData, p: string[]): void {
       if ('hasStat' in c) statOk(where, c.hasStat);
       if ('geography' in c && !d.geographies.has(c.geography)) p.push(`${where}: unbekannte Geografie ${c.geography}`);
       if ('form' in c && !d.forms.has(c.form)) p.push(`${where}: unbekannte Form ${c.form}`);
+      if ('population' in c && !d.species.has(c.population)) p.push(`${where}: unbekannte Art ${c.population}`);
       if ('season' in c && !d.seasons.some((s) => s.id === c.season))
         p.push(`${where}: unbekannte Jahreszeit ${c.season}`);
       if ('anyNeighbor' in c) checkCond(where, c.anyNeighbor);
@@ -137,9 +147,25 @@ function checkReferences(d: GameData, p: string[]): void {
       if ('any' in c) checkCond(where, c.any);
     }
   };
-  /** Prüft Effekte; `names` sind die gebundenen Zonen-Namen (Slots bzw. self/source). */
-  const checkEffects = (where: string, es: readonly Effect[], names: ReadonlySet<string>) => {
+  /**
+   * Prüft Effekte; `names` sind die gebundenen Zonen-Namen (Slots bzw. self/source),
+   * `speciesSlots` die Art-Slots einer Karte.
+   */
+  const checkEffects = (
+    where: string,
+    es: readonly Effect[],
+    names: ReadonlySet<string>,
+    speciesSlots: ReadonlySet<string> = new Set(),
+  ) => {
+    const speciesOk = (ref: string) => {
+      if (!speciesSlots.has(ref) && !d.species.has(ref)) p.push(`${where}: unbekannte Art ${ref}`);
+    };
     for (const e of es) {
+      if ('population' in e) speciesOk(e.population);
+      if ('move' in e) {
+        speciesOk(e.move);
+        if (!names.has(e.from)) p.push(`${where}: move from=${e.from} ist keine gebundene Zone`);
+      }
       if ('adjust' in e) statOk(where, e.adjust);
       if ('set' in e) statOk(where, e.set);
       if ('restore' in e && e.restore !== 'all') statOk(where, e.restore);
@@ -220,29 +246,53 @@ function checkReferences(d: GameData, p: string[]): void {
   for (const card of d.cards.values()) {
     const where = `Karte ${card.id}`;
     if (!d.categories.has(card.category)) p.push(`${where}: unbekannte Kategorie ${card.category}`);
-    const slots = new Set<string>();
-    for (const s of card.slots) {
-      if (slots.has(s.id)) p.push(`${where}: Slot doppelt ${s.id}`);
-      if (s.kind === 'neighbor' && !slots.has(s.of))
-        p.push(`${where}: Slot ${s.id} verweist auf unbekannten/späteren Slot ${s.of}`);
-      checkCond(where, s.when);
-      slots.add(s.id);
-    }
-    checkEffects(where, card.effects, slots);
+    const { zones: slots, species: speciesSlots } = checkSlots(d, card, where, p);
+    for (const s of card.slots) if (s.kind !== 'species') checkCond(where, s.when);
+    checkEffects(where, card.effects, slots, speciesSlots);
     for (const t of card.triggers) {
-      if (!slots.has(t.at)) p.push(`${where}: Schwelle ${t.id} at=${t.at} ist kein Slot`);
+      if (!slots.has(t.at)) p.push(`${where}: Schwelle ${t.id} at=${t.at} ist kein Zonen-Slot`);
       checkCond(`${where} Schwelle ${t.id}`, t.when);
-      checkEffects(`${where} Schwelle ${t.id}`, t.effects, slots);
+      checkEffects(`${where} Schwelle ${t.id}`, t.effects, slots, speciesSlots);
     }
   }
 
+  // Arten
+  checkSpecies(d, p, checkCond);
+  const life = d.params.life !== undefined ? lifeParams(d) : null;
+  if (life)
+    for (const [stat, effects] of Object.entries(life.overuse)) {
+      statOk('config.yaml rules.life.overuse', stat);
+      checkEffects(`config.yaml rules.life.overuse.${stat}`, effects, self);
+    }
+  if (d.params.evolution !== undefined)
+    checkCond('config.yaml rules.evolution.pressure', evolutionParams(d).pressure.when);
+
   // Szenarien
+  const breathMax = d.params.breath !== undefined ? breathParams(d).max : null;
   for (const s of d.scenarios.values()) {
     const where = `Szenario ${s.id}`;
     for (const st of Object.keys(s.adjust)) statOk(where, st);
     for (const [zid, o] of Object.entries(s.zones)) {
+      const mz = d.zones.find((z) => z.id === zid);
+      if (!mz) p.push(`${where}: unbekannte Zone ${zid}`);
+      const g = mz && d.geographies.get(mz.geography);
+      for (const [st, v] of Object.entries(o.stats)) {
+        statOk(where, st);
+        if (g && d.stats.has(st) && st !== g.special && !d.commonStats.includes(st))
+          p.push(`${where}: Zone ${zid} hat keinen Wert ${st}`);
+        inScale(`${where} ${zid}.${st}`, v);
+      }
+    }
+    if (s.harmony !== undefined && (s.harmony <= d.harmony.collapseAt || s.harmony > d.harmony.max))
+      p.push(`${where}: Harmonie ${s.harmony} außerhalb ${d.harmony.collapseAt + 1}–${d.harmony.max}`);
+    if (s.breath !== undefined && breathMax !== null && s.breath > breathMax)
+      p.push(`${where}: Odem ${s.breath} außerhalb 0–${breathMax}`);
+    for (const [zid, pops] of Object.entries(s.populations)) {
       if (!zoneIds.has(zid)) p.push(`${where}: unbekannte Zone ${zid}`);
-      for (const st of Object.keys(o.stats)) statOk(where, st);
+      for (const [sp, n] of Object.entries(pops)) {
+        if (!d.species.has(sp)) p.push(`${where}: unbekannte Art ${sp}`);
+        if (life && (n < 0 || n > life.max)) p.push(`${where}: Bestand ${zid}.${sp}=${n} außerhalb 0–${life.max}`);
+      }
     }
   }
   if (!d.scenarios.has('standard')) p.push('Szenario "standard" fehlt');
@@ -256,4 +306,43 @@ function checkReferences(d: GameData, p: string[]): void {
   const n = d.config.starterDeck.length;
   if (n < d.config.deck.minSize || n > d.config.deck.maxSize)
     p.push(`starterDeck: ${n} Karten, erlaubt ${d.config.deck.minSize}–${d.config.deck.maxSize}`);
+}
+
+/** Slots einer Karte: Reihenfolge, Verweise, Art-Filter. Liefert die Zonen- und Art-Slots. */
+function checkSlots(d: GameData, card: Card, where: string, p: string[]) {
+  const zones = new Set<string>();
+  const species = new Set<string>();
+  for (const s of card.slots) {
+    if (zones.has(s.id) || species.has(s.id)) p.push(`${where}: Slot doppelt ${s.id}`);
+    if (d.species.has(s.id)) p.push(`${where}: Slot-Id ${s.id} ist schon eine Art`);
+    if (s.kind === 'neighbor' && !zones.has(s.of))
+      p.push(`${where}: Slot ${s.id} verweist auf unbekannten/späteren Slot ${s.of}`);
+    if (s.kind === 'species') {
+      if (!zones.has(s.in)) p.push(`${where}: Slot ${s.id} verweist auf unbekannten/späteren Slot ${s.in}`);
+      if (s.eats !== undefined && !d.stats.has(s.eats) && !d.species.has(s.eats))
+        p.push(`${where}: Slot ${s.id} eats=${s.eats} ist weder Wert noch Art`);
+      for (const x of s.species ?? []) if (!d.species.has(x)) p.push(`${where}: unbekannte Art ${x}`);
+      species.add(s.id);
+    } else zones.add(s.id);
+  }
+  return { zones, species };
+}
+
+/** Stammbaum: Vorfahren, Lebensräume, Nahrung, Gaben, Jagd. */
+function checkSpecies(d: GameData, p: string[], checkCond: (where: string, cs: readonly Condition[]) => void): void {
+  for (const sp of d.species.values()) {
+    const where = `Art ${sp.id}`;
+    if (d.stats.has(sp.id)) p.push(`${where}: Id ist schon ein Wert`);
+    if (sp.ancestor !== null) {
+      const a = d.species.get(sp.ancestor);
+      if (!a) p.push(`${where}: unbekannter Vorfahr ${sp.ancestor}`);
+      else if (a.tier >= sp.tier) p.push(`${where}: Vorfahr ${a.id} hat keine niedrigere Stufe`);
+    }
+    for (const f of sp.habitat) if (!d.forms.has(f)) p.push(`${where}: unbekannte Form ${f}`);
+    for (const f of sp.diet)
+      if (!d.stats.has(f) && !d.species.has(f)) p.push(`${where}: Nahrung ${f} ist weder Wert noch Art`);
+    for (const c of sp.gift) if (!d.cards.has(c)) p.push(`${where}: unbekannte Gabe ${c}`);
+    for (const h of sp.hunts) if (!d.species.has(h)) p.push(`${where}: jagt unbekannte Art ${h}`);
+    checkCond(where, sp.evolve);
+  }
 }

@@ -6,17 +6,20 @@ import type { Action, GameSetup, Locale, Preview, Targets } from './api.ts';
 import { drawUpTo } from './cards/deck.ts';
 import { getCard, playFromHand } from './cards/play.ts';
 import { canEndTurn } from './turn.ts';
+import { runNature } from './nature.ts';
+import { addGifts, setPopulation } from './population.ts';
 import { breathParams } from './rules/breath.ts';
+import { evolutionParams } from './rules/evolution.ts';
 import { formFor } from './rules/forms.ts';
-import { RULES } from './rules/index.ts';
 import { LevelsParams } from './rules/levels.ts';
 import { paramsOf } from './rules/module.ts';
 import { rngOf, seedFrom } from './rng.ts';
 import type { GameData } from './schema/index.ts';
-import type { GameEvent, GameState, ZoneState } from './state.ts';
-import { clamp, RuleError, seasonOf } from './world.ts';
+import { STATE_VERSION, type GameEvent, type GameState, type ZoneState } from './state.ts';
+import { clamp, getZone, RuleError, seasonOf } from './world.ts';
 
 export { view } from './view.ts';
+export { runNature } from './nature.ts';
 export { canEndTurn, legalPlays } from './turn.ts';
 
 export interface StepResult {
@@ -56,11 +59,13 @@ export function newGame(data: GameData, setup: GameSetup): GameState {
       levelProgress: 0,
       lastDisturbance: null,
       populations: {},
+      lastHunger: null,
+      evolution: {},
     };
   });
 
   const state: GameState = {
-    version: 2,
+    version: STATE_VERSION,
     rng: seedFrom(setup.seed),
     scenario: scenarioId,
     round: 1,
@@ -75,9 +80,21 @@ export function newGame(data: GameData, setup: GameSetup): GameState {
     nextUid: 1,
     playsThisTurn: 0,
     cardPlays: {},
+    species: {},
+    score: 0,
   };
   for (const z of state.zones) z.form = formFor(data, state, z).id;
-  state.drawPile = rngOf(state).shuffle(deck.map((card) => ({ uid: state.nextUid++, card })));
+  // Startleben: zählt ab Runde 0 als entstanden.
+  state.round = 0;
+  for (const [zid, pops] of Object.entries(scenario.populations))
+    for (const [species, n] of Object.entries(pops))
+      setPopulation(data, state, getZone(state, zid), species, n, () => {}, 'start');
+  state.round = 1;
+  const rng = rngOf(state);
+  state.drawPile = rng.shuffle(deck.map((card) => ({ uid: state.nextUid++, card })));
+  // AUSLEGUNG: Das Startleben ist „erstmals entstanden“ – seine Gaben kommen gleich zu Beginn ins Deck.
+  if (evolutionParams(data).startGifts)
+    for (const sp of data.species.values()) if (sp.id in state.species) addGifts(state, sp, rng.int, () => {});
   drawUpTo(state, data.config.turn.handSize, () => {});
   return state;
 }
@@ -103,16 +120,6 @@ export function step(data: GameData, state: GameState, action: Action): StepResu
     }
   }
   return { state: next, events };
-}
-
-/** Natur-Phase und Bilanz: Module in der Reihenfolge aus config.yaml → pipeline. */
-export function runNature(data: GameData, state: GameState, emit: (e: GameEvent) => void): void {
-  for (const id of data.config.pipeline) {
-    const m = RULES.get(id);
-    if (!m) throw new Error(`Unbekanntes Regel-Modul: ${id}`);
-    m.run({ data, state, params: data.params[id], emit, rng: rngOf(state) });
-    if (state.phase === 'over') return;
-  }
 }
 
 /** Vorschau eines Kartenzugs ohne Ausführung (Kosten werden angezeigt, aber nicht verlangt). */

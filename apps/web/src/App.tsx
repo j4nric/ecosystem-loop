@@ -8,6 +8,7 @@ import { useTargeting } from './state/useTargeting.ts';
 import { GameOver } from './ui/GameOver.tsx';
 import { Hand } from './ui/Hand.tsx';
 import { Hud } from './ui/Hud.tsx';
+import { PlayPreview } from './ui/PlayPreview.tsx';
 import { Toasts } from './ui/Toasts.tsx';
 import { ZoneSheet } from './ui/ZoneSheet.tsx';
 
@@ -16,7 +17,7 @@ export function App({ client }: { client: GameClient }) {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
   const play = useCallback((uid: number, targets: Targets) => dispatch({ type: 'play', uid, targets }), [dispatch]);
-  const targeting = useTargeting(view, play);
+  const targeting = useTargeting(client, view, play);
 
   const onZoneTap = useCallback(
     (zoneId: string) => {
@@ -38,25 +39,60 @@ export function App({ client }: { client: GameClient }) {
     [targeting],
   );
 
-  const zone = view.zones.find((z) => z.id === selectedZone);
   const active = targeting.targeting;
+  // Während eines Kartenzugs zeigt das Sheet die erste gewählte Zielzone, sonst die angetippte Zone.
+  const firstSlot = active?.card.slots[0];
+  const targetZoneId = active && firstSlot ? (active.targets[firstSlot.id] ?? null) : null;
+  const focusZone = active ? targetZoneId : selectedZone;
+  const zone = view.zones.find((z) => z.id === focusZone);
 
   return (
     <div className="app">
       <IslandScene
         zones={view.zones}
-        selectedZone={selectedZone}
+        selectedZone={focusZone}
         validTargets={active ? targeting.validZones : null}
         onZoneTap={onZoneTap}
         onBackgroundTap={() => setSelectedZone(null)}
       />
 
       <div className="top">
-        <Hud view={view} isMock={client.isMock} />
+        <Hud
+          view={view}
+          isMock={client.isMock}
+          onNewGame={() => {
+            if (!window.confirm(t.newGameConfirm)) return;
+            setSelectedZone(null);
+            targeting.cancel();
+            newGame();
+          }}
+        />
         <Toasts toasts={toasts} />
       </div>
 
       <footer className="dock">
+        {active && targeting.complete && zone && (
+          <ZoneSheet zone={zone} zones={view.zones} onClose={targeting.cancel} changes={targeting.preview?.changes}>
+            <PlayPreview
+              card={active.card}
+              preview={targeting.preview}
+              shownZone={zone.id}
+              onPlay={targeting.confirm}
+              onCancel={targeting.cancel}
+            />
+          </ZoneSheet>
+        )}
+        {active && targeting.complete && !zone && (
+          <section className="sheet" role="dialog" aria-label={active.card.name}>
+            <PlayPreview
+              card={active.card}
+              preview={targeting.preview}
+              shownZone={null}
+              onPlay={targeting.confirm}
+              onCancel={targeting.cancel}
+            />
+          </section>
+        )}
         {active && targeting.slot && (
           <div className="target-banner" role="status">
             <div>

@@ -7,7 +7,7 @@ try {
   const forms = [...d.geographies.values()].reduce((n, g) => n + g.forms.length, 0);
   console.log(
     `Spieldaten ok: ${d.geographies.size} Geografien, ${forms} Formen, ${d.zones.length} Zonen, ` +
-      `${d.seasons.length} Jahreszeiten, ${d.couplings.length} Kopplungen, ${d.cards.size} Karten, ` +
+      `${d.seasons.length} Jahreszeiten, ${d.couplings.length} Kopplungen, ${d.cards.size} Karten, ${d.species.size} Arten, ` +
       `${d.scenarios.size} Szenarien · Pipeline: ${d.config.pipeline.join(' → ')}`,
   );
 } catch (e) {

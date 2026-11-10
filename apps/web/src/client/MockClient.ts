@@ -1,5 +1,5 @@
-import type { Action, CardView, FormKind, GameView, Locale, ZoneView } from '@core/api';
-import type { GameClient } from './GameClient.ts';
+import type { Action, CardView, FormKind, GameView, Locale, Targets, ZoneView } from '@core/api';
+import type { GameClient, Notice, PreviewView } from './GameClient.ts';
 
 /**
  * Vorschau-Implementierung ohne Engine: liefert eine realistische GameView und simuliert Aktionen grob
@@ -242,6 +242,7 @@ export class MockClient implements GameClient {
   private state: MockState;
   private view: GameView;
   private readonly listeners = new Set<() => void>();
+  private readonly noticeListeners = new Set<(notices: Notice[]) => void>();
 
   constructor(private readonly locale: Locale) {
     this.state = this.initialState();
@@ -257,6 +258,47 @@ export class MockClient implements GameClient {
     return () => this.listeners.delete(listener);
   }
 
+  subscribeNotices(listener: (notices: Notice[]) => void): () => void {
+    this.noticeListeners.add(listener);
+    return () => this.noticeListeners.delete(listener);
+  }
+
+  /** Grobe Zielregel der Vorschau: `zone` = jede Zone, `neighbor` = Nachbarn der zuletzt gewählten Zone. */
+  legalTargets(uid: number, chosen: Targets): string[] {
+    const entry = this.state.hand.find((h) => h.uid === uid);
+    if (!entry || entry.def.cost > this.state.breath || this.state.phase === 'over') return [];
+    const slot = entry.def.slots.find((s) => chosen[s.id] === undefined);
+    if (!slot) return [];
+    if (slot.kind === 'neighbor') {
+      const previous = Object.values(chosen).at(-1);
+      return this.state.zones.find((z) => z.geo.id === previous)?.geo.neighbors ?? [];
+    }
+    return this.state.zones.map((z) => z.geo.id);
+  }
+
+  preview(uid: number, targets: Targets): PreviewView | null {
+    const entry = this.state.hand.find((h) => h.uid === uid);
+    const zone = this.state.zones.find((z) => z.geo.id === targets['zone']);
+    if (!entry || !zone) return null;
+    const lc = this.locale;
+    const changes: PreviewView['changes'] = [];
+    for (const [stat, delta] of Object.entries(entry.def.effect)) {
+      const i = Number(stat);
+      const from = zone.values[i] ?? 0;
+      const to = clamp(from + delta, 0, 5);
+      const name = i === 3 ? zone.geo.special.name : STAT_NAMES[i];
+      if (to !== from)
+        changes.push({ zone: zone.geo.id, zoneName: zone.geo.name[lc], stat, statName: name?.[lc] ?? stat, from, to });
+    }
+    return {
+      cost: entry.def.cost,
+      affordable: entry.def.cost <= this.state.breath,
+      changes,
+      triggers: [],
+      formChanges: [],
+    };
+  }
+
   newGame(): void {
     this.state = this.initialState();
     this.emit();
@@ -265,6 +307,7 @@ export class MockClient implements GameClient {
   dispatch(action: Action): void {
     const s = this.state;
     if (s.phase === 'over') return;
+    const notices: Notice[] = [];
     switch (action.type) {
       case 'play': {
         const index = s.hand.findIndex((h) => h.uid === action.uid);
@@ -274,6 +317,7 @@ export class MockClient implements GameClient {
         s.breath -= entry.def.cost;
         s.discardPile += 1;
         s.playsThisTurn += 1;
+        notices.push({ type: 'played', card: entry.def.name[this.locale] });
         const zone = s.zones.find((z) => z.geo.id === action.targets['zone']);
         if (zone) {
           for (const [stat, delta] of Object.entries(entry.def.effect)) {
@@ -286,10 +330,15 @@ export class MockClient implements GameClient {
       case 'endTurn': {
         if (s.playsThisTurn < MIN_PLAYS) return;
         this.natureStep();
+        const season = SEASONS[(s.round - 1) % SEASONS.length] ?? SEASONS[0]!;
+        notices.push({ type: 'round', round: s.round, season: season.name[this.locale] });
+        if (s.lastHarmonyDelta !== 0) notices.push({ type: 'harmony', delta: s.lastHarmonyDelta });
+        if (this.state.phase === 'over') notices.push({ type: 'collapsed' });
         break;
       }
     }
     this.emit();
+    if (notices.length > 0) for (const listener of this.noticeListeners) listener(notices);
   }
 
   // --- Simulation ---------------------------------------------------------------------------------
