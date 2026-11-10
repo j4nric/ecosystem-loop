@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9d5e6" />
+      <stop offset="1" stop-color="#b9b4cb" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)" />
+  <ellipse cx="256" cy="440" rx="120" ry="16" fill="#8d87a3" opacity="0.45" />
+  <!-- Erdsockel -->
+  <polygon points="96,262 416,262 372,316 300,398 232,412 160,340" fill="#8a5a3b" />
+  <polygon points="96,262 160,340 232,412 214,300" fill="#a06a45" />
+  <polygon points="416,262 372,316 300,398 310,300" fill="#6f462d" />
+  <polygon points="96,262 416,262 404,282 108,282" fill="#5e3b26" opacity="0.55" />
+  <!-- Grasoberfläche -->
+  <polygon points="96,262 166,222 256,206 350,222 416,262 256,290" fill="#8cc06a" />
+  <polygon points="96,262 256,290 416,262 404,276 256,304 108,276" fill="#6ea653" />
+  <!-- Fluss -->
+  <polygon points="250,208 270,208 300,250 330,284 306,290 280,256" fill="#6fb6d9" />
+  <!-- Berg -->
+  <polygon points="168,236 220,140 268,226" fill="#9a97a8" />
+  <polygon points="220,140 268,226 236,232" fill="#7f7c8f" />
+  <polygon points="204,170 220,140 238,172 222,166" fill="#ffffff" />
+  <!-- Bäume -->
+  <polygon points="300,244 324,180 348,244" fill="#3f8a4a" />
+  <polygon points="324,180 348,244 330,246" fill="#2f6e3a" />
+  <polygon points="344,252 362,206 380,252" fill="#4a9a52" />
+  <polygon points="130,262 146,222 162,262" fill="#4a9a52" />
+</svg>

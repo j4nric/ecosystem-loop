@@ -1,12 +1,19 @@
-# apps/mobile (geplant)
+# apps/web – Being God als mobile Web-App
 
-Hier entsteht die iOS-/Android-App. Sie wird erst angelegt, wenn die Regeln in der Simulation tragen.
+Ziel: spielbar im iPhone-Browser, als Web-App zum Home-Bildschirm hinzufügbar, Deploy auf eigenem vServer.
+Native Builds (Capacitor) folgen später.
 
-Geplanter Stack:
+Stack: Vite + React + TypeScript, Three.js über React Three Fiber (+ drei), Low-Poly-Insel.
+Die App spricht mit der Engine nur über `@being-god/core` (`api.ts`: `GameView`, `Action`).
 
-- **Vite + React + TypeScript** als App-Hülle
-- **Three.js über React Three Fiber** (+ drei) für das Low-Poly-Diorama
-- **Capacitor** für die nativen iOS-/Android-Builds
-- **@being-god/core** als Regel-Engine – unverändert dieselbe wie in Simulation und Tests
-- 3D-Modelle zunächst aus CC0-Paketen (Kenney, Quaternius) als glTF, später eigene Modelle (Blender)
-- Spielstände getrennt von der Engine (Speicher-Adapter), damit später Cloud-Sync möglich ist
+## Starten
+
+```sh
+npm run -w apps/web dev        # Entwicklungsserver (auch im WLAN erreichbar, fürs iPhone)
+npm run -w apps/web build      # statischer Build nach apps/web/dist (relative Pfade)
+npm run -w apps/web preview    # Build lokal ansehen
+npm run -w apps/web typecheck
+```
+
+Die App spricht über `src/client/GameClient.ts`. Welche Implementierung läuft, entscheidet allein
+`src/client/index.ts` (derzeit `MockClient` mit Vorschau-Daten). `?lang=en` erzwingt Englisch.

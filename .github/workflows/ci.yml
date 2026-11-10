@@ -61,6 +61,19 @@ jobs:
       - name: Absturz-Test (gieriger Bot)
         run: npm run sim -- --bot greedy --runs 3 --scenario random
 
+  web:
+    name: Web-App bauen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
   audit:
     name: Abhängigkeiten (Sicherheit)
     runs-on: ubuntu-latest
@@ -78,7 +91,7 @@ jobs:
   ci-ok:
     name: CI ok
     if: always()
-    needs: [quality, test, game-data, audit]
+    needs: [quality, test, game-data, web, audit]
     runs-on: ubuntu-latest
     steps:
       - name: Alle Jobs erfolgreich?
