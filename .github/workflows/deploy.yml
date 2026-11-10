@@ -1,61 +1,109 @@
 name: Deploy Web-App
 
-# Baut apps/web und kopiert den statischen Build per rsync/SSH auf den vServer.
-# Läuft nur, wenn die Secrets DEPLOY_HOST, DEPLOY_USER, DEPLOY_PATH und DEPLOY_SSH_KEY gesetzt sind
-# (Anleitung: docs/deploy.md). Ohne Secrets wird der Lauf übersprungen statt rot zu werden.
+# Jeder Push auf main: CI läuft (ci.yml per workflow_call), danach geht genau der dort
+# gebaute und getestete Stand auf den vServer. Muster wie Stammtisch (j4nric/skat-roguelite):
+# statische Dateien per rsync nach $DEPLOY_PATH/site, Caddy-Container hinter dem Caddy der
+# Haushalt-App. Ohne Secrets wird der Server-Schritt übersprungen. Anleitung: deploy/README.md.
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: deploy
   cancel-in-progress: false
 
-permissions:
-  contents: read
-
 jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
   deploy:
-    name: Build und Deploy
+    name: Auf den vServer
     runs-on: ubuntu-latest
+    needs: ci
     timeout-minutes: 15
-    env:
-      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
     steps:
-      - name: Zugangsdaten vorhanden?
-        id: guard
-        run: |
-          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ] || [ -z "$DEPLOY_PATH" ]; then
-            echo "Keine Deploy-Secrets gesetzt – Deploy übersprungen (siehe docs/deploy.md)."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          fi
       - uses: actions/checkout@v4
-        if: steps.guard.outputs.skip != 'true'
-      - uses: actions/setup-node@v7
-        if: steps.guard.outputs.skip != 'true'
+      - uses: actions/download-artifact@v4
         with:
-          node-version-file: .nvmrc
-          cache: npm
-      - if: steps.guard.outputs.skip != 'true'
-        run: npm ci
-      - if: steps.guard.outputs.skip != 'true'
-        run: npm run -w apps/web build
-      - name: SSH-Schlüssel einrichten
-        if: steps.guard.outputs.skip != 'true'
+          name: web-dist
+          path: site
+      - name: Build-Info anlegen
+        run: |
+          printf '{"commit":"%s","built":"%s"}\n' "$GITHUB_SHA" "$(date -u +%FT%TZ)" > site/version.json
+          ls -la site
+      - name: Secrets vorhanden?
+        id: secrets
         env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEST: ${{ secrets.DEPLOY_PATH }}
         run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
-      - name: Hochladen
-        if: steps.guard.outputs.skip != 'true'
+          if [ -z "$HOST" ] || [ -z "$USER" ] || [ -z "$KEY" ] || [ -z "$DEST" ]; then
+            echo "::warning::Deploy-Secrets fehlen (DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_PATH). Server-Schritt übersprungen. Siehe deploy/README.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      # Mit DEPLOY_KNOWN_HOSTS (Host-Schlüssel des Servers) wird streng geprüft; ohne wird
+      # der Schlüssel aus ssh-keyscan übernommen (mit Warnung).
+      - name: SSH einrichten
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_PORT:-22}" \
-            apps/web/dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::DEPLOY_KNOWN_HOSTS fehlt; Host-Schlüssel aus ssh-keyscan übernommen. Siehe deploy/README.md."
+            ssh-keyscan -H "$HOST" > ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 600 ~/.ssh/known_hosts
+          {
+            echo "Host $HOST"
+            echo "  IdentityFile ~/.ssh/deploy_key"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+            echo "  UserKnownHostsFile ~/.ssh/known_hosts"
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+      - name: Dateien übertragen
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          DEST: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh "$USER@$HOST" "mkdir -p '$DEST/site'"
+          # Neue Dateien landen unter vorläufigen Namen und werden am Ende gemeinsam
+          # umbenannt, alte erst danach gelöscht: niemand sieht einen halben Build.
+          rsync -az --delete-after --delay-updates site/ "$USER@$HOST:$DEST/site/"
+          rsync -az deploy/docker-compose.yml deploy/Caddyfile deploy/up.sh "$USER@$HOST:$DEST/"
+      - name: Container starten oder aktualisieren
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          DEST: ${{ secrets.DEPLOY_PATH }}
+        run: ssh "$USER@$HOST" "sh '$DEST/up.sh'"
+      - name: Erreichbarkeit prüfen
+        if: steps.secrets.outputs.ready == 'true' && vars.DEPLOY_URL != ''
+        env:
+          URL: ${{ vars.DEPLOY_URL }}
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "$URL/version.json" | grep -q "$GITHUB_SHA"; then echo "Live: $URL"; exit 0; fi
+            sleep 5
+          done
+          echo "::error::$URL liefert nicht den neuen Stand aus. Siehe deploy/README.md, Fehlersuche."
+          exit 1

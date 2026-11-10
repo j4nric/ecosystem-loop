@@ -1,0 +1,35 @@
+# Läuft auf dem vServer in $DEPLOY_PATH (/opt/being-god). Der Deploy-Job
+# (.github/workflows/deploy.yml) synchronisiert ./site, diese Datei, die Caddyfile
+# und up.sh dorthin und führt up.sh aus.
+#
+# Ports 80/443 gehören dem Caddy der Haushalt-App (Repo j4nric/haushalt-app,
+# infra/production). Dieser Caddy beendet HTTPS für beinggod-62-83-23-90.sslip.io und
+# leitet über das gemeinsame Netzwerk `beinggod-proxy` an den Alias `beinggod-web`
+# weiter. Dieser Container veröffentlicht keine Ports – dasselbe Muster wie
+# Stammtisch (skat-roguelite) und Uhrturm (auto-battle). Siehe deploy/README.md.
+
+name: being-god
+
+# Logs rotieren: höchstens 3 Dateien zu 10 MB.
+x-logging: &logging
+  driver: local
+  options:
+    max-size: 10m
+    max-file: '3'
+
+services:
+  web:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    logging: *logging
+    volumes:
+      - ./site:/srv:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      proxy:
+        aliases: [beinggod-web]
+
+networks:
+  proxy:
+    name: beinggod-proxy
+    external: true

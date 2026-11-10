@@ -1,0 +1,30 @@
+# Interner Server für die statischen Dateien. HTTPS übernimmt der Caddy der
+# Haushalt-App davor, dieser hier spricht nur HTTP auf :80.
+
+:80 {
+	# Sicherheits-Header für die ganze Seite. Die App lädt nichts von außen;
+	# React setzt style-Attribute (unsafe-inline bei style-src), Three.js nutzt
+	# data:/blob: für Texturen. Geprüft gegen den Build (deploy/README.md).
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' data: blob:; font-src 'self'; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	root * /srv
+	encode zstd gzip
+	file_server
+
+	# Vite legt gehashte Dateien unter /assets/ ab: lange cachen. index.html nie.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	@html path / /index.html
+	header @html Cache-Control "no-cache"
+
+	# Web-App-Manifest (Zum Home-Bildschirm). Gos MIME-Tabelle kennt .webmanifest nicht.
+	@manifest path *.webmanifest
+	header @manifest Content-Type application/manifest+json
+	header @manifest Cache-Control "no-cache"
+}
