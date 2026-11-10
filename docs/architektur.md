@@ -34,7 +34,8 @@ Einzelheiten (Dateien, Ablauf eines Monats, Ereignisse, Erweiterungspunkte, Ausl
 - **Lesemodell** (`src/view.ts`): `HerdeView` mit Feldern, Herde, Rudeln, Absicht der Herde, Prognosen und
   Hand mit gültigen Zielen. Die Absicht entsteht genau so wie im nächsten `advance`.
 - **Daten** (`src/schema.ts`, `src/data.ts`): zod-Schemas je YAML-Datei und `buildData`, das Querverweise und
-  Widersprüche prüft (z. B. unbekannte Landschaften, Geburtsmonat außerhalb des Jahres). Die Bedürfnisse der Herde stehen als **Stufe** in `stages.yaml`.
+  Widersprüche prüft (z. B. unbekannte Landschaften, Geburtsmonat außerhalb des Jahres,
+  `wolves.starveReset < starveAfter`). Die Bedürfnisse der Herde stehen als **Stufe** in `stages.yaml`.
 - **Monat** (`src/month.ts`): feste Reihenfolge Natur (Wachstum, Sukzession, Feuer) → Herde (Zug, Fressen,
   Durst, Kälte) → Wölfe → Nachwuchs → Wildnis/Eiszeit → Karten ziehen.
 - **Zufalls-Bot** (`src/bot.ts`) spielt nur über die Fassade und prüft jeden Zustand; er dient bis H5 als
@@ -50,14 +51,14 @@ Einzelheiten (Starten, iOS, URL-Schalter, Bedienung, Performance, Tests): [apps/
 src/client/   GameClient (Schnittstelle der Oberfläche), HerdeClient (echte Engine), SaveStore (localStorage
               bzw. Speicher), gameData.ts (YAML zur Build-Zeit eingebunden, mit buildData geprüft), index.ts
 src/logic/    reine Funktionen ohne DOM: events (Ereignisse → Meldungen und Effekte), preview (Vorschau über
-              step + view), format (Texte, Prognose, Pfeile)
-src/state/    useGame (View, Protokoll, Meldungen, animiertes Ablaufen der Monate), motion (reduzierte Bewegung),
-              tutorialStore
+              step + view), format (Texte, Regelzahlen aus den Daten, Prognose, Pfeile)
+src/state/    useGame (View, Protokoll, Meldungen), monthRunner (schrittweises Ablaufen der Monate, ohne DOM
+              getestet), motion (reduzierte Bewegung), tutorialStore
 src/scene/    3D-Insel: IslandScene, islandModel (Instanzen aus der View, rein), Instanced, Figures, FxLayer,
               geometries, palette
 src/ui/       Statusleiste, Hand, Sheets (Karte/Vorschau, Feld-Info, Geschehen), Spielende, Hilfe, Einführung,
               Meldungen
-src/i18n/     Deutsch und Englisch; Namen aus den Daten
+src/i18n/     Deutsch und Englisch; Namen aus den Daten, Regelzahlen aus `data.params`
 tests/        Vitest ohne DOM
 ```
 
@@ -65,6 +66,10 @@ tests/        Vitest ohne DOM
   `step` aus, übersetzt die Ereignisse in Meldungen und Szenen-Effekte und speichert Stand und Protokoll.
 - Die Szene rendert nur die View: Instanzen entstehen in `islandModel.ts`, wenn sich die View ändert; pro Frame
   laufen nur Schweben, Pulsieren, Zug der Figuren und Effekte.
+- Spieltexte nennen keine Regelzahlen fest, sondern lesen sie aus `data.params`.
+- Bei `prefers-reduced-motion` entfallen Schweben, Pulsieren, Hüpfen, flackernde Flammen und fallender Regen
+  (stattdessen färben sich die Felder kurz ein); die Szene zeichnet dann nur auf Anforderung
+  (`frameloop="demand"`, `invalidate()` nach jeder Änderung).
 
 Deploy: [deploy.md](deploy.md).
 

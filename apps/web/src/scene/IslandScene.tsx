@@ -18,7 +18,7 @@ import type { StepReport } from '../client/GameClient.ts';
 import { Figures, type FigureGroup } from './Figures.tsx';
 import { FxLayer } from './FxLayer.tsx';
 import { GEO } from './geometries.ts';
-import { Instanced, type InstanceSpec } from './Instanced.tsx';
+import { capacityFor, Instanced, type InstanceSpec } from './Instanced.tsx';
 import { BOTTOM, buildIsland, cellCenter, type Grid } from './islandModel.ts';
 import { COLORS, SEASON_LIGHT } from './palette.ts';
 
@@ -56,6 +56,8 @@ export function IslandScene(props: Props) {
         flat
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         camera={{ fov: 36, near: 0.5, far: 80, position: [0, 11, 9] }}
+        // Ohne Bewegung (kein Schweben, Pulsieren, Hüpfen) wird nur bei Änderungen gezeichnet: Akku schonen.
+        frameloop={props.reducedMotion ? 'demand' : 'always'}
         onPointerMissed={props.onBackgroundTap}
       >
         <Atmosphere season={season} reducedMotion={props.reducedMotion} />
@@ -81,8 +83,8 @@ function Island({
 }: Props & { grid: Grid }) {
   const float = useRef<Group>(null);
   useFrame(({ clock }) => {
-    if (reducedMotion || !float.current) return;
-    float.current.position.y = Math.sin(clock.elapsedTime * 0.6) * 0.06;
+    if (!float.current) return;
+    float.current.position.y = reducedMotion ? 0 : Math.sin(clock.elapsedTime * 0.6) * 0.06;
   });
 
   const stage = data.stages.get(view.herd.stage);
@@ -178,6 +180,12 @@ function Island({
   );
 
   const intent = running ? null : view.intent;
+
+  // Bei frameloop="demand": nach jeder sichtbaren Änderung (auch Ein- und Ausblenden von Meshes) neu zeichnen.
+  const invalidate = useThree((st) => st.invalidate);
+  useEffect(() => {
+    invalidate();
+  }, [invalidate, model, targets, grown, selected, previewIntent, intent, herdGroups, packGroups]);
 
   return (
     <>
@@ -286,14 +294,17 @@ function Squares({
   frame?: boolean;
 }) {
   const ref = useRef<InstancedMesh>(null);
-  const capacity = Math.max(16, positions.length);
+  // Zweierpotenz wie bei `Instanced`: Das Mesh wird nur neu angelegt, wenn es wachsen muss.
+  const capacity = useMemo(() => capacityFor(positions.length), [positions.length]);
+  const invalidate = useThree((st) => st.invalidate);
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
     positions.forEach((pos, i) => mesh.setMatrixAt(i, scratch.makeTranslation(...pos)));
     mesh.count = positions.length;
     mesh.instanceMatrix.needsUpdate = true;
-  }, [positions, capacity]);
+    invalidate();
+  }, [positions, capacity, invalidate]);
   useFrame(({ clock }) => {
     const mesh = ref.current;
     if (!pulse || !mesh || mesh.count === 0) return;
@@ -344,8 +355,8 @@ function IntentArrow({
 }) {
   const ref = useRef<Group>(null);
   useFrame(({ clock }) => {
-    if (reducedMotion || !ref.current) return;
-    ref.current.position.y = Math.sin(clock.elapsedTime * 3) * 0.04;
+    if (!ref.current) return;
+    ref.current.position.y = reducedMotion ? 0 : Math.sin(clock.elapsedTime * 3) * 0.04;
   });
   const y = Math.max(from[1], to[1]) + ARROW_Y + lift;
   const dx = to[0] - from[0];
@@ -395,12 +406,15 @@ function Atmosphere({ season, reducedMotion }: { season: string; reducedMotion: 
   const light = SEASON_LIGHT[season] ?? SEASON_LIGHT['spring']!;
   const target = useMemo(() => ({ sky: light.sky, sun: light.sun }), [light]);
   const settled = useRef(false);
+  const invalidate = useThree((st) => st.invalidate);
   useEffect(() => {
     settled.current = false;
-  }, [target]);
+    invalidate();
+  }, [target, invalidate]);
 
   useFrame((_, delta) => {
     if (settled.current) return;
+    invalidate(); // bis die Farben angekommen sind (nur nötig bei frameloop="demand")
     const k = reducedMotion ? 1 : 1 - Math.exp(-delta * 2);
     sky.current?.color.lerp(skyColor.set(target.sky), k);
     sun.current?.color.lerp(sunColor.set(target.sun), k);
@@ -436,6 +450,7 @@ function GroundShadow({ width, height }: { width: number; height: number }) {
     }
     return new CanvasTexture(canvas);
   }, []);
+  useEffect(() => () => texture.dispose(), [texture]);
   return (
     <mesh position={[0.3, -4.6, 0.3]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
       <planeGeometry args={[width * 1.5, height * 1.3]} />

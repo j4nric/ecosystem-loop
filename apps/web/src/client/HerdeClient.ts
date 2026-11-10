@@ -90,11 +90,6 @@ export class HerdeClient implements GameClient {
     return this.seed;
   }
 
-  /** Aktueller Engine-Zustand (nur lesen; für Tests und Werkzeuge). */
-  getState(): HerdeState {
-    return this.state;
-  }
-
   takeStartupNotice(): StartupNotice {
     const notice = this.startup;
     this.startup = null;
@@ -119,7 +114,11 @@ export class HerdeClient implements GameClient {
     this.cachedView = null;
     const packsAt = new Map<number, Pos>(before.packs.map((p) => [p.id, { x: p.x, y: p.y }]));
     const herdAt = { x: this.state.herd.x, y: this.state.herd.y };
-    const { notices, fx } = describeEvents(this.data, this.locale, this.t, result.events, herdAt, packsAt);
+    const width = this.getView().width;
+    const grown = this.state.cells.flatMap((c, i) =>
+      c.food > (before.cells[i]?.food ?? 0) ? [{ x: i % width, y: Math.floor(i / width) }] : [],
+    );
+    const { notices, fx } = describeEvents(this.data, this.locale, this.t, result.events, herdAt, packsAt, grown);
     const entries = notices.map((n) => ({ month: before.month + (n.next ? 1 : 0), text: n.text, tone: n.tone }));
     this.log = [...entries.reverse(), ...this.log].slice(0, LOG_MAX);
     this.persist();

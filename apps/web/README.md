@@ -40,13 +40,16 @@ Der Spielstand liegt auch in der App in `localStorage`; für dauerhafte Speicher
 src/client/   GameClient (Schnittstelle), HerdeClient, SaveStore, gameData.ts (YAML → buildData), index.ts
 src/logic/    events (Ereignisse → Meldungen und Effekte), preview (Vorschau über step + view), format (Texte,
               Prognose, Pfeile) – reine Funktionen ohne DOM
-src/state/    useGame (View, Protokoll, Meldungen, animiertes Ablaufen), motion, tutorialStore
+src/state/    useGame (View, Protokoll, Meldungen), monthRunner (schrittweises Ablaufen der Monate), motion,
+              tutorialStore
 src/scene/    IslandScene (Kamera, Licht, Insel, Pfeile, Hervorhebungen), islandModel (Instanzen aus der View, rein),
               Figures (Herde und Rudel), FxLayer (Effekte), Instanced, geometries, palette
 src/ui/       StatusBar (Statusleiste, Jahreskreis, Absicht), Hand, Sheets (Karte/Vorschau, Feld-Info, Geschehen),
               GameOver, Help, Tutorial, Toasts
-src/i18n/     de.ts, en.ts, locale.ts – UI-Texte; Namen (Landschaften, Karten, Jahreszeiten, Monate) aus den Daten
-tests/        HerdeClient, SaveStore, logic (Meldungen, Texte, Prognose, Vorschau, Inselmodell), locale
+src/i18n/     de.ts, en.ts, locale.ts – UI-Texte; Namen (Landschaften, Karten, Jahreszeiten, Monate) aus den Daten,
+              Regelzahlen (Geburtsmonat, Wildnis-Grenze, Eiszeit, Handgröße) aus `data.params` über `ruleNumbers`
+tests/        HerdeClient, SaveStore, logic (Meldungen, Texte, Regelzahlen, Prognose, Vorschau, Inselmodell),
+              monthRunner (Fake-Timer), locale
 ```
 
 ### Client
@@ -83,7 +86,8 @@ URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
   Feld antippen → Vorschau (Feld vorher/nachher, Futter, Feuer, vertriebenes Rudel und – falls sie sich ändert – die
   neue Absicht als oranger Pfeil) → „Legen“. Regen: antippen, betroffene Felder leuchten grün, „Ausspielen“.
   Die Vorschau rechnet `step` auf dem aktuellen Zustand (rein) und vergleicht `view` davor und danach.
-  Kein Ablegen.
+  Eine Karte ohne gültiges Ziel ist ausgegraut; angetippt sagt ihr Sheet „Gerade kein passendes Feld“. Kein
+  Ablegen.
 - **Zeit:** „Jahreszeit spielen“ lässt die Monate bis zur nächsten Jahreszeit einzeln ablaufen (die Herde hüpft
   sichtbar zum nächsten Feld, Effekte und Meldungen je Monat), „Anhalten“ bricht ab; „1 Monat“ geht einen Schritt.
 - **Feld antippen:** Landschaft, Futter, Prognose („wird in N Monaten zu Busch“ erst ab ≤ 3 Monaten, sonst „bleibt
@@ -93,7 +97,9 @@ URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
 - **Ende:** Sieg (Eiszeit überstanden) oder Niederlage mit Überlebenden, Dauer und Wildnis; „Insel ansehen“ oder
   „Neue Partie“.
 - Einführung (5 Karten) beim ersten Start, erneut über das Menü oder die Hilfe. `prefers-reduced-motion` kürzt
-  Animationen und die Pausen zwischen den Monaten.
+  Animationen und die Pausen zwischen den Monaten, lässt Schweben, Pulsieren, Hüpfen, flackernde Flammen und
+  fallenden Regen weg (stattdessen färben sich die betroffenen Felder kurz und ruhig ein) und zeichnet die Szene
+  nur bei Änderungen neu (`frameloop="demand"`).
 
 ## Performance
 
@@ -105,8 +111,9 @@ Figuren und die Effekte. Keine Echtzeit-Schatten (Schatten unter der Insel ist e
 ## Tests
 
 `apps/web/tests` (vitest, ohne DOM): HerdeClient (Züge, Meldungen, Speichern, Prüfen und Verwerfen alter Stände,
-Daten aus den eingebundenen YAML-Texten), SaveStore, reine Logik (Meldungen, Texte, Prognose, Vorschau,
-Inselmodell), Sprachwahl. Im Entwicklungsmodus stellt die Szene `window.__herdeCell(x, y)` bereit (Bildschirmpunkt
+Daten aus den eingebundenen YAML-Texten, Regen-Felder), SaveStore, reine Logik (Meldungen, Texte, Regelzahlen aus
+den Daten, spielbare Karten, Prognose, Vorschau, Inselmodell), schrittweises Ablaufen der Monate mit Fake-Timern
+(„Jahreszeit spielen“, „Anhalten“), Sprachwahl. Im Entwicklungsmodus stellt die Szene `window.__herdeCell(x, y)` bereit (Bildschirmpunkt
 eines Felds) – für Klicktests mit Playwright.
 
 ## Bundle

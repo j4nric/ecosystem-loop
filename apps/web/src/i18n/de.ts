@@ -2,6 +2,26 @@
  * UI-Texte (Deutsch). Namen von Landschaften, Karten, Jahreszeiten und Monaten stehen in den Spieldaten
  * (packages/herde/data, `name.de`); hier stehen nur Sätze und Beschriftungen der Oberfläche.
  */
+/**
+ * Regelzahlen für Texte (aus `data.params`, siehe `ruleNumbers` in `logic/format.ts`), damit die Oberfläche
+ * nichts behauptet, was die Daten anders festlegen.
+ */
+export interface RuleNumbers {
+  /** Jahreszeit mit Nachwuchs und Monat darin (1 = erster Monat der Jahreszeit) */
+  birthSeason: string;
+  birthMonth: number;
+  /** Wildnis, bei der die Eiszeit beginnt */
+  wildMax: number;
+  /** Dauer der Eiszeit in Monaten */
+  iceMonths: number;
+  /** höchstens so viele Karten auf der Hand */
+  handMax: number;
+  /** Zahl der Nachbarfelder, aus denen die Herde frisst */
+  neighbors: number;
+}
+
+const months = (n: number) => `${n} ${n === 1 ? 'Monat' : 'Monate'}`;
+
 export const de = {
   appTitle: 'Die Herde',
   // Statusleiste
@@ -15,12 +35,17 @@ export const de = {
     `Herde ${herd}, Vorrat ${fat} von ${fatMax}, Wölfe ${wolves}`,
   // Jahreskreis
   date: (year: number, month: string) => `Jahr ${year} · ${month}`,
-  seasonHint: {
-    spring: 'Gras wächst, Nachwuchs im 2. Monat',
-    summer: 'Die Herde braucht Wasser, Altwald kann brennen',
-    autumn: 'Das Gras wächst langsamer, Vorrat anfressen',
-    winter: 'Kein Gras, die Herde braucht Schutz',
-  } as Record<string, string>,
+  seasonHint: (season: string, r: RuleNumbers): string | undefined => {
+    const hint = (
+      {
+        spring: 'Gras wächst',
+        summer: 'Die Herde braucht Wasser, Altwald kann brennen',
+        autumn: 'Das Gras wächst langsamer, Vorrat anfressen',
+        winter: 'Kein Gras, die Herde braucht Schutz',
+      } as Record<string, string>
+    )[season];
+    return hint && r.birthSeason === season ? `${hint}, Nachwuchs im ${r.birthMonth}. Monat` : hint;
+  },
   seasonHintFallback: 'Die Herde zieht weiter',
   iceHint: (n: number) => `Eiszeit: noch ${n} ${n === 1 ? 'Monat' : 'Monate'} Winter`,
   // Absicht
@@ -33,7 +58,6 @@ export const de = {
   } as Record<string, string>,
   intentLine: (reason: string) => `Die Herde ${reason}`,
   stays: '(bleibt)',
-  intentAfter: 'Danach',
   intentSame: 'Die Absicht der Herde bleibt gleich.',
   // Hand und Steuerung
   hand: 'Hand',
@@ -63,7 +87,6 @@ export const de = {
   previewPackGone: 'Das Wolfsrudel dort wird vertrieben.',
   previewIntentChanged: 'Neue Absicht:',
   // Feld-Info
-  fieldHint: 'Feld antippen: Futter und was dort von selbst geschieht.',
   fertile: 'fruchtbar',
   food: (n: number, max: number) => `Futter ${n} von ${max}`,
   forecastUngrazedSoon: (to: string, n: number) =>
@@ -131,7 +154,7 @@ export const de = {
     'Dein gespeicherter Spielstand passt nicht zur aktuellen Version des Spiels und wurde verworfen. Eine neue Partie hat begonnen.',
   ok: 'Weiter',
   // Einführung
-  tutorial: [
+  tutorial: (r: RuleNumbers) => [
     {
       icon: '🐑',
       title: 'Die Herde zieht selbst',
@@ -150,7 +173,7 @@ export const de = {
     {
       icon: '❄️',
       title: 'Wildnis und Eiszeit',
-      text: 'Jeder Monat und jede gelegte Karte lässt die Wildnis wachsen. Bei 100 beginnt die Eiszeit: sechs Monate Winter ohne Nachwuchs. Bring die Herde hindurch, dann ist das Zeitalter gewonnen.',
+      text: `Jeder Monat und jede gelegte Karte lässt die Wildnis wachsen. Bei ${r.wildMax} beginnt die Eiszeit: ${months(r.iceMonths)} Winter ohne Nachwuchs. Bring die Herde hindurch, dann ist das Zeitalter gewonnen.`,
     },
     {
       icon: '▶',
@@ -167,14 +190,14 @@ export const de = {
   // Hilfe
   helpTitle: 'So spielst du',
   helpGoal: 'Ziel',
-  helpGoalText:
-    'Bring die Herde durch die Eiszeit. Sie beginnt, wenn die Wildnis 100 erreicht – jeder Monat und jede Karte lässt sie wachsen. Wer viel eingreift, ist besser vorbereitet, ruft die Prüfung aber früher herbei.',
+  helpGoalText: (r: RuleNumbers) =>
+    `Bring die Herde durch die Eiszeit. Sie beginnt, wenn die Wildnis ${r.wildMax} erreicht – jeder Monat und jede Karte lässt sie wachsen. Wer viel eingreift, ist besser vorbereitet, ruft die Prüfung aber früher herbei.`,
   helpHerd: 'Die Herde',
-  helpHerdText:
-    'Sie zieht jeden Monat höchstens ein Feld und frisst aus dem eigenen und den 8 Nachbarfeldern. Überschuss wird Vorrat, Mangel zehrt ihn auf, danach sterben Tiere. Sommer: Durst ohne Wasser in der Nähe. Winter: Kälte ohne Gehölz in der Nähe. Frühling: Nachwuchs, je nach Vorrat.',
+  helpHerdText: (r: RuleNumbers) =>
+    `Sie zieht jeden Monat höchstens ein Feld und frisst aus dem eigenen und den ${r.neighbors} Nachbarfeldern. Überschuss wird Vorrat, Mangel zehrt ihn auf, danach sterben Tiere. Sommer: Durst ohne Wasser in der Nähe. Winter: Kälte ohne Gehölz in der Nähe. Frühling: Nachwuchs, je nach Vorrat.`,
   helpCards: 'Karten',
-  helpCardsText:
-    'Zu Beginn jeder Jahreszeit ziehst du neue Karten, höchstens 5 auf der Hand. Karte antippen, dann ein leuchtendes Feld – die Vorschau zeigt, was mit dem Feld geschieht und ob die Herde ihre Absicht ändert. Regen wirkt auf die ganze Insel.',
+  helpCardsText: (r: RuleNumbers) =>
+    `Zu Beginn jeder Jahreszeit ziehst du neue Karten, höchstens ${r.handMax} auf der Hand. Karte antippen, dann ein leuchtendes Feld – die Vorschau zeigt, was mit dem Feld geschieht und ob die Herde ihre Absicht ändert. Regen wirkt auf die ganze Insel.`,
   helpWorld: 'Die Welt lebt',
   helpWorldText:
     'Landschaft wandelt sich von selbst. Wölfe leben im Gehölz, ziehen hungrig durch Waldkorridore zur Herde und reißen Tiere in ihrer Nähe. Feuer und Fels vertreiben sie.',

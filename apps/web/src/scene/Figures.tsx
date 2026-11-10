@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { Color, Matrix4, Quaternion, Vector3, type BufferGeometry, type InstancedMesh } from 'three';
 
 /** Eine Gruppe von Figuren auf einem Feld (die Herde oder ein Rudel). */
@@ -60,6 +60,7 @@ export function Figures({
   const tracks = useRef(new Map<string, Track>());
   const dirty = useRef(true);
   const groupsRef = useRef(groups);
+  const invalidate = useThree((st) => st.invalidate);
 
   // Feste Lage und Drehung je Figur (Index in der Gruppe)
   const offsets = useMemo(
@@ -98,7 +99,8 @@ export function Figures({
     }
     for (const id of [...tracks.current.keys()]) if (!seen.has(id)) tracks.current.delete(id);
     dirty.current = true;
-  }, [groups, reducedMotion]);
+    invalidate(); // bei frameloop="demand" den nächsten Frame anfordern, der die Matrizen schreibt
+  }, [groups, reducedMotion, invalidate]);
 
   useFrame(({ clock }) => {
     const now = clock.elapsedTime;
@@ -117,6 +119,7 @@ export function Figures({
     }
     if (!moving && !dirty.current) return;
     dirty.current = moving;
+    if (moving) invalidate();
     const b = bodies.current;
     const h = heads.current;
     if (!b || !h) return;

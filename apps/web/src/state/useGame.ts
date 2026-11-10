@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import type { Action } from '@being-god/herde';
 import type { GameClient } from '../client/index.ts';
 import type { Tone } from '../logic/events.ts';
+import { createMonthRunner, timingFor, type MonthRunner } from './monthRunner.ts';
 
 export interface Toast {
   id: number;
@@ -11,9 +12,6 @@ export interface Toast {
 
 const TOAST_MS = 3400;
 const MAX_TOASTS = 2;
-/** Pause zwischen zwei Monaten beim Abspielen (die Herde braucht etwa 0,7 s für ihren Zug). */
-export const MONTH_MS = 1000;
-export const MONTH_MS_REDUCED = 300;
 
 /**
  * Bindet den GameClient an React: aktuelle View, Protokoll, dispatch, kurze Meldungen und das animierte
@@ -26,8 +24,10 @@ export function useGame(client: GameClient, reducedMotion: boolean) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [running, setRunning] = useState(false);
   const nextId = useRef(1);
-  const timer = useRef<number | null>(null);
-  const runId = useRef(0);
+  const reduced = useRef(reducedMotion);
+  useEffect(() => {
+    reduced.current = reducedMotion;
+  }, [reducedMotion]);
 
   useEffect(() => {
     const timers = new Set<number>();
@@ -54,43 +54,28 @@ export function useGame(client: GameClient, reducedMotion: boolean) {
     };
   }, [client]);
 
-  const stop = useCallback(() => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
-    timer.current = null;
-    runId.current++;
-    setRunning(false);
-  }, []);
-  useEffect(() => stop, [stop]);
+  // Schrittweises Ablaufen der Monate (Logik in monthRunner.ts, ohne DOM getestet). Ein Runner je Client;
+  // beim Wechsel oder Abbau wird ein laufender Lauf angehalten.
+  const runner = useRef<MonthRunner | null>(null);
+  useEffect(() => {
+    const r = createMonthRunner({
+      advance: () => client.dispatch({ type: 'advance' }),
+      isOver: () => client.getView().over !== null,
+      setRunning,
+      timing: () => timingFor(reduced.current),
+    });
+    runner.current = r;
+    return () => {
+      r.stop();
+      if (runner.current === r) runner.current = null;
+    };
+  }, [client]);
+  const stop = useCallback(() => runner.current?.stop(), []);
 
   const dispatch = useCallback((action: Action) => client.dispatch(action), [client]);
 
   /** Lässt `months` Monate nacheinander ablaufen; endet früher, wenn die Partie vorbei ist oder `stop` kommt. */
-  const run = useCallback(
-    (months: number) => {
-      if (timer.current !== null || months <= 0) return;
-      setRunning(true);
-      const id = ++runId.current;
-      let left = months;
-      const tick = () => {
-        const ok = client.dispatch({ type: 'advance' });
-        left--;
-        if (!ok || left <= 0 || client.getView().over) {
-          timer.current = null;
-          // Die letzte Bewegung noch ausklingen lassen, dann Knöpfe wieder freigeben.
-          window.setTimeout(
-            () => {
-              if (runId.current === id) setRunning(false);
-            },
-            reducedMotion ? 0 : 500,
-          );
-          return;
-        }
-        timer.current = window.setTimeout(tick, reducedMotion ? MONTH_MS_REDUCED : MONTH_MS);
-      };
-      timer.current = window.setTimeout(tick, 0);
-    },
-    [client, reducedMotion],
-  );
+  const run = useCallback((months: number) => void runner.current?.run(months), []);
 
   const newGame = useCallback(() => {
     stop();
