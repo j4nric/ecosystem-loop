@@ -61,7 +61,7 @@ export type Reach = z.infer<typeof Reach>;
 /**
  * Weltkarten: Effekte und Schwellen werden für jede Zone einzeln ausgewertet, die Zone ist dabei als
  * "self" gebunden (wie bei Jahreszeiten). `effects` wirken in jeder Zone, `byGeography` zusätzlich nur in
- * Zonen dieser Geografie. Ablauf siehe `cards/world.ts`.
+ * Zonen dieser Geografie. Ablauf siehe `cards/worldcard.ts`.
  */
 export const Card = z.strictObject({
   id: Id,

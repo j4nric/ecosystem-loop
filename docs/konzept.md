@@ -294,7 +294,7 @@ Schwellen der Wetterkarten (je Zone, nur in den genannten Geografien):
 Die Idee je Karte:
 
 - **Gewitter** nässt Wald und Küste (gut für Urwald und Mangrove) und macht das Flachland zum Moor; der Fluss steigt.
-- **Dürre** lässt Schnee schwinden und trocknet nasses Flachland, schadet aber Wald, Küste und Fluss.
+- **Dürre** lässt Schnee schwinden und trocknet nasses Flachland; Wald und Küste leiden meist, den Fluss senkt sie – schädlich in der Aue, hilfreich im Hochwasser.
 - **Sturm** verweht den Schnee der Berge, bricht Bäume im Wald und trägt Salz an die Küste.
 - **Frost** lockert den Boden des Flachlands (Frostgare), lässt aber die Wiese erfrieren und bindet Flusswasser.
 - **Regen** hilft dem Wald und einem niedrigen Fluss, verschneit aber die Berge und nässt das Flachland.
@@ -450,6 +450,8 @@ entscheidet; Zahlen bleiben Platzhalter bis Phase 6.
   den Zustand vor der Karte, Schwellen mit Prüfung _nachher_ den Zustand nach der Grundwirkung aller Zonen.
   Wirkungen auf Nachbarzonen (z. B. Flut: Nachbarn Feuchte +1) werden je Zone summiert und einmal angewendet,
   so dass die Reihenfolge der Zonen das Ergebnis nicht entscheidet.
+  Die Wirkung auf die eigene Zone wird zuerst angewendet und auf die Skala begrenzt, die gesammelten
+  Nachbarwirkungen danach (z. B. Feuchte 5, eigene +1 → 5, Nachbar −2 → 3, nicht 4).
 - Reihenfolge: Schwellen „vorher“ → Grundwirkung (erst die Wirkung auf alle Zonen, dann die der Geografie) →
   Ziehen, Odem und Ereignis-Effekte genau einmal → Schwellen „nachher“ → Folgen der Schwellen (je Schwelle in allen
   Zonen, in denen sie auslöst). Im Protokoll erscheinen die Zonen in Kartenreihenfolge.

@@ -217,5 +217,11 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop, onDropWorld, o
  */
 function overPlayArea(x: number, y: number): boolean {
   const el = document.elementFromPoint(x, y);
-  return el !== null && el.closest('.dock') === null;
+  if (el === null || el.closest('.dock') !== null) return false;
+  // Die Zieh-Vorschau lässt Zeiger durch, deckt die Fläche aber sichtbar ab: dort loslassen spielt nicht.
+  for (const panel of document.querySelectorAll('.drag-panel')) {
+    const r = panel.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return false;
+  }
+  return true;
 }

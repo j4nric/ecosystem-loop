@@ -162,7 +162,7 @@ cards:
       mountains: [{ adjust: snow, by: -1 }]
 
   # Sonne: überall Licht +1; Schneeschmelze in den Bergen (Schnee −1), an der Küste verdunstet Wasser (Salz +1).
-  # Die Karte, die Schnee senkt. Hilft Alm und Blumenwiese (Licht ≥ 3), schadet der Mangrove (Salz 2–3).
+  # Senkt Schnee wie Dürre, Sturm und Trockenwind. Hilft Alm und Blumenwiese (Licht ≥ 3), schadet der Mangrove (Salz 2–3).
   - id: sun
     name: { de: Sonne, en: Sun }
     category: weather
