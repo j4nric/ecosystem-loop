@@ -97,6 +97,8 @@ function noticeToast(n: Exclude<Notice, { type: 'incompatible' }>): Omit<Toast, 
       return { text: t.toastHarmony(n.delta), tone: n.delta > 0 ? 'good' : 'bad' };
     case 'collapsed':
       return { text: t.toastCollapsed, tone: 'bad' };
+    case 'text':
+      return { text: n.text, tone: n.tone };
     case 'emerged':
       return {
         text: n.first ? t.toastEmergedFirst(n.species, n.zone) : t.toastEmerged(n.species, n.zone),

@@ -274,7 +274,7 @@ describe('Gaben der Arten und Menschenkarten (Konzept 5.3, 5.4)', () => {
     const v = view(data, s, 'de').hand[0]!;
     expect(v.slots).toEqual([
       { id: 'zone', kind: 'zone', label: 'Zone' },
-      { id: 'prey', kind: 'species', label: 'Pflanzenfresser' },
+      { id: 'prey', kind: 'species', label: 'Pflanzenfresser', of: 'zone' },
     ]);
     expect(v.text).toBe('Bestand Pflanzenfresser −2');
   });

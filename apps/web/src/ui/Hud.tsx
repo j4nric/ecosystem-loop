@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { GameView } from '@core/api';
 import { t } from '../i18n/index.ts';
 
@@ -8,10 +8,13 @@ interface Props {
   reducedMotion: boolean;
   onNewGame: () => void;
   onHelp: () => void;
+  onBook: () => void;
 }
 
 /** Kopfzeile: Harmonie-Balken (animiert), Odem, Runde/Jahr/Jahreszeit, Ereignis-Vorschau, Hilfe. */
-export function Hud({ view, isMock, reducedMotion, onNewGame, onHelp }: Props) {
+export function Hud({ view, isMock, reducedMotion, onNewGame, onHelp, onBook }: Props) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [forecastOpen, setForecastOpen] = useState(false);
   const h = view.harmony;
   const pct = Math.round((h.value / Math.max(1, h.max)) * 100);
   const tone = pct >= 60 ? 'good' : pct >= 30 ? 'mid' : 'low';
@@ -95,14 +98,65 @@ export function Hud({ view, isMock, reducedMotion, onNewGame, onHelp }: Props) {
           <button type="button" className="icon-btn" onClick={onHelp} aria-label={t.help}>
             ?
           </button>
-          <button type="button" className="icon-btn" onClick={onNewGame} aria-label={t.newGame}>
-            ↻
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-label={t.menu}
+            aria-expanded={menuOpen}
+          >
+            ☰
           </button>
+          {menuOpen && (
+            <div className="hud__menu" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onBook();
+                }}
+              >
+                <span aria-hidden>📖</span> {t.book}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onNewGame();
+                }}
+              >
+                <span aria-hidden>↻</span> {t.newGame}
+              </button>
+            </div>
+          )}
         </div>
       </div>
       {view.forecast && (
-        <div className="forecast">
-          <b>{t.forecast}:</b> {view.forecast.name} – {view.forecast.text}
+        <button
+          type="button"
+          className={`forecast${forecastOpen ? ' is-open' : ''}${(view.forecast.inRounds ?? 0) <= 0 ? ' is-now' : ''}`}
+          aria-expanded={forecastOpen}
+          title={t.forecastShowText}
+          onClick={() => setForecastOpen((o) => !o)}
+        >
+          <span className="forecast__icon" aria-hidden>
+            {view.forecast.icon ?? '⚠'}
+          </span>
+          <span className="forecast__main">
+            <b>{view.forecast.name}</b>
+            <small>
+              {t.forecastWhen(view.forecast.inRounds ?? 0)}
+              {view.forecast.zoneName ? ` · ${t.forecastZone(view.forecast.zoneName)}` : ''}
+            </small>
+            {forecastOpen && <span className="forecast__text">{view.forecast.text}</span>}
+          </span>
+        </button>
+      )}
+      {(view.eventShield ?? 0) > 0 && (
+        <div className="shield">
+          <span aria-hidden>🛡</span> {t.eventShield(view.eventShield ?? 0)}
         </div>
       )}
       {isMock && <div className="mock-badge">{t.mockBadge}</div>}

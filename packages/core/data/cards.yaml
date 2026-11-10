@@ -200,6 +200,22 @@ cards:
     cost: 5
     effects: [{ adjust: vegetation, by: 1, scope: all }]
 
+  # Gegenkarten zu Ereignissen (Konzept 6.2, 8, 9); im Pool erst über Meilensteine (meta.yaml).
+  - id: silence
+    name: { de: Stille, en: Silence }
+    category: miracle
+    cost: 3
+    effects: [{ event: cancel }]
+
+  - id: ark
+    name: { de: Arche, en: Ark }
+    category: miracle
+    cost: 4
+    slots:
+      - { id: zone, kind: zone }
+      - { id: species, kind: species, in: zone, label: { de: Art, en: Species } }
+    effects: [{ population: species, by: 2, at: zone }]
+
   # ---------- Gaben der Arten (kommen ins Deck, wenn die Art erstmals entsteht; Konzept 5.3) ----------
   - id: algal_bloom
     name: { de: Algenblüte, en: Algal bloom }
@@ -296,12 +312,18 @@ cards:
         label: { de: Pflanzenfresser, en: Herbivore }
     effects: [{ population: prey, by: -2, at: zone }]
 
-  # AUSLEGUNG: Ereignisse kommen erst in Phase 3. Bis dahin zieht Späherblick nur eine Karte (Platzhalter).
+  # Späherblick: angekündigtes Ereignis abwenden oder um eine Runde verschieben (Wahl beim Ausspielen).
   - id: scout_eye
     name: { de: Späherblick, en: Scout's eye }
     category: species
     cost: 2
-    effects: [{ draw: 1 }]
+    slots:
+      - id: mode
+        kind: choice
+        label: { de: Späherblick, en: Scout's eye }
+        options:
+          - { id: avert, label: { de: Abwenden, en: Avert }, effects: [{ event: cancel }] }
+          - { id: delay, label: { de: Verschieben, en: Delay }, effects: [{ event: delay, rounds: 1 }] }
 
   - id: fruit_rain
     name: { de: Fruchtregen, en: Fruit rain }

@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import type { Card, CardCategory } from './cards.ts';
 import type { SpeciesDef } from './life.ts';
+import type { EventDef, MetaData } from './events.ts';
 import { FORM_KINDS, Id, Text, type FormKindSchema } from './common.ts';
 import type { Coupling, FormDef, Geography, MapZone, Season, StatDef } from './world.ts';
 
@@ -14,7 +15,14 @@ export const Config = z.strictObject({
     minPlays: z.number().int().nonnegative(),
     maxPlays: z.number().int().positive().nullable(),
   }),
-  deck: z.strictObject({ minSize: z.number().int().positive(), maxSize: z.number().int().positive() }),
+  deck: z.strictObject({
+    minSize: z.number().int().positive(),
+    maxSize: z.number().int().positive(),
+    /** Höchstens so viele Kopien derselben Karte im Startdeck. */
+    maxCopies: z.number().int().positive(),
+  }),
+  /** Variierende Startwelten: jeder Startwert streut um ±spread (aus dem Seed), wenn vary an ist. */
+  startWorld: z.strictObject({ vary: z.boolean(), spread: z.number().int().nonnegative() }),
   /** Reihenfolge der Natur-Phase (Modul-Ids aus src/rules). */
   pipeline: z.array(Id).min(1),
   /** Parameter je Regel-Modul; geprüft vom Schema des Moduls. */
@@ -97,4 +105,8 @@ export interface GameData {
   species: Map<string, SpeciesDef>;
   harmony: HarmonyData;
   scenarios: Map<string, Scenario>;
+  /** Ereignispool in Daten-Reihenfolge (Konzept 9). */
+  events: Map<string, EventDef>;
+  /** Meta-Progression: Grundpool und Meilensteine (Konzept 10). */
+  meta: MetaData;
 }

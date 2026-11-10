@@ -12,6 +12,7 @@ export type Notice =
   | { type: 'level'; zone: string; from: number; to: number }
   | { type: 'harmony'; delta: number }
   | { type: 'collapsed' }
+  | { type: 'text'; text: string; tone: 'good' | 'bad' | 'info' }
   | { type: 'emerged'; species: string; zone: string; first: boolean }
   | { type: 'extinct'; species: string }
   | { type: 'migrated'; species: string; from: string; to: string }
@@ -28,13 +29,43 @@ export type Notice =
   /** Der Spielstand passt nicht (mehr) zu den Spieldaten – die Oberfläche bietet eine neue Partie an. */
   | { type: 'incompatible' };
 
-/** Vorschau eines Kartenzugs mit aufgelösten Namen (für das Zonen-Sheet vor dem Bestätigen). */
+/** Vorschau eines Kartenzugs mit lokalisierten Namen (aus der Engine) für das Zonen-Sheet vor dem Bestätigen. */
 export interface PreviewView {
   cost: number;
   affordable: boolean;
   changes: { zone: string; zoneName: string; stat: string; statName: string; from: number; to: number }[];
   triggers: { zone: string; zoneName: string; name: string; icon: string }[];
   formChanges: { zone: string; zoneName: string; from: string; to: string; kind: FormKind }[];
+  populationChanges: {
+    zone: string;
+    zoneName: string;
+    species: string;
+    speciesName: string;
+    from: number;
+    to: number;
+  }[];
+  /** Wirkung auf angekündigte Ereignisse (Gegenkarten wie Späherblick, Stille). */
+  eventChanges: { name: string | null; change: 'cancelled' | 'delayed' | 'shielded'; round: number | null }[];
+}
+
+/** Schöpfungsbuch für die Anzeige (lokalisierte Namen). */
+export interface BookView {
+  games: number;
+  /** Entdeckte Arten, nach Stufe sortiert. */
+  species: { id: string; name: string; tier: number; firstGame: number }[];
+  /** Anzahl aller Arten in den Daten (für „x von y“). */
+  speciesTotal: number;
+  milestones: { id: string; name: string; description: string; reached: boolean }[];
+  best: { score: number; rounds: number; tier: number };
+  totals: { rounds: number; extinctions: number; events: number };
+}
+
+/** Was die letzte beendete Partie ins Schöpfungsbuch gebracht hat (lokalisierte Namen). */
+export interface GameResult {
+  discovered: string[];
+  milestones: string[];
+  unlocked: string[];
+  records: ('score' | 'rounds' | 'tier')[];
 }
 
 /**
@@ -57,6 +88,10 @@ export interface GameClient {
   speciesName(speciesId: string): string;
   /** Vorschau eines vollständigen Kartenzugs ohne Ausführung; null, wenn keine Vorschau möglich ist. */
   preview(uid: number, targets: Targets): PreviewView | null;
+  /** Schöpfungsbuch (bleibt zwischen Partien erhalten). */
+  getBook(): BookView;
+  /** Eintrag der zuletzt beendeten Partie ins Buch; null, solange in dieser Sitzung keine Partie endete. */
+  lastResult(): GameResult | null;
   /** Neue Partie starten (setzt auch den gespeicherten Spielstand zurück). */
   newGame(): void;
   /** true, solange Vorschau-Daten statt der echten Engine laufen. */

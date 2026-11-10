@@ -35,6 +35,15 @@ URL-Schalter: `?mock` (Vorschau-Daten ohne Engine), `?seed=abc` (fester Seed fü
 - Einführung beim ersten Start (Status in `localStorage`), Hilfe über „?“ im HUD.
 - Zonen-Beschriftungen sind eine DOM-Schicht (`scene/ZoneLabels.tsx`) statt drei `<Html>`.
 
+## Ereignisse und Schöpfungsbuch (Phase 3)
+
+- Das angekündigte Ereignis steht unter der Kopfzeile (Symbol, Name, wann, wo); Antippen zeigt den Text. „Stille“
+  zeigt einen Schild-Hinweis. Wahl-Slots (z. B. Späherblick: Abwenden/Verschieben) wählt man über Chips.
+- Zielwahl über `slotOptions`, Vorschau mit den lokalisierten Feldern aus `preview(…, locale)`.
+- Das Schöpfungsbuch liegt unter eigenem Schlüssel in `localStorage` (`LocalBookStore`), wird nach dem Kollaps mit
+  `recordGame` fortgeschrieben und an `newGame` übergeben. Spiel-Ende zeigt Neues (entdeckt, freigeschaltet,
+  Bestwerte); die Buch-Ansicht ist über das Menü (☰) erreichbar.
+
 ## Tests
 
 `apps/web/tests` (vitest, ohne DOM): EngineClient und SaveStore. Lokal: `npx vitest run apps/web/tests --config /dev/null`.

@@ -12,10 +12,11 @@ import { useTargeting } from './state/useTargeting.ts';
 import { DragOverlay } from './ui/DragOverlay.tsx';
 import { GameOver } from './ui/GameOver.tsx';
 import { Hand } from './ui/Hand.tsx';
+import { Book } from './ui/Book.tsx';
 import { Help } from './ui/Help.tsx';
 import { Hud } from './ui/Hud.tsx';
 import { PlayPreview } from './ui/PlayPreview.tsx';
-import { SpeciesChips } from './ui/SpeciesChips.tsx';
+import { ChoiceChips } from './ui/ChoiceChips.tsx';
 import { Toasts } from './ui/Toasts.tsx';
 import { Tutorial } from './ui/Tutorial.tsx';
 import { ZoneSheet } from './ui/ZoneSheet.tsx';
@@ -32,6 +33,7 @@ export function App({ client }: { client: GameClient }) {
   const reducedMotion = useReducedMotion();
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [bookOpen, setBookOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(initialTutorial);
   const pickerRef = useRef<ZonePicker | null>(null);
 
@@ -95,11 +97,12 @@ export function App({ client }: { client: GameClient }) {
   const zone = view.zones.find((z) => z.id === focusZone);
   const speciesSlot = targeting.editSlot?.kind === 'species';
 
-  const chips = speciesSlot && (
-    <SpeciesChips
-      options={targeting.speciesOptions}
-      selected={targeting.chosenSpecies}
-      onPick={targeting.pickSpecies}
+  const chips = targeting.chipSlot && targeting.editSlot && (
+    <ChoiceChips
+      options={targeting.chipOptions}
+      selected={targeting.chosenChip}
+      onPick={targeting.pickChip}
+      label={targeting.editSlot.label}
     />
   );
   const preview = active && targeting.complete && (
@@ -135,6 +138,7 @@ export function App({ client }: { client: GameClient }) {
           isMock={client.isMock}
           reducedMotion={reducedMotion}
           onHelp={() => setHelpOpen(true)}
+          onBook={() => setBookOpen(true)}
           onNewGame={() => {
             if (!window.confirm(t.newGameConfirm)) return;
             startNewGame();
@@ -163,7 +167,9 @@ export function App({ client }: { client: GameClient }) {
                   ? t.unsupportedSlot(targeting.slot.kind)
                   : speciesSlot
                     ? t.chooseSpecies(targeting.slot.label)
-                    : t.chooseTarget(targeting.slot.label)}
+                    : targeting.chipSlot
+                      ? t.chooseOption(targeting.slot.label)
+                      : t.chooseTarget(targeting.slot.label)}
               </span>
               {chips || <small>{active.card.text}</small>}
             </div>
@@ -206,7 +212,9 @@ export function App({ client }: { client: GameClient }) {
 
       {dragging && <DragOverlay drag={dragging} zones={view.zones} preview={dragPreview} ghostRef={drag.ghostRef} />}
 
-      {view.phase === 'over' && <GameOver view={view} onNewGame={startNewGame} />}
+      {view.phase === 'over' && (
+        <GameOver view={view} result={client.lastResult()} onNewGame={startNewGame} onBook={() => setBookOpen(true)} />
+      )}
 
       {incompatible && (
         <div className="overlay" role="alertdialog" aria-modal="true" aria-labelledby="incompatible-title">
@@ -234,6 +242,7 @@ export function App({ client }: { client: GameClient }) {
           }}
         />
       )}
+      {bookOpen && <Book book={client.getBook()} onClose={() => setBookOpen(false)} />}
       {tutorialOpen && <Tutorial onDone={closeTutorial} />}
     </div>
   );

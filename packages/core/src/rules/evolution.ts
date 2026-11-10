@@ -32,10 +32,20 @@ export function evolutionParams(data: GameData): EvolutionParams {
   return paramsOf(data, spec);
 }
 
-/** Lebensraum für die neue Art: die Zone selbst oder eine passende Nachbarzone mit Platz. */
-function settleZone(data: GameData, state: GameState, zone: ZoneState, sp: SpeciesDef): ZoneState | null {
+/**
+ * Lebensraum für die neue Art: die Zone selbst oder eine passende Nachbarzone mit Platz.
+ * Die Zonenstufe gilt für die Zielzone (Konzept 4.4: „kann nur in einer Zone mit Stufe ≥ n − 2 entstehen“).
+ */
+function settleZone(
+  data: GameData,
+  state: GameState,
+  zone: ZoneState,
+  sp: SpeciesDef,
+  p: EvolutionParams,
+): ZoneState | null {
   const max = lifeParams(data).max;
-  const fits = (z: ZoneState) => sp.habitat.includes(z.form) && populationOf(z, sp.id) < max;
+  const fits = (z: ZoneState) =>
+    sp.habitat.includes(z.form) && populationOf(z, sp.id) < max && z.level >= sp.tier - p.levelGap;
   if (fits(zone)) return zone;
   // AUSLEGUNG: Passt die Form der Ursprungszone nicht (z. B. Frosch → Echse, Primat → Mensch), entsteht die
   // neue Art in einer passenden Nachbarzone („Landgang“); bei mehreren die mit dem kleinsten Bestand.
@@ -56,11 +66,10 @@ export function evolutionTarget(
   p: EvolutionParams = evolutionParams(data),
 ): ZoneState | null {
   if (sp.ancestor === null || populationOf(zone, sp.ancestor) < p.minAncestor) return null;
-  if (zone.level < sp.tier - p.levelGap) return null;
   const ctx = { data, state, zone };
   if (sp.tier >= p.pressure.fromTier && !holdsAll(p.pressure.when, ctx)) return null;
   if (!holdsAll(sp.evolve, ctx)) return null;
-  return settleZone(data, state, zone, sp);
+  return settleZone(data, state, zone, sp, p);
 }
 
 export const evolution = defineRule({

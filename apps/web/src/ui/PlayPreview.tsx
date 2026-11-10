@@ -40,7 +40,12 @@ export function PlayPreview({ card, preview, shownZone, onPlay, onCancel, childr
 
 /** Liste der erwarteten Wirkungen: Schwellen, Formwechsel, Wertänderungen. */
 export function PreviewList({ preview, shownZone }: { preview: PreviewView; shownZone: string | null }) {
-  const nothing = preview.changes.length === 0 && preview.triggers.length === 0 && preview.formChanges.length === 0;
+  const nothing =
+    preview.changes.length === 0 &&
+    preview.triggers.length === 0 &&
+    preview.formChanges.length === 0 &&
+    preview.populationChanges.length === 0 &&
+    preview.eventChanges.length === 0;
   return (
     <ul className="play-preview__list" aria-label={t.previewTitle}>
       {preview.triggers.map((x) => (
@@ -57,6 +62,16 @@ export function PreviewList({ preview, shownZone }: { preview: PreviewView; show
         <li key={`c-${c.zone}-${c.stat}`}>
           {c.zone === shownZone ? '' : `${c.zoneName} · `}
           {c.statName} {c.from} → <b>{c.to}</b>
+        </li>
+      ))}
+      {preview.populationChanges.map((p) => (
+        <li key={`p-${p.zone}-${p.species}`} className={p.to < p.from ? 'is-bad' : 'is-good'}>
+          {t.previewPopulation(p.zoneName, p.speciesName, p.from, p.to)}
+        </li>
+      ))}
+      {preview.eventChanges.map((e, i) => (
+        <li key={`e-${i}`} className="is-good">
+          {t.previewEvent(e.change, e.name, e.round)}
         </li>
       ))}
       {nothing && <li className="muted">{t.previewNone}</li>}

@@ -73,7 +73,43 @@ export const de = {
   later: 'Später',
   // Zielwahl
   chooseSpecies: (label: string) => `Art wählen: ${label}`,
-  speciesOptions: 'Mögliche Arten',
+  chooseOption: (label: string) => `Wählen: ${label}`,
+  // Ereignis-Vorschau
+  forecastWhen: (inRounds: number) =>
+    inRounds <= 0 ? 'diese Runde' : inRounds === 1 ? 'nächste Runde' : `in ${inRounds} Runden`,
+  forecastZone: (zone: string) => `in ${zone}`,
+  forecastShowText: 'Angekündigtes Ereignis – antippen für Details',
+  eventShield: (n: number) =>
+    `Stille: ${n === 1 ? 'das nächste Ereignis entfällt' : `die nächsten ${n} Ereignisse entfallen`}`,
+  noForecast: 'Kein Ereignis angekündigt',
+  // Vorschau
+  previewPopulation: (zone: string, species: string, from: number, to: number) =>
+    `${zone} · ${species} ${from} → ${to}`,
+  previewEvent: (change: 'cancelled' | 'delayed' | 'shielded', name: string | null, round: number | null) =>
+    change === 'cancelled'
+      ? `${name ?? 'Ereignis'} wird abgewendet`
+      : change === 'delayed'
+        ? `${name ?? 'Ereignis'} wird verschoben${round !== null ? ` auf Runde ${round}` : ''}`
+        : 'Das nächste Ereignis entfällt',
+  // Menü und Schöpfungsbuch
+  menu: 'Menü',
+  book: 'Schöpfungsbuch',
+  bookGames: (n: number) => (n === 1 ? '1 Partie gespielt' : `${n} Partien gespielt`),
+  bookSpecies: (found: number, total: number) => `Entdeckte Arten (${found} von ${total})`,
+  bookNoSpecies: 'Noch keine Partie beendet – entdeckte Arten erscheinen hier.',
+  bookMilestones: 'Meilensteine',
+  bookBest: 'Bestwerte',
+  bookTotals: 'Summen',
+  bookTotalRounds: 'Runden',
+  bookTotalExtinctions: 'Aussterben',
+  bookTotalEvents: 'Ereignisse',
+  bookFirstGame: (n: number) => `seit Partie ${n}`,
+  // Spiel-Ende
+  resultDiscovered: 'Neu entdeckt',
+  resultMilestones: 'Meilensteine erreicht',
+  resultUnlocked: 'Freigeschaltet',
+  resultRecords: 'Neuer Bestwert',
+  recordName: { score: 'Punkte', rounds: 'Runden', tier: 'Entwicklungsstufe' },
   // Ziehen
   dragHint: 'Auf eine leuchtende Zone ziehen',
   dragInvalid: (zone: string) => `${zone}: hier nicht möglich`,

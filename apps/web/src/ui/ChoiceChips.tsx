@@ -1,16 +1,19 @@
-import type { SpeciesOption } from '../state/useTargeting.ts';
-import { t } from '../i18n/index.ts';
+import type { ChipOption } from '../state/useTargeting.ts';
 
 interface Props {
-  options: SpeciesOption[];
+  options: ChipOption[];
   selected: string | null;
-  onPick: (speciesId: string) => void;
+  onPick: (optionId: string) => void;
+  label: string;
 }
 
-/** Auswahl einer Art für einen Art-Slot (z. B. Beute bei „Jagd“) als große, daumenfreundliche Chips. */
-export function SpeciesChips({ options, selected, onPick }: Props) {
+/**
+ * Auswahl für Art-Slots (z. B. Beute bei „Jagd“) und Wahl-Slots (z. B. Abwenden/Verschieben bei „Späherblick“)
+ * als große, daumenfreundliche Chips.
+ */
+export function ChoiceChips({ options, selected, onPick, label }: Props) {
   return (
-    <div className="chips" role="radiogroup" aria-label={t.speciesOptions}>
+    <div className="chips" role="radiogroup" aria-label={label}>
       {options.map((o) => (
         <button
           key={o.id}

@@ -9,20 +9,20 @@ interface Selection {
 
 /** Slot-Arten, die durch Antippen einer Zone gefüllt werden. */
 const ZONE_KINDS = new Set(['zone', 'neighbor']);
-/** Slot-Arten, die über eine Auswahlliste (Chips) gefüllt werden. */
-const SPECIES_KINDS = new Set(['species']);
+/** Slot-Arten, die über eine Auswahlliste (Chips) gefüllt werden: Art in einer Zone, feste Wahl (z. B. Abwenden). */
+const CHIP_KINDS = new Set(['species', 'choice']);
 
 export const isZoneSlot = (kind: string) => ZONE_KINDS.has(kind);
 
-export interface SpeciesOption {
+export interface ChipOption {
   id: string;
   name: string;
-  /** Bestand in der Zone des Bezugs-Slots (falls bekannt). */
+  /** Bestand in der Zone des Bezugs-Slots (nur bei Art-Slots). */
   count: number | null;
 }
 
 /**
- * Führt durch einen Kartenzug: Karte wählen → Slot für Slot eine gültige Zone antippen bzw. eine Art wählen →
+ * Führt durch einen Kartenzug: Karte wählen → Slot für Slot eine gültige Zone antippen bzw. eine Art oder Option wählen →
  * Vorschau → „Spielen“. Gültige Ziele kommen vom Client (`legalTargets`, in der Engine über `legalPlays`),
  * nie aus App-Regeln. Sind alle Slots belegt, ersetzt eine weitere Wahl die des letzten Slots (Vorschauen
  * vergleichen); eine Zone, die für den ersten Slot gültig ist, beginnt die Zielwahl dort neu.
@@ -61,8 +61,12 @@ export function useTargeting(client: GameClient, view: GameView, onComplete: (ui
     return new Set(options);
   }, [editsZone, options, restartZones]);
 
-  const speciesOptions = useMemo<SpeciesOption[]>(() => {
-    if (!active || !editSlot || !SPECIES_KINDS.has(editSlot.kind)) return [];
+  const chipOptions = useMemo<ChipOption[]>(() => {
+    if (!active || !editSlot || !CHIP_KINDS.has(editSlot.kind)) return [];
+    if (editSlot.kind === 'choice') {
+      // Beschriftungen der Wahlmöglichkeiten kommen lokalisiert aus der CardView.
+      return options.map((id) => ({ id, name: editSlot.options?.find((o) => o.id === id)?.label ?? id, count: null }));
+    }
     // Art-Slots beziehen sich auf die Zone eines früheren Slots; deren Bestände liefern Namen und Anzahl.
     const zoneIds = new Set(Object.values(active.targets));
     const pops = view.zones.filter((z) => zoneIds.has(z.id)).flatMap((z) => z.populations);
@@ -109,10 +113,10 @@ export function useTargeting(client: GameClient, view: GameView, onComplete: (ui
     [active, editSlot, editsZone, options, restartZones],
   );
 
-  const pickSpecies = useCallback(
-    (speciesId: string) => {
-      if (!active || !editSlot || !SPECIES_KINDS.has(editSlot.kind) || !options.includes(speciesId)) return;
-      setSelection({ uid: active.card.uid, targets: { ...active.targets, [editSlot.id]: speciesId } });
+  const pickChip = useCallback(
+    (optionId: string) => {
+      if (!active || !editSlot || !CHIP_KINDS.has(editSlot.kind) || !options.includes(optionId)) return;
+      setSelection({ uid: active.card.uid, targets: { ...active.targets, [editSlot.id]: optionId } });
     },
     [active, editSlot, options],
   );
@@ -129,17 +133,18 @@ export function useTargeting(client: GameClient, view: GameView, onComplete: (ui
     editSlot,
     complete,
     validZones,
-    speciesOptions,
-    /** Gewählte Art des Art-Slots (für die Markierung in der Auswahl). */
-    chosenSpecies:
-      active && editSlot && SPECIES_KINDS.has(editSlot.kind) ? (active.targets[editSlot.id] ?? null) : null,
+    chipOptions,
+    /** true, wenn der aktuelle Slot über Chips gewählt wird. */
+    chipSlot: editSlot !== undefined && CHIP_KINDS.has(editSlot.kind),
+    /** Gewählte Option des Chip-Slots (für die Markierung in der Auswahl). */
+    chosenChip: active && editSlot && CHIP_KINDS.has(editSlot.kind) ? (active.targets[editSlot.id] ?? null) : null,
     preview,
     start,
     startAt,
     cancel,
     pickZone,
-    pickSpecies,
+    pickChip,
     confirm,
-    slotSupported: !slot || ZONE_KINDS.has(slot.kind) || SPECIES_KINDS.has(slot.kind),
+    slotSupported: !slot || ZONE_KINDS.has(slot.kind) || CHIP_KINDS.has(slot.kind),
   };
 }

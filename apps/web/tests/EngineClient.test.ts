@@ -4,7 +4,7 @@ import { legalPlays, type GameEvent, type GameState } from '@being-god/core';
 import { loadGameData } from '@being-god/core/node';
 import { EngineClient } from '../src/client/EngineClient.ts';
 import type { Notice } from '../src/client/GameClient.ts';
-import { MemorySaveStore } from '../src/client/SaveStore.ts';
+import { MemoryBookStore, MemorySaveStore } from '../src/client/SaveStore.ts';
 
 const data = loadGameData();
 
@@ -137,6 +137,52 @@ describe('EngineClient', () => {
     }
     expect(ctx.client.speciesName('deer')).toBe('Hirsch');
     expect(ctx.client.speciesName('unbekannt')).toBe('unbekannt');
+  });
+});
+
+describe('Zielwahl über slotOptions', () => {
+  it('liefert die Optionen eines Wahl-Slots (Späherblick) und Arten eines Art-Slots (Jagd)', () => {
+    const store = new MemorySaveStore();
+    setup(store, 'wahl');
+    const state = savedState(store);
+    const plains = state.zones.find((z) => z.geography === 'plains')!;
+    plains.populations = { ...plains.populations, deer: 3 };
+    state.hand[0] = { ...state.hand[0]!, card: 'scout_eye' };
+    state.hand[1] = { ...state.hand[1]!, card: 'hunt' };
+    store.save({ version: 1, seed: 'wahl', savedAt: 0, state });
+    const client = new EngineClient({ data, locale: 'de', store, seed: 'wahl' });
+    const scout = client.getView().hand[0]!;
+    expect(scout.slots[0]?.kind).toBe('choice');
+    expect(client.legalTargets(scout.uid, {}).sort()).toEqual(['avert', 'delay']);
+    const hunt = client.getView().hand[1]!;
+    expect(client.legalTargets(hunt.uid, {})).toContain(plains.id);
+    expect(client.legalTargets(hunt.uid, { zone: plains.id })).toContain('deer');
+    const p = client.preview(hunt.uid, { zone: plains.id, prey: 'deer' });
+    expect(p?.populationChanges).toEqual([
+      expect.objectContaining({ zone: plains.id, species: 'deer', speciesName: 'Hirsch', from: 3, to: 1 }),
+    ]);
+  });
+});
+
+describe('Schöpfungsbuch', () => {
+  it('trägt eine beendete Partie ein, speichert das Buch und meldet Neues', () => {
+    const books = new MemoryBookStore();
+    const client = new EngineClient({ data, locale: 'de', store: new MemorySaveStore(), books, seed: 'buch' });
+    expect(client.getBook().games).toBe(0);
+    expect(client.lastResult()).toBeNull();
+    (client as unknown as { record(): void }).record();
+    expect(books.load()?.games).toBe(1);
+    const book = client.getBook();
+    expect(book.games).toBe(1);
+    expect(book.species.length).toBeGreaterThan(0);
+    expect(book.speciesTotal).toBe(data.species.size);
+    expect(book.milestones.length).toBe(data.meta.milestones.length);
+    expect(client.lastResult()?.discovered.length).toBe(book.species.length);
+    client.newGame();
+    expect(client.lastResult()).toBeNull();
+    // Ein neuer Client liest das gespeicherte Buch
+    const again = new EngineClient({ data, locale: 'de', store: new MemorySaveStore(), books, seed: 'buch2' });
+    expect(again.getBook().games).toBe(1);
   });
 });
 

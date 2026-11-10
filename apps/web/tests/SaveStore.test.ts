@@ -1,8 +1,8 @@
 /** SaveStore: flüchtige und localStorage-Ablage – ohne DOM, mit einfachem Stub. */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { newGame, STATE_VERSION } from '@being-god/core';
+import { newBook, newGame, STATE_VERSION } from '@being-god/core';
 import { loadGameData } from '@being-god/core/node';
-import { LocalSaveStore, MemorySaveStore, type SavedGame } from '../src/client/SaveStore.ts';
+import { LocalBookStore, LocalSaveStore, MemorySaveStore, type SavedGame } from '../src/client/SaveStore.ts';
 
 const data = loadGameData();
 const game = (): SavedGame => ({ version: 1, seed: 's', savedAt: 1, state: newGame(data, { seed: 's' }) });
@@ -73,6 +73,19 @@ describe('LocalSaveStore', () => {
     const old = game();
     storage.items.set('k', JSON.stringify({ ...old, state: { ...old.state, version: STATE_VERSION - 1 } }));
     expect(store.load()).toBeNull();
+  });
+
+  it('speichert das Schöpfungsbuch unter eigenem Schlüssel und verwirft ungültige Bücher', () => {
+    const books = new LocalBookStore('buch');
+    expect(books.load()).toBeNull();
+    const book = { ...newBook(), games: 3 };
+    books.save(book);
+    expect(books.load()).toEqual(book);
+    storage.items.set('buch', JSON.stringify({ version: 1, games: -1 }));
+    expect(books.load()).toBeNull();
+    storage.failing = true;
+    expect(() => books.save(book)).not.toThrow();
+    expect(books.load()).toBeNull();
   });
 
   it('wirft nie, auch wenn der Speicher gesperrt ist', () => {

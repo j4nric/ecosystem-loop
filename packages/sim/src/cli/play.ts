@@ -6,6 +6,7 @@
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 import {
+  describeEvent,
   legalPlays,
   newGame,
   RuleError,
@@ -62,6 +63,11 @@ function render(v: GameView): void {
     );
     if (z.populations.length > 0) console.log(`       ${z.populations.map((p) => `${p.name} ${p.count}`).join(' · ')}`);
   });
+  if (v.forecast) {
+    const when = v.forecast.inRounds ? ` (in ${v.forecast.inRounds} Runde(n))` : ' (am Ende dieser Runde)';
+    console.log(`  Vorschau: ${v.forecast.icon ?? '!'} ${v.forecast.name}${when} – ${v.forecast.text}`);
+  } else console.log('  Vorschau: kein Ereignis angekündigt');
+  if (v.eventShield) console.log(`  Stille wirkt: die nächsten ${v.eventShield} Ereignis(se) entfallen`);
   console.log(`  Hand (gespielt ${v.playsThisTurn}, Pflicht ${v.minPlays}):`);
   v.hand.forEach((c, i) => {
     const mark = c.playable ? ' ' : '·';
@@ -119,6 +125,11 @@ function describe(d: GameData, e: GameEvent): string | null {
       return `  ✚ Gabe ins Deck: ${d.cards.get(e.card)?.name.de ?? e.card}`;
     case 'scored':
       return `  ★ ${e.points} Punkte${e.doubled ? ' (doppelt: Menschen)' : ''} · gesamt ${e.total}`;
+    case 'eventForecast':
+    case 'eventOccurred':
+    case 'eventCancelled':
+    case 'eventDelayed':
+      return `  ${describeEvent(d, e, 'de')}`;
     case 'roundStarted':
     case 'cardDrawn':
     case 'disturbance':
@@ -137,7 +148,13 @@ const POP_CAUSE: Record<string, string> = {
   evolution: 'Evolution',
 };
 
-const LEVEL_REASON = { rise: 'Aufstieg', disturbance: 'Störung', degraded: 'verödet', formChanged: 'Formwechsel' };
+const LEVEL_REASON = {
+  rise: 'Aufstieg',
+  disturbance: 'Störung',
+  degraded: 'verödet',
+  formChanged: 'Formwechsel',
+  effect: 'Ereignis/Karte',
+};
 
 function cause(d: GameData, c: string): string {
   const [kind, id = ''] = c.split(':');
@@ -157,10 +174,12 @@ async function chooseTargets(v: GameView, s: GameState, uid: number): Promise<Ta
   const chosen: Targets = {};
   for (const slot of card.slots) {
     const values = [...new Set(options.map((p) => p.targets[slot.id]!))];
-    // Zonen werden mit ihrer Nummer gewählt, Arten mit ihrer Position in der Auswahl.
-    const isSpecies = slot.kind === 'species';
+    // Zonen werden mit ihrer Nummer gewählt.
+    // Arten und Wahl-Optionen werden mit ihrer Position in der Auswahl gewählt.
+    const isSpecies = slot.kind === 'species' || slot.kind === 'choice';
     const label = (id: string) => {
-      if (isSpecies) return `${values.indexOf(id) + 1}=${data.species.get(id)?.name.de ?? id}`;
+      const name = slot.options?.find((o) => o.id === id)?.label ?? data.species.get(id)?.name.de ?? id;
+      if (isSpecies) return `${values.indexOf(id) + 1}=${name}`;
       const z = v.zones.find((x) => x.id === id)!;
       return `${v.zones.indexOf(z) + 1}=${z.geographyName}`;
     };

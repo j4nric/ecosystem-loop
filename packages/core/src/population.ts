@@ -95,6 +95,8 @@ export function checkExtinctions(state: GameState, emit: (e: GameEvent) => void)
   for (const [species, rec] of Object.entries(state.species)) {
     if (rec.extinct !== null || totalPopulation(state, species) > 0) continue;
     rec.extinct = state.round;
+    // Eigenes Protokoll: Kehrt die Art in derselben Runde zurück (noteAlive), bleibt das Aussterben gezählt.
+    state.extinctions.push({ species, round: state.round });
     emit({ type: 'speciesExtinct', species });
   }
 }

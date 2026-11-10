@@ -1,22 +1,29 @@
 import {
   RuleError,
+  describeEvent,
   legalPlays,
+  newBook,
   newGame,
   preview,
+  recordGame,
+  slotOptions,
   step,
   view,
+  type CreationBook,
   type GameData,
   type GameEvent,
   type GameState,
 } from '@being-god/core';
 import type { Action, GameView, Locale, Targets } from '@core/api';
-import type { GameClient, Notice, PreviewView } from './GameClient.ts';
-import type { SaveStore } from './SaveStore.ts';
+import type { BookView, GameClient, GameResult, Notice, PreviewView } from './GameClient.ts';
+import { MemoryBookStore, type BookStore, type SaveStore } from './SaveStore.ts';
 
 export interface EngineClientOptions {
   data: GameData;
   locale: Locale;
   store: SaveStore;
+  /** Ablage des Schöpfungsbuchs; Standard: flüchtig. */
+  books?: BookStore;
   /** Fester Seed für eine neue Partie (Tests, `?seed=`); sonst zufällig. */
   seed?: string;
 }
@@ -27,6 +34,9 @@ export class EngineClient implements GameClient {
   private readonly data: GameData;
   private readonly locale: Locale;
   private readonly store: SaveStore;
+  private readonly books: BookStore;
+  private book: CreationBook;
+  private result: GameResult | null = null;
   private readonly fixedSeed: string | undefined;
   private seed: string;
   private state: GameState;
@@ -38,6 +48,8 @@ export class EngineClient implements GameClient {
     this.data = options.data;
     this.locale = options.locale;
     this.store = options.store;
+    this.books = options.books ?? new MemoryBookStore();
+    this.book = this.books.load() ?? newBook();
     this.fixedSeed = options.seed;
     const resumed = this.resume();
     if (resumed) {
@@ -46,7 +58,7 @@ export class EngineClient implements GameClient {
       this.view = resumed.view;
     } else {
       this.seed = this.freshSeed();
-      this.state = newGame(this.data, { seed: this.seed });
+      this.state = newGame(this.data, { seed: this.seed, book: this.book });
       this.view = view(this.data, this.state, this.locale);
       this.persist();
     }
@@ -81,25 +93,17 @@ export class EngineClient implements GameClient {
       return;
     }
     this.state = result.state;
+    if (this.state.phase === 'over') this.record();
     this.persist();
     this.publish(this.toNotices(result.events));
   }
 
   legalTargets(uid: number, chosen: Targets): string[] {
-    const inst = this.state.hand.find((c) => c.uid === uid);
-    const card = inst && this.data.cards.get(inst.card);
-    if (!card) return [];
-    const slot = card.slots.find((s) => chosen[s.id] === undefined);
-    if (!slot) return [];
-    const out = new Set<string>();
-    for (const play of legalPlays(this.data, this.state)) {
-      if (play.uid !== uid) continue;
-      if (Object.entries(chosen).every(([k, v]) => play.targets[k] === v)) {
-        const target = play.targets[slot.id];
-        if (target !== undefined) out.add(target);
-      }
+    try {
+      return slotOptions(this.data, this.state, uid, chosen);
+    } catch {
+      return [];
     }
-    return [...out];
   }
 
   speciesName(speciesId: string): string {
@@ -113,34 +117,75 @@ export class EngineClient implements GameClient {
     } catch {
       return null;
     }
+    const named = <T extends { zone: string; zoneName?: string | null }>(x: T) => x.zoneName ?? x.zone;
     return {
       cost: p.cost,
       affordable: p.affordable,
-      changes: p.changes.map((c) => ({
-        ...c,
-        zoneName: this.zoneName(c.zone),
-        statName: this.data.stats.get(c.stat)?.name[this.locale] ?? c.stat,
-      })),
-      triggers: p.triggers.map((t) => ({ zone: t.zone, zoneName: this.zoneName(t.zone), name: t.name, icon: t.icon })),
+      changes: p.changes.map((c) => ({ ...c, zoneName: named(c), statName: c.statName ?? c.stat })),
+      triggers: p.triggers.map((x) => ({ zone: x.zone, zoneName: named(x), name: x.name, icon: x.icon })),
       formChanges: p.formChanges.map((f) => ({
         zone: f.zone,
-        zoneName: this.zoneName(f.zone),
-        from: this.formName(f.from),
-        to: this.formName(f.to),
-        kind: this.data.forms.get(f.to)?.form.kind ?? 'normal',
+        zoneName: named(f),
+        from: f.fromName ?? f.from,
+        to: f.toName ?? f.to,
+        kind: f.kind ?? 'normal',
       })),
+      populationChanges: p.populationChanges ?? [],
+      eventChanges: (p.eventChanges ?? []).map((e) => ({ name: e.name, change: e.change, round: e.round ?? null })),
     };
+  }
+
+  getBook(): BookView {
+    const lc = this.locale;
+    const b = this.book;
+    return {
+      games: b.games,
+      species: Object.entries(b.species)
+        .map(([id, rec]) => {
+          const sp = this.data.species.get(id);
+          return { id, name: sp?.name[lc] ?? id, tier: sp?.tier ?? 0, firstGame: rec.firstGame };
+        })
+        .sort((x, y) => x.tier - y.tier || x.name.localeCompare(y.name)),
+      speciesTotal: this.data.species.size,
+      milestones: this.data.meta.milestones.map((m) => ({
+        id: m.id,
+        name: m.name[lc],
+        description: m.description[lc],
+        reached: m.id in b.milestones,
+      })),
+      best: { ...b.best },
+      totals: { ...b.totals },
+    };
+  }
+
+  lastResult(): GameResult | null {
+    return this.result;
   }
 
   newGame(): void {
     this.store.clear();
     this.seed = this.freshSeed(true);
-    this.state = newGame(this.data, { seed: this.seed });
+    this.result = null;
+    this.state = newGame(this.data, { seed: this.seed, book: this.book });
     this.persist();
     this.publish([]);
   }
 
   // --- intern -------------------------------------------------------------------------------------
+
+  /** Beendete Partie ins Schöpfungsbuch eintragen (genau einmal, beim Übergang zu „over“). */
+  private record(): void {
+    const lc = this.locale;
+    const update = recordGame(this.data, this.book, this.state);
+    this.book = update.book;
+    this.books.save(this.book);
+    this.result = {
+      discovered: update.discovered.map((id) => this.speciesName(id)),
+      milestones: update.milestones.map((id) => this.data.meta.milestones.find((m) => m.id === id)?.name[lc] ?? id),
+      unlocked: update.unlocked.map((id) => this.data.cards.get(id)?.name[lc] ?? id),
+      records: update.records,
+    };
+  }
 
   private resume(): { seed: string; state: GameState; view: GameView } | null {
     const saved = this.store.load();
@@ -318,6 +363,19 @@ export class EngineClient implements GameClient {
             add(entry.changes, e.species, delta);
             shifted.set(key, entry);
           }
+          break;
+        }
+        case 'eventForecast':
+        case 'eventOccurred':
+        case 'eventCancelled':
+        case 'eventDelayed': {
+          const text = describeEvent(this.data, e, lc);
+          if (text)
+            (e.type === 'eventOccurred' ? head : body).push({
+              type: 'text',
+              text,
+              tone: e.type === 'eventOccurred' ? 'bad' : 'info',
+            });
           break;
         }
         case 'scored':

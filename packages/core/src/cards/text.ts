@@ -18,6 +18,14 @@ export const TEXT_KEYS = [
   'effect.breath',
   'effect.population',
   'effect.move',
+  'effect.disturb',
+  'effect.setLevel',
+  'effect.eventCancel',
+  'effect.eventDelay',
+  'choice',
+  'choice.option',
+  'forecast.strength',
+  'forecast.zone',
   'scope.neighbors',
   'scope.area',
   'scope.all',
@@ -44,12 +52,38 @@ export const TEXT_KEYS = [
   'slot.zone',
   'slot.neighbor',
   'slot.species',
+  'slot.choice',
   'kind.ideal',
   'kind.normal',
   'kind.degraded',
   'kind.disturbance',
 ] as const;
-export type TextKey = (typeof TEXT_KEYS)[number];
+
+/** Textbausteine für Ereignis-Meldungen (`describeEvent`), Schlüssel log.<Ereignistyp>[.<Variante>]. */
+export const LOG_KEYS = [
+  'log.roundStarted',
+  'log.deckReshuffled',
+  'log.cardPlayed',
+  'log.triggered',
+  'log.formChanged',
+  'log.levelRose',
+  'log.levelFell',
+  'log.speciesEmerged',
+  'log.speciesEmergedFirst',
+  'log.speciesExtinct',
+  'log.giftAdded',
+  'log.hunger',
+  'log.overpopulation',
+  'log.migrated',
+  'log.collapsed',
+  'log.eventForecast',
+  'log.eventForecastZone',
+  'log.eventOccurred',
+  'log.eventOccurredZone',
+  'log.eventCancelled',
+  'log.eventDelayed',
+] as const;
+export type TextKey = (typeof TEXT_KEYS)[number] | (typeof LOG_KEYS)[number];
 
 export function localize(text: Text, locale: Locale): string {
   return text[locale];
@@ -138,6 +172,12 @@ export function describeEffect(data: GameData, card: Card | null, e: Effect, loc
     });
   else if ('move' in e)
     text = tpl(data, 'effect.move', locale, { species: speciesRefName(data, card, e.move, locale), n: e.amount });
+  else if ('disturb' in e) text = tpl(data, 'effect.disturb', locale);
+  else if ('setLevel' in e) text = tpl(data, 'effect.setLevel', locale, { n: e.setLevel });
+  else if ('event' in e)
+    return e.event === 'cancel'
+      ? tpl(data, 'effect.eventCancel', locale)
+      : tpl(data, 'effect.eventDelay', locale, { n: e.rounds });
   else if ('draw' in e) return tpl(data, 'effect.draw', locale, { n: e.draw });
   else return tpl(data, 'effect.breath', locale, { n: signed(e.breath) });
 
@@ -158,6 +198,16 @@ export function slotLabel(data: GameData, slot: Card['slots'][number], locale: L
 export function cardText(data: GameData, card: Card, locale: Locale): string {
   const sep = tpl(data, 'join.list', locale);
   const parts = card.effects.map((e) => describeEffect(data, card, e, locale));
+  for (const slot of card.slots)
+    if (slot.kind === 'choice') {
+      const options = slot.options.map((o) =>
+        tpl(data, 'choice.option', locale, {
+          label: o.label[locale],
+          effects: o.effects.map((e) => describeEffect(data, card, e, locale)).join(', '),
+        }),
+      );
+      parts.push(tpl(data, 'choice', locale, { options: options.join(tpl(data, 'join.or', locale)) }));
+    }
   for (const t of card.triggers) {
     let line = tpl(data, 'trigger', locale, {
       conds: t.when.map((c) => describeCondition(data, c, locale)).join(tpl(data, 'join.and', locale)),
@@ -169,7 +219,7 @@ export function cardText(data: GameData, card: Card, locale: Locale): string {
     parts.push(line);
   }
   const text = parts.join(sep);
-  const when = card.slots.flatMap((s) => (s.kind === 'species' ? [] : s.when));
+  const when = card.slots.flatMap((s) => ('when' in s ? s.when : []));
   if (when.length === 0) return text;
   const conds = when.map((c) => describeCondition(data, c, locale)).join(tpl(data, 'join.and', locale));
   return tpl(data, 'slot.when', locale, { conds, text });
