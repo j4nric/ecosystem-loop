@@ -25,12 +25,27 @@ export interface ZoneState {
   levelProgress: number;
   /** Runde der letzten Störung (Feuer, Flut, Baumsturz, Hochwasser …), null = nie. */
   lastDisturbance: number | null;
-  /** Art-Id → Bestand (ab Phase 2). */
+  /** Art-Id → Bestand 0–9. */
   populations: Record<string, number>;
+  /** Runde des letzten Hungers bzw. der letzten Überpopulation in dieser Zone, null = nie. */
+  lastHunger: number | null;
+  /** Neue Art-Id → Runden in Folge, in denen ihre Evolutionsbedingungen hier erfüllt waren. */
+  evolution: Record<string, number>;
 }
 
+/** Lebenslauf einer Art in dieser Partie. */
+export interface SpeciesRecord {
+  /** Runde, in der die Art erstmals gelebt hat (0 = Startleben). */
+  since: number;
+  /** Runde des Aussterbens; null = lebt (oder ist zurückgekehrt). */
+  extinct: number | null;
+}
+
+/** Version des Zustandsformats; Spielstände anderer Versionen sind nicht ladbar. */
+export const STATE_VERSION = 3;
+
 export interface GameState {
-  version: 2;
+  version: typeof STATE_VERSION;
   rng: number;
   scenario: string;
   round: number;
@@ -47,6 +62,10 @@ export interface GameState {
   playsThisTurn: number;
   /** Karten-Id → wie oft in dieser Partie gespielt. */
   cardPlays: Record<string, number>;
+  /** Arten, die in dieser Partie je gelebt haben. */
+  species: Record<string, SpeciesRecord>;
+  /** Punkte (Konzept 10). */
+  score: number;
 }
 
 /** Ereignisse eines Schritts. Texte entstehen erst in der Oberfläche. */
@@ -70,6 +89,24 @@ export type GameEvent =
       to: number;
       parts: { source: string; zone: string | null; amount: number }[];
     }
-  | { type: 'collapsed'; round: number };
+  | { type: 'collapsed'; round: number }
+  /** Bestand einer Art in einer Zone hat sich geändert. cause: growth, hunger, degraded, overhunted, hunted,
+   *  migration, evolution oder card:<id> bzw. trigger:<id>. */
+  | { type: 'populationChanged'; zone: string; species: string; from: number; to: number; cause: string }
+  /** Eine Art hat in dieser Zone nicht genug Nahrung. */
+  | { type: 'hunger'; zone: string; species: string }
+  /** Die Nachfrage übersteigt eine Nahrungsquelle (Wert- oder Art-Id); sie wird leergefressen. */
+  | { type: 'overpopulation'; zone: string; food: string }
+  /** Tiere sind in eine Nachbarzone gewandert. */
+  | { type: 'migrated'; species: string; from: string; to: string; count: number }
+  /** Evolution: aus `ancestor` in Zone `from` sind Tiere der Art `species` in Zone `zone` entstanden.
+   *  first = erstmals in dieser Partie. */
+  | { type: 'speciesEmerged'; species: string; ancestor: string; from: string; zone: string; first: boolean }
+  /** Eine Art lebt in keiner Zone mehr. */
+  | { type: 'speciesExtinct'; species: string }
+  /** Die Gabe einer Art kam als Karte in den Nachziehstapel. */
+  | { type: 'giftAdded'; species: string; card: string; uid: number }
+  /** Punkte der Runde (Konzept 10). */
+  | { type: 'scored'; points: number; total: number; doubled: boolean };
 
 export type LevelReason = 'rise' | 'disturbance' | 'degraded' | 'formChanged';

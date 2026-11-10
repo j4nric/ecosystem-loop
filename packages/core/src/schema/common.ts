@@ -30,6 +30,10 @@ export type Condition =
   | { season: string }
   /** Störung in dieser Zone in den letzten n Runden (inkl. der aktuellen). */
   | { disturbedWithin: number }
+  /** Bestand einer Art in dieser Zone (fehlende Art = 0). */
+  | { population: string; gte?: number; lte?: number; eq?: number }
+  /** Zonenstufe mindestens n. */
+  | { minLevel: number }
   | { anyNeighbor: Condition[] }
   | { not: Condition[] }
   | { any: Condition[] };
@@ -52,6 +56,17 @@ export const Condition: z.ZodType<Condition> = z.lazy(() =>
     z.strictObject({ formKind: FormKindSchema }),
     z.strictObject({ season: Id }),
     z.strictObject({ disturbedWithin: z.number().int().positive() }),
+    z
+      .strictObject({
+        population: Id,
+        gte: z.number().int().optional(),
+        lte: z.number().int().optional(),
+        eq: z.number().int().optional(),
+      })
+      .refine((c) => c.gte !== undefined || c.lte !== undefined || c.eq !== undefined, {
+        message: 'population-Bedingung braucht gte, lte oder eq',
+      }),
+    z.strictObject({ minLevel: z.number().int().positive() }),
     z.strictObject({ anyNeighbor: z.array(Condition).min(1) }),
     z.strictObject({ not: z.array(Condition).min(1) }),
     z.strictObject({ any: z.array(Condition).min(1) }),
@@ -88,5 +103,9 @@ export const Effect = z.union([
   z.strictObject({ draw: z.number().int().positive() }),
   /** Odem gewinnen (oder verlieren). */
   z.strictObject({ breath: z.number().int() }),
+  /** Bestand einer Art (Art-Id oder Id eines Art-Slots der Karte) um `by` ändern. */
+  z.strictObject({ population: Id, by: z.number().int(), at: At, scope: Scope }),
+  /** Bis zu `amount` Tiere einer Art (Art-Id oder Art-Slot) wandern von Zone `from` in Zone `at`. */
+  z.strictObject({ move: Id, amount: z.number().int().positive(), from: Id, at: At }),
 ]);
 export type Effect = z.infer<typeof Effect>;

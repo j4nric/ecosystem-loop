@@ -1,6 +1,7 @@
 /** Schemas für Konfiguration, Harmonie und Szenarien sowie die geprüften Spieldaten (GameData). */
 import { z } from 'zod';
 import type { Card, CardCategory } from './cards.ts';
+import type { SpeciesDef } from './life.ts';
 import { FORM_KINDS, Id, Text, type FormKindSchema } from './common.ts';
 import type { Coupling, FormDef, Geography, MapZone, Season, StatDef } from './world.ts';
 
@@ -38,10 +39,13 @@ export const HarmonyFile = z.strictObject({
     formKind: KindWeights,
     /** Beitrag je Zone mit Störung in dieser Runde. */
     disturbance: z.number(),
-    /** Ab Phase 2: */
+    /** je lebender Art */
     perSpecies: z.number(),
+    /** einmalig je ausgestorbener Art */
     extinction: z.number(),
+    /** je Zone mit Hunger oder Überpopulation in dieser Runde */
     hungerPerZone: z.number(),
+    /** je Tier einer Menschen-Art */
     perHuman: z.number(),
   }),
 });
@@ -62,6 +66,8 @@ export const Scenario = z.strictObject({
     .default({}),
   harmony: z.number().optional(),
   breath: z.number().int().nonnegative().optional(),
+  /** Startleben: Zone → Art → Bestand. */
+  populations: z.record(Id, z.record(Id, z.number().int())).default({}),
 });
 export type Scenario = z.infer<typeof Scenario>;
 
@@ -87,6 +93,8 @@ export interface GameData {
   couplings: Coupling[];
   categories: Map<string, CardCategory>;
   cards: Map<string, Card>;
+  /** Arten in Daten-Reihenfolge (Stufe aufsteigend; bestimmt auch die Reihenfolge beim Fressen). */
+  species: Map<string, SpeciesDef>;
   harmony: HarmonyData;
   scenarios: Map<string, Scenario>;
 }

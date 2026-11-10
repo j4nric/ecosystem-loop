@@ -6,6 +6,18 @@ export const Slot = z.discriminatedUnion('kind', [
   z.strictObject({ id: Id, kind: z.literal('zone'), when: Conditions, label: Text.optional() }),
   /** Nachbarzone eines früheren Zonen-Slots. */
   z.strictObject({ id: Id, kind: z.literal('neighbor'), of: Id, when: Conditions, label: Text.optional() }),
+  /**
+   * Art, die in der Zone eines früheren Slots lebt (Bestand ≥ 1). Optional nur Arten, die `eats` fressen
+   * (Wert- oder Art-Id, z. B. vegetation = Pflanzenfresser), oder nur die Arten aus `species`.
+   */
+  z.strictObject({
+    id: Id,
+    kind: z.literal('species'),
+    in: Id,
+    eats: Id.optional(),
+    species: z.array(Id).optional(),
+    label: Text.optional(),
+  }),
 ]);
 export type Slot = z.infer<typeof Slot>;
 
