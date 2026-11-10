@@ -32,6 +32,7 @@ export function Hand({ cards, activeUid, draggingUid, onCardTap, pointer }: Prop
         return (
           <button
             key={card.uid}
+            data-uid={card.uid}
             type="button"
             role="listitem"
             className={`card card--${card.category}${card.playable ? '' : ' is-disabled'}${active ? ' is-active' : ''}${dragging ? ' is-dragging' : ''}`}

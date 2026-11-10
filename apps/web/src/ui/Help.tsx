@@ -5,7 +5,7 @@ import { GROUP_COLORS, SPECIES_GROUPS } from '../scene/palette.ts';
 
 const KINDS: FormKind[] = ['ideal', 'normal', 'degraded', 'disturbance'];
 
-/** Hilfe-Ansicht: Formen-Arten, Symbole und Figuren der Insel; von hier aus die Einführung erneut zeigen. */
+/** Hilfe-Ansicht: Zielbereiche der Idealform, Formen-Arten, Symbole und Figuren der Insel; von hier aus die Einführung erneut zeigen. */
 export function Help({ onClose, onTutorial }: { onClose: () => void; onTutorial: () => void }) {
   useEscape(onClose);
   return (
@@ -18,6 +18,23 @@ export function Help({ onClose, onTutorial }: { onClose: () => void; onTutorial:
           </button>
         </header>
         <div className="help__body">
+          <h3>{t.helpIdeal}</h3>
+          <p>{t.helpIdealText}</p>
+          <div className="help__bar" aria-hidden>
+            <span className="stat__bar">
+              <i className="on" />
+              <i className="on" />
+              <i className="on t t-start t-end" />
+              <i />
+              <i />
+            </span>
+            <span className="stat__target is-ok">
+              <b>✓ {t.targetStatus.ok}</b>
+            </span>
+          </div>
+          <p>{t.helpIdealTools}</p>
+          <p>{t.helpIdealTint}</p>
+
           <h3>{t.helpForms}</h3>
           <dl className="help__list">
             {KINDS.map((k) => (

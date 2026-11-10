@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CardView, Targets } from '@core/api';
 import type { DeckStore, GameClient } from './client/index.ts';
 import { initialDeck } from './logic/deck.ts';
+import { zoneTints } from './logic/ideal.ts';
 import { t } from './i18n/index.ts';
 import { IslandScene } from './scene/IslandScene.tsx';
 import type { ZonePicker } from './scene/registry.ts';
@@ -11,6 +12,7 @@ import { useCardDrag } from './state/useCardDrag.ts';
 import { useGame } from './state/useGame.ts';
 import { useTargeting } from './state/useTargeting.ts';
 import { DragOverlay } from './ui/DragOverlay.tsx';
+import { Effects, type EffectsApi } from './ui/Effects.tsx';
 import { GameOver } from './ui/GameOver.tsx';
 import { Hand } from './ui/Hand.tsx';
 import { Book } from './ui/Book.tsx';
@@ -47,7 +49,16 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
   const [detailUid, setDetailUid] = useState<number | null>(null);
   const pickerRef = useRef<ZonePicker | null>(null);
 
-  const play = useCallback((uid: number, targets: Targets) => dispatch({ type: 'play', uid, targets }), [dispatch]);
+  const fxRef = useRef<EffectsApi | null>(null);
+  const zoneIds = useMemo(() => new Set(view.zones.map((z) => z.id)), [view.zones]);
+  const play = useCallback(
+    (uid: number, targets: Targets) => {
+      // Karte fliegt zur ersten Zielzone; die Wertänderungen steigen danach über der Zone auf (Effects).
+      fxRef.current?.flyCard(uid, Object.values(targets).find((v) => zoneIds.has(v)) ?? null);
+      dispatch({ type: 'play', uid, targets });
+    },
+    [dispatch, zoneIds],
+  );
   const targeting = useTargeting(client, view, play);
   const { cancel: cancelTargeting, startAt } = targeting;
 
@@ -76,6 +87,15 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
     const slot = dragging.card.slots[0]!;
     return client.preview(dragging.card.uid, { [slot.id]: dragging.zone });
   }, [client, dragging]);
+
+  // Beim Ziehen: jede gültige Zone nach der Wirkung auf ihre Idealform einfärben (nur Karten mit einem Slot).
+  const dragCard = dragging?.card;
+  const dragValid = dragging?.valid;
+  const dragTints = useMemo(() => {
+    const slot = dragCard?.slots[0];
+    if (!dragCard || !dragValid || !slot || dragCard.slots.length !== 1) return null;
+    return zoneTints(dragValid, (zone) => client.preview(dragCard.uid, { [slot.id]: zone }));
+  }, [client, dragCard, dragValid]);
 
   const onZoneTap = useCallback(
     (zoneId: string) => {
@@ -169,11 +189,14 @@ export function App({ client, decks }: { client: GameClient; decks: DeckStore })
         season={view.season.id}
         selectedZone={focusZone}
         validTargets={dragging ? dragging.valid : active ? targeting.validZones : null}
+        tints={dragging ? dragTints : active ? targeting.tints : null}
         reducedMotion={reducedMotion}
         pickerRef={pickerRef}
         onZoneTap={onZoneTap}
         onBackgroundTap={() => setSelectedZone(null)}
       />
+
+      <Effects client={client} reducedMotion={reducedMotion} apiRef={fxRef} />
 
       <div className="top">
         <Hud

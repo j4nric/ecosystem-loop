@@ -17,6 +17,9 @@ export const COLORS = {
   trunkBurnt: '#3b302b',
   select: '#ffffff',
   target: '#ffd66b',
+  /** Zielring: Karte bringt die Zone näher an ihre Idealform bzw. weiter weg. */
+  better: '#5fd46a',
+  worse: '#ff5f4f',
   /** Nebel bei niedriger Harmonie – nah an der Hintergrundfarbe, damit die Insel „verblasst“. */
   fog: '#dcd8e6',
   paleSky: '#e4e2ea',

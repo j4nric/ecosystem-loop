@@ -9,7 +9,17 @@ export type Notice =
   | { type: 'round'; round: number; season: string }
   | { type: 'played'; card: string }
   | { type: 'trigger'; zone: string; name: string; icon: string; disturbance: boolean }
-  | { type: 'form'; zone: string; from: string; to: string; kind: FormKind }
+  | { type: 'form'; zone: string; from: string; to: string; kind: FormKind; zoneId?: string }
+  /**
+   * Wertänderungen einer Zone in einem Schritt (netto je Wert), für die aufsteigenden Zahlen über der Zone.
+   * cause: card = durch einen Kartenzug, nature = Natur-Phase/Rundenende. Keine Meldung als Text.
+   */
+  | {
+      type: 'statShift';
+      zone: string;
+      cause: 'card' | 'nature';
+      changes: { stat: string; statName: string; from: number; to: number }[];
+    }
   | { type: 'level'; zone: string; from: number; to: number }
   | { type: 'harmony'; delta: number }
   | { type: 'collapsed' }
@@ -34,7 +44,18 @@ export type Notice =
 export interface PreviewView {
   cost: number;
   affordable: boolean;
-  changes: { zone: string; zoneName: string; stat: string; statName: string; from: number; to: number }[];
+  changes: {
+    zone: string;
+    zoneName: string;
+    stat: string;
+    statName: string;
+    from: number;
+    to: number;
+    /** Richtung zum Zielbereich der Idealform (fehlt bei älterer Engine). */
+    toward?: 'better' | 'worse' | 'neutral';
+  }[];
+  /** Abstand der betroffenen Zonen zur Idealform vorher/nachher (fehlt bei älterer Engine). */
+  idealDistance?: { zone: string; before: number; after: number }[];
   triggers: { zone: string; zoneName: string; name: string; icon: string }[];
   formChanges: { zone: string; zoneName: string; from: string; to: string; kind: FormKind }[];
   populationChanges: {

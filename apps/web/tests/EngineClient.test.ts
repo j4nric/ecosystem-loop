@@ -279,4 +279,28 @@ describe('Ereignisse → Meldungen', () => {
     expect(notices[0]).toEqual({ type: 'collapsed' });
     expect(notices[1]).toEqual(expect.objectContaining({ type: 'round', round: 3 }));
   });
+
+  it('fasst Wertänderungen je Zone netto zusammen (Karte bzw. Natur-Phase)', () => {
+    const zone = client.getView().zones[0]!;
+    const [a, b] = zone.stats;
+    const card = toNotices(client, [
+      { type: 'statChanged', zone: zone.id, stat: a!.id, from: 1, to: 2, cause: 'card:x' },
+      { type: 'statChanged', zone: zone.id, stat: a!.id, from: 2, to: 4, cause: 'trigger:y' },
+      { type: 'statChanged', zone: zone.id, stat: b!.id, from: 3, to: 2, cause: 'card:x' },
+      { type: 'statChanged', zone: zone.id, stat: b!.id, from: 2, to: 3, cause: 'card:x' },
+    ]);
+    expect(card).toEqual([
+      {
+        type: 'statShift',
+        zone: zone.id,
+        cause: 'card',
+        changes: [{ stat: a!.id, statName: a!.name, from: 1, to: 4 }],
+      },
+    ]);
+    const nature = toNotices(client, [
+      { type: 'turnEnded', round: 1 },
+      { type: 'statChanged', zone: zone.id, stat: a!.id, from: 1, to: 0, cause: 'season' },
+    ]);
+    expect(nature).toContainEqual(expect.objectContaining({ type: 'statShift', cause: 'nature' }));
+  });
 });

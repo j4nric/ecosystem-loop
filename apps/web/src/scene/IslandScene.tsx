@@ -18,6 +18,7 @@ import {
   type PerspectiveCamera,
 } from 'three';
 import type { ZoneView } from '@core/api';
+import type { Toward } from '../logic/ideal.ts';
 import { buildCreatures } from './creatures.ts';
 import { GEO } from './geometries.ts';
 import { Instanced } from './Instanced.tsx';
@@ -38,6 +39,8 @@ interface Props {
   selectedZone: string | null;
   /** Während einer Zielwahl oder beim Ziehen: gültige Zonen; sonst null. */
   validTargets: Set<string> | null;
+  /** Während der Zielwahl: Wirkung einer Zone als Ziel auf ihre Idealform (grün/rot/neutral). */
+  tints?: ReadonlyMap<string, Toward> | null;
   reducedMotion: boolean;
   /** Wird mit einer Funktion belegt, die die Zone unter einem Bildschirmpunkt findet (Ziehen). */
   pickerRef: RefObject<ZonePicker | null>;
@@ -73,6 +76,7 @@ export function IslandScene(props: Props) {
         registry={registry}
         selectedZone={props.selectedZone}
         validTargets={props.validTargets}
+        tints={props.tints ?? null}
       />
     </div>
   );
@@ -83,6 +87,7 @@ function Island({
   round,
   selectedZone,
   validTargets,
+  tints,
   reducedMotion,
   onZoneTap,
   registry,
@@ -109,6 +114,7 @@ function Island({
             position={positions.get(zone.id) ?? [0, 0, 0]}
             selected={zone.id === selectedZone}
             targetable={validTargets?.has(zone.id) ?? false}
+            tint={validTargets?.has(zone.id) ? (tints?.get(zone.id) ?? null) : null}
             dimmed={validTargets !== null && !validTargets.has(zone.id)}
             reducedMotion={reducedMotion}
             registry={registry}
