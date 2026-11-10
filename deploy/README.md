@@ -137,6 +137,10 @@ curl -sI https://beinggod-62-83-23-90.sslip.io/ | grep -i content-security
 sh /opt/being-god/up.sh                                            # alles neu starten
 ```
 
+„tlsv1 alert internal error“ beim Abruf heißt: Der Haushalt-Caddy hat (noch) kein Zertifikat für die Domain –
+entweder ist der Haushalt-Deploy mit dem Block für `beinggod-62-83-23-90.sslip.io` noch nicht ausgerollt, oder
+Let's Encrypt stellt es gerade aus (erster Abruf, bis zu einer Minute).
+
 Der Netzwerk-Befehl muss `being-god-web-1` und `haushalt-prod-caddy-1` zeigen. Fehlt der Caddy, ist der Haushalt-PR
 noch nicht ausgerollt. Antwortet die Domain mit 502, läuft unser Container nicht (`docker compose ps`).
 
