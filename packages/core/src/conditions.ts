@@ -1,51 +1,36 @@
-/**
- * Auswertung der Bedingungssprache (Steckbriefe, Schwellen, Zonenwechsel, Slot-Filter).
- */
-import type { Condition, GameData } from './schema.ts';
-import type { ExpeditionState, ZoneState } from './state.ts';
+/** Auswertung der Bedingungssprache (Formen, Schwellen, Slot-Filter, Jahreszeiten, Kopplungen). */
+import type { Condition, GameData } from './schema/index.ts';
+import type { GameState, ZoneState } from './state.ts';
+import { formKindOf, getZone, seasonOf } from './world.ts';
 
 export interface ConditionContext {
   data: GameData;
-  state: ExpeditionState;
+  state: GameState;
   zone: ZoneState;
 }
 
-export function getZone(state: ExpeditionState, id: string): ZoneState {
-  const z = state.zones.find((z) => z.id === id);
-  if (!z) throw new Error(`Unbekannte Zone: ${id}`);
-  return z;
-}
-
-export function hasAnimal(zone: ZoneState, animal: string): boolean {
-  return zone.animals.some((a) => a.id === animal);
-}
-
-/** Züge seit der letzten Störung in der Zone oder einer Nachbarzone. */
-export function calmTurns(state: ExpeditionState, zone: ZoneState): number {
-  let last = zone.lastDisturbanceTurn;
-  for (const n of zone.neighbors) last = Math.max(last, getZone(state, n).lastDisturbanceTurn);
-  return state.turn - last;
+/** Prüft eine stat-Bedingung gegen einen Wert (auch für Vorschau ohne Zustand nutzbar). */
+export function statHolds(c: { gte?: number; lte?: number; eq?: number }, v: number | undefined): boolean {
+  // AUSLEGUNG: Ein Wert, den die Geografie nicht hat, erfüllt keine stat-Bedingung.
+  if (v === undefined) return false;
+  if (c.gte !== undefined && !(v >= c.gte)) return false;
+  if (c.lte !== undefined && !(v <= c.lte)) return false;
+  if (c.eq !== undefined && v !== c.eq) return false;
+  return true;
 }
 
 export function holds(c: Condition, ctx: ConditionContext): boolean {
-  const { zone, state } = ctx;
-  if ('stat' in c) {
-    const v = zone.values[c.stat];
-    if (c.gte !== undefined && !(v >= c.gte)) return false;
-    if (c.lte !== undefined && !(v <= c.lte)) return false;
-    if (c.eq !== undefined && v !== c.eq) return false;
-    return true;
-  }
-  if ('animal' in c) return hasAnimal(zone, c.animal);
-  if ('noAnimal' in c) return !hasAnimal(zone, c.noAnimal);
-  if ('tag' in c) return zone.tags.includes(c.tag);
-  if ('noTag' in c) return !zone.tags.includes(c.noTag);
-  if ('zoneType' in c) return zone.type === c.zoneType;
+  const { zone, state, data } = ctx;
+  if ('stat' in c) return statHolds(c, zone.stats[c.stat]);
+  if ('hasStat' in c) return c.hasStat in zone.stats;
+  if ('geography' in c) return zone.geography === c.geography;
+  if ('form' in c) return zone.form === c.form;
+  if ('formKind' in c) return formKindOf(data, zone.form) === c.formKind;
+  if ('season' in c) return seasonOf(data, state.round).id === c.season;
+  if ('disturbedWithin' in c)
+    return zone.lastDisturbance !== null && state.round - zone.lastDisturbance < c.disturbedWithin;
   if ('anyNeighbor' in c)
     return zone.neighbors.some((n) => holdsAll(c.anyNeighbor, { ...ctx, zone: getZone(state, n) }));
-  if ('cardPlayed' in c) return (state.cardPlays[c.cardPlayed] ?? 0) >= c.gte;
-  if ('calmTurns' in c) return calmTurns(state, zone) >= c.calmTurns;
-  if ('hasAnimals' in c) return zone.animals.length > 0 === c.hasAnimals;
   if ('not' in c) return !holdsAll(c.not, ctx);
   if ('any' in c) return c.any.some((sub) => holds(sub, ctx));
   const never: never = c;
@@ -54,9 +39,4 @@ export function holds(c: Condition, ctx: ConditionContext): boolean {
 
 export function holdsAll(cs: readonly Condition[], ctx: ConditionContext): boolean {
   return cs.every((c) => holds(c, ctx));
-}
-
-/** Für Anzeige/Analyse: welche Bedingungen eines Steckbriefs sind (nicht) erfüllt. */
-export function evaluateEach(cs: readonly Condition[], ctx: ConditionContext): { condition: Condition; ok: boolean }[] {
-  return cs.map((condition) => ({ condition, ok: holds(condition, ctx) }));
 }

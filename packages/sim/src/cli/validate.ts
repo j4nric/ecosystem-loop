@@ -1,21 +1,18 @@
-/** Prüft die Spieldaten und gibt eine Übersicht aus:  npm run validate */
+/** Prüft die Spieldaten (Schema + Querverweise). Exit-Code 1 bei Fehlern. */
 import { DataError } from '@being-god/core';
 import { loadGameData } from '@being-god/core/node';
-import { describeCard, describeCondition } from './text.ts';
 
 try {
   const d = loadGameData();
+  const forms = [...d.geographies.values()].reduce((n, g) => n + g.forms.length, 0);
   console.log(
-    `✓ Spieldaten gültig: ${d.cards.size} Karten, ${d.animals.size} Tiere, ${d.mapZones.length} Zonen, ${d.scenarios.size} Szenarien\n`,
+    `Spieldaten ok: ${d.geographies.size} Geografien, ${forms} Formen, ${d.zones.length} Zonen, ` +
+      `${d.seasons.length} Jahreszeiten, ${d.couplings.length} Kopplungen, ${d.cards.size} Karten, ` +
+      `${d.scenarios.size} Szenarien · Pipeline: ${d.config.pipeline.join(' → ')}`,
   );
-  console.log('Karten:');
-  for (const c of d.cards.values()) console.log(`  ${c.name.de.padEnd(13)} [${c.source}] ${describeCard(d, c)}`);
-  console.log('\nTiere:');
-  for (const a of d.animals.values())
-    console.log(`  S${a.tier} ${a.name.de.padEnd(14)} ${a.conditions.map((c) => describeCondition(d, c)).join(', ')}`);
 } catch (e) {
   if (e instanceof DataError) {
-    console.error(`✗ ${e.message}`);
+    console.error(e.message);
     process.exit(1);
   }
   throw e;

@@ -1,142 +1,81 @@
 /**
- * Bots für automatisierte Balancing-Läufe.
+ * Bots für den Absturz-Test (bis Phase 6 kein Messinstrument fürs Balancing).
  *
- * - random: spielt zufällige legale Karten, beendet selten freiwillig.
- * - greedy: schaut jeweils einen Kartenzug plus Zugende voraus und wählt, was die Wertung
- *   am stärksten verbessert; steigt aus, wenn jeder mögliche Zug die Wertung senken würde.
- *   Hinweis: Die Vorausschau nutzt eine Kopie des Spielzustands inkl. Zufallsgenerator und
- *   „kennt“ damit den Ausgang des nächsten Zugendes – das macht ihn etwas stärker als einen Menschen.
+ * - random: spielt zufällige legale Karten und beendet die Runde zufällig, sobald erlaubt.
+ * - greedy: bewertet jeden legalen Zug per Vorschau (Formwechsel nach Harmonie-Gewicht, Störungen,
+ *   Nähe zum Ruhewert, Kosten) und spielt den besten, solange er sich lohnt oder Kartenzwang herrscht.
  */
 import {
-  canEndExpedition,
   canEndTurn,
-  endExpedition,
-  endTurn,
   legalPlays,
-  playCard,
-  report,
-  type Play,
-  cardPool,
-  type Notebook,
-  nextFloat,
-  nextInt,
+  preview,
+  rngOf,
   seedFrom,
-  type RngHolder,
+  type Action,
   type GameData,
-  type ExpeditionState,
+  type GameState,
+  type Play,
 } from '@being-god/core';
 
-export interface Bot {
-  name: string;
-  buildDeck(data: GameData, nb: Notebook): string[];
-  /** Spielt einen kompletten Zug (Karten + Zugende) oder beendet die Expedition. */
-  takeTurn(data: GameData, state: ExpeditionState): void;
-}
-
 export type BotName = 'random' | 'greedy';
+export const BOT_NAMES: readonly BotName[] = ['random', 'greedy'];
+
+export interface Bot {
+  name: BotName;
+  /** Nächste Aktion im aktuellen Zustand. */
+  choose(data: GameData, state: GameState): Action;
+}
 
 export function createBot(name: BotName, seed: string | number = 1): Bot {
   return name === 'random' ? randomBot(seed) : greedyBot();
 }
 
-/** Startdeck + freigeschaltete Tierkarten (je 1×, höchste Stufe zuerst) bis zur Maximalgröße. */
-export function defaultDeck(data: GameData, nb: Notebook): string[] {
-  const deck = [...data.config.starterDeck];
-  const tierOf = (card: string) =>
-    Math.max(0, ...[...data.animals.values()].filter((a) => a.card === card).map((a) => a.tier));
-  const extras = cardPool(data, nb)
-    .filter((c) => data.cards.get(c)?.source === 'animal')
-    .sort((a, b) => tierOf(b) - tierOf(a));
-  for (const c of extras) {
-    if (deck.length >= data.config.deck.maxSize) break;
-    deck.push(c);
-  }
-  return deck;
-}
+const play = (p: Play): Action => ({ type: 'play', uid: p.uid, targets: p.targets });
 
 function randomBot(seed: string | number): Bot {
-  const rng: RngHolder = { rng: seedFrom(`bot:${seed}`) };
+  const rng = rngOf({ rng: seedFrom(`bot:${seed}`) });
   return {
     name: 'random',
-    buildDeck: defaultDeck,
-    takeTurn(data, state) {
-      if (canEndExpedition(state) && report(data, state).points > 0 && nextFloat(rng) < 0.1) {
-        endExpedition(state);
-        return;
-      }
-      const wanted = 1 + nextInt(rng, data.config.hand.size);
-      for (let i = 0; i < wanted; i++) {
-        const plays = legalPlays(data, state);
-        if (plays.length === 0) break;
-        const p = plays[nextInt(rng, plays.length)]!;
-        playCard(data, state, p.uid, p.choices);
-      }
-      if (canEndTurn(data, state)) endTurn(data, state);
+    choose(data, state) {
+      const plays = legalPlays(data, state);
+      if (plays.length === 0 || (canEndTurn(data, state) && rng.float() < 0.5)) return { type: 'endTurn' };
+      return play(rng.pick(plays));
     },
   };
 }
 
-function cloneForSim(state: ExpeditionState): ExpeditionState {
-  return structuredClone({ ...state, log: [] });
-}
-
-/** Bewertung eines Zustands: Wertung plus kleine Boni für Tiere und Kartenvorrat. */
-function value(data: GameData, s: ExpeditionState): number {
-  const r = report(data, s);
-  return r.points + 0.3 * r.individuals + 0.05 * (s.drawPile.length + s.hand.length);
-}
-
-function afterTurnEnd(data: GameData, s: ExpeditionState): ExpeditionState {
-  const sim = cloneForSim(s);
-  if (canEndTurn(data, sim)) endTurn(data, sim);
-  return sim;
+/** Bewertung eines Zugs aus seiner Vorschau. */
+export function scorePlay(data: GameData, state: GameState, p: Play): number {
+  const pv = preview(data, state, p);
+  const weights = data.harmony.perRound;
+  const kindWeight = (form: string) => weights.formKind[data.forms.get(form)?.form.kind ?? 'normal'];
+  let score = 0;
+  for (const f of pv.formChanges) score += kindWeight(f.to) - kindWeight(f.from);
+  const card = data.cards.get(p.card)!;
+  for (const t of pv.triggers)
+    if (card.triggers.find((x) => x.id === t.trigger)?.disturbance) score += weights.disturbance;
+  for (const c of pv.changes) {
+    const zone = state.zones.find((z) => z.id === c.zone)!;
+    const rest = data.geographies.get(zone.geography)!.rest[c.stat] ?? c.from;
+    score += 0.2 * (Math.abs(c.from - rest) - Math.abs(c.to - rest));
+  }
+  return score - 0.1 * pv.cost;
 }
 
 function greedyBot(): Bot {
   return {
     name: 'greedy',
-    buildDeck: defaultDeck,
-    takeTurn(data, state) {
-      // Ausstiegsmoment: würde jeder mögliche Zug die Wertung senken?
-      if (canEndExpedition(state)) {
-        const now = report(data, state).points;
-        if (now > 0) {
-          const plays = legalPlays(data, state);
-          const bestPoints = Math.max(
-            -Infinity,
-            ...plays.map((p) => {
-              const sim = cloneForSim(state);
-              playCard(data, sim, p.uid, p.choices);
-              return report(data, afterTurnEnd(data, sim)).points;
-            }),
-          );
-          if (plays.length > 0 && bestPoints < now) {
-            endExpedition(state);
-            return;
-          }
-        }
+    choose(data, state) {
+      const plays = legalPlays(data, state);
+      let best: Play | null = null;
+      let bestScore = -Infinity;
+      for (const p of plays) {
+        const s = scorePlay(data, state, p);
+        if (s > bestScore) [best, bestScore] = [p, s];
       }
-
-      for (;;) {
-        const plays = legalPlays(data, state);
-        if (plays.length === 0) break;
-        let best: Play | null = null;
-        let bestScore = -Infinity;
-        for (const p of plays) {
-          const sim = cloneForSim(state);
-          playCard(data, sim, p.uid, p.choices);
-          const score = value(data, afterTurnEnd(data, sim));
-          if (score > bestScore) {
-            bestScore = score;
-            best = p;
-          }
-        }
-        const stopScore =
-          state.playsThisTurn >= data.config.hand.minPlaysPerTurn ? value(data, afterTurnEnd(data, state)) : -Infinity;
-        if (!best || stopScore >= bestScore) break;
-        playCard(data, state, best.uid, best.choices);
-      }
-      if (canEndTurn(data, state)) endTurn(data, state);
+      const mustPlay = !canEndTurn(data, state);
+      if (best && (mustPlay || bestScore > 0)) return play(best);
+      return { type: 'endTurn' };
     },
   };
 }

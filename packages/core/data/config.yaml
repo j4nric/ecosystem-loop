@@ -1,33 +1,82 @@
-# Globale Regelparameter. Alles hier ist Balancing – Änderungen brauchen keinen Code.
+# Globale Regelparameter der Engine v2. Alles hier ist Balancing bzw. Daten – Änderungen brauchen keinen Code.
 
-values:
-  min: 0
-  max: 5 # Skala der vier Zustandswerte (später evtl. 0–100 für Prozentwerte)
+scale: { min: 0, max: 5 } # Skala aller Zonenwerte
 
-hand:
-  size: 4 # Am Zugbeginn wird auf diese Handgröße nachgezogen
-  minPlaysPerTurn: 1 # Kartenzwang: mindestens so viele Karten pro Zug
-  maxPlaysPerTurn: null # null = beliebig viele
+turn:
+  handSize: 4 # nach jeder Runde wird auf 4 nachgezogen; ist der Stapel leer, wird die Ablage gemischt
+  minPlays: 1 # Kartenzwang (greift nur, wenn eine bezahlbare Karte spielbar ist)
+  maxPlays: null # null = beliebig viele
 
-deck:
-  minSize: 8
-  maxSize: 10
-  maxCopiesPerCard: 2
+deck: { minSize: 8, maxSize: 10 }
 
-end:
-  onEmptyDrawPile: true # Expedition endet, wenn zu Zugbeginn nichts mehr nachzuziehen ist
-  maxTurns: null # optionales hartes Zuglimit
+# Natur-Phase und Bilanz in fester Reihenfolge (Konzept 3). Module: src/rules/.
+# Später: event (nach season), life und evolution (nach levels), score, forecast.
+pipeline: [season, couplings, healing, forms, levels, harmony, breath]
 
-arrival:
-  delayTurns: 0 # Züge, die Bedingungen erfüllt sein müssen, bevor ein Tier einzieht (0 = sofort)
-  perZonePerTurn: 1 # Höchstens so viele Einzüge je Zone und Zug (Zufall wählt bei Konkurrenz)
-  cardOnArrival: every # every = bei jedem Einzug eine Kopie in den Stapel; firstPerSpecies = einmal je Art und Expedition
+rules:
+  season: {}
+  couplings: {}
+  healing:
+    interval: 2 # alle 2 Runden …
+    step: 1 # … bewegt sich jeder Wert um 1 zum Ruhewert
+  forms: {}
+  levels:
+    min: 1
+    max: 5
+    riseAfter: 3 # Runden am Stück in derselben, nicht verödeten Form
+    idealFrom: 4 # Stufe 4 und 5 nur in der Idealform
+    species:
+      enabled: false # AUSLEGUNG: aus, solange es keine Arten gibt (Phase 2 schaltet ein)
+      forRise: 1 # „genügend Arten“ (Platzhalter)
+      forTop: 4 # Stufe 5 verlangt ≥ 4 Arten
+  harmony: {}
+  breath:
+    start: 3 # AUSLEGUNG: Startodem = Zufluss bei Start-Harmonie (1 + ⌊60/25⌋)
+    base: 1
+    harmonyStep: 25 # + ⌊Harmonie / 25⌋
+    speciesBonus: 1 # + 1 …
+    speciesBonusFrom: 6 # … wenn ≥ 6 Arten leben
+    max: 10 # Obergrenze angespart
 
-predation:
-  extinctionTurns: 3 # Beute verlässt die Zone nach so vielen Zügen gemeinsam mit ihrem Fresser
+# Startdeck (8–10 Karten)
+starterDeck: [thunderstorm, drought, storm, frost, rain, sun, seeds, fertilizer, healing]
 
-notebook:
-  recordOn: end # end = nur was beim Abschluss dokumentiert ist; arrival = jeder Einzug zählt
-
-# Startdeck ohne Freischaltungen (8 Karten). Weitere Karten kommen aus dem Notizbuch-Pool.
-starterDeck: [thunderstorm, thunderstorm, storm, storm, drought, drought, seeds, seeds]
+# Textbausteine für erzeugte Texte (Kartentext). Platzhalter in {Klammern}.
+texts:
+  effect.adjust: { de: '{stat} {n}', en: '{stat} {n}' }
+  effect.set: { de: '{stat} auf {n}', en: '{stat} to {n}' }
+  effect.restoreAll: { de: 'alle Werte zurück zum Ruhewert', en: 'all values back to rest' }
+  effect.restoreAllSteps: { de: 'alle Werte {n} Schritt zum Ruhewert', en: 'all values {n} step towards rest' }
+  effect.restoreStat: { de: '{stat} zurück zum Ruhewert', en: '{stat} back to rest' }
+  effect.restoreStatSteps: { de: '{stat} {n} Schritt zum Ruhewert', en: '{stat} {n} step towards rest' }
+  effect.transfer: { de: 'bis zu {n} {stat} fließen als {into} ab', en: 'up to {n} {stat} flow off as {into}' }
+  effect.draw: { de: 'ziehe {n} Karten', en: 'draw {n} cards' }
+  effect.breath: { de: 'Odem {n}', en: 'Breath {n}' }
+  scope.neighbors: { de: '{text} auf allen Nachbarzonen', en: '{text} on all neighbouring zones' }
+  scope.area: { de: '{text} hier und auf allen Nachbarzonen', en: '{text} here and on all neighbouring zones' }
+  scope.all: { de: '{text} auf allen Zonen', en: '{text} on all zones' }
+  at.slot: { de: '{text} ({slot})', en: '{text} ({slot})' }
+  cond.gte: { de: '{stat} ≥ {n}', en: '{stat} ≥ {n}' }
+  cond.lte: { de: '{stat} ≤ {n}', en: '{stat} ≤ {n}' }
+  cond.eq: { de: '{stat} = {n}', en: '{stat} = {n}' }
+  cond.range: { de: '{stat} {a}–{b}', en: '{stat} {a}–{b}' }
+  cond.hasStat: { de: 'Zone mit {stat}', en: 'zone with {stat}' }
+  cond.geography: { de: '{geo}', en: '{geo}' }
+  cond.form: { de: 'Form {form}', en: 'form {form}' }
+  cond.formKind: { de: 'Form {kind}', en: '{kind} form' }
+  cond.season: { de: 'im {season}', en: 'in {season}' }
+  cond.disturbedWithin: { de: 'Störung in den letzten {n} Runden', en: 'disturbed within the last {n} rounds' }
+  cond.anyNeighbor: { de: 'ein Nachbar mit {conds}', en: 'a neighbour with {conds}' }
+  cond.not: { de: 'nicht ({conds})', en: 'not ({conds})' }
+  join.and: { de: ' und ', en: ' and ' }
+  join.or: { de: ' oder ', en: ' or ' }
+  join.list: { de: '. ', en: '. ' }
+  trigger: { de: 'Wenn {conds}: {icon} {name} – {effects}', en: 'If {conds}: {icon} {name} – {effects}' }
+  trigger.disturbance: { de: '{text} (Störung)', en: '{text} (disturbance)' }
+  slot.when: { de: 'Nur {conds}: {text}', en: 'Only {conds}: {text}' }
+  slot.zone: { de: 'Zone', en: 'Zone' }
+  slot.neighbor: { de: 'Nachbarzone', en: 'Neighbouring zone' }
+  kind.ideal: { de: 'ideal', en: 'ideal' }
+  kind.normal: { de: 'normal', en: 'normal' }
+  kind.degraded: { de: 'verödet', en: 'degraded' }
+  kind.disturbance: { de: 'Störung', en: 'disturbance' }

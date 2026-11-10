@@ -1,227 +1,196 @@
 /**
- * Interaktive Konsolen-Expedition.
+ * Interaktive Konsolen-Partie (deutsch). Spricht mit der Engine nur über newGame, view, legalPlays und step.
  *
- *   npm run play -- [--seed X] [--scenario standard|dry|flooded|burnt] [--deck a,b,c] [--notebook pfad]
+ *   npm run play -- [--seed X] [--scenario standard|drought|wet|fragile]
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 import {
-  holdsAll,
-  canEndExpedition,
-  canEndTurn,
-  createExpedition,
-  endExpedition,
-  endTurn,
-  getCard,
   legalPlays,
-  playCard,
-  report,
+  newGame,
   RuleError,
-  slotOptions,
-  warnings,
-  cardPool,
-  emptyNotebook,
-  isDiscovered,
-  recordExpedition,
-  validateDeck,
-  type Notebook,
+  step,
+  view,
+  type Action,
   type GameData,
-  type Choices,
-  type ExpeditionState,
+  type GameEvent,
+  type GameState,
+  type GameView,
+  type Targets,
 } from '@being-god/core';
 import { loadGameData } from '@being-god/core/node';
-import { defaultDeck } from '../bots.ts';
-import {
-  animalName,
-  cardName,
-  describeCard,
-  describeCondition,
-  describeEvent,
-  endLabel,
-  slotPrompt,
-  tag,
-  zoneLabel,
-} from './text.ts';
 
 const { values: args } = parseArgs({
   options: {
     seed: { type: 'string' },
     scenario: { type: 'string', default: 'standard' },
-    deck: { type: 'string' },
-    notebook: { type: 'string', default: 'save/notebook.json' },
   },
 });
 
 const data = loadGameData();
 const rl = createInterface({ input: process.stdin, terminal: process.stdin.isTTY });
 const lines = rl[Symbol.asyncIterator]();
+
 /** Gepuffert, damit auch per Pipe eingespeiste Eingaben (Tests, Skripte) nicht verloren gehen. */
 async function ask(q: string): Promise<string> {
   process.stdout.write(q);
   const next = await lines.next();
   if (next.done) {
-    console.log('\nEingabe beendet, nichts gespeichert.');
+    console.log('\nEingabe beendet.');
     process.exit(0);
   }
   if (!process.stdin.isTTY) console.log(next.value);
   return next.value.trim();
 }
 
-function loadNotebook(path: string): Notebook {
-  return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as Notebook) : emptyNotebook();
-}
+const KIND = { ideal: '★ ideal', normal: 'normal', degraded: '✗ verödet', disturbance: '⚡ Störung' };
+const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+const bar = (p: number) => '▰'.repeat(Math.round(p * 3)).padEnd(3, '▱');
 
-function saveNotebook(path: string, nb: Notebook): void {
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, JSON.stringify(nb, null, 2));
-}
-
-function renderState(d: GameData, s: ExpeditionState): void {
-  const warn = warnings(d, s);
+function render(v: GameView): void {
   console.log(
-    `\n══ Zug ${s.turn} · Stapel ${s.drawPile.length} · Ablage ${s.discardPile.length} · gespielt ${s.playsThisTurn} ══`,
+    `\n══ Runde ${v.round} · Jahr ${v.year} · ${v.season.name} ══  Harmonie ${fmt(v.harmony.value)}/${v.harmony.max} ` +
+      `(${signed(Number(fmt(v.harmony.trend)))}) · Odem ${v.breath.value}/${v.breath.max} (+${v.breath.nextIncome} zur Bilanz)` +
+      ` · Stapel ${v.drawPile} · Ablage ${v.discardPile}`,
   );
-  for (const z of s.zones) {
-    const v = z.values;
-    const w = warn.filter((x) => x.zone === z.id).map((x) => x.icon ?? '!');
-    const animals = z.animals.map((a) => animalName(d, a.id)).join(', ') || '–';
-    const tags = z.tags.length ? ` [${z.tags.map(tag).join(', ')}]` : '';
+  v.zones.forEach((z, i) => {
+    const stats = z.stats.map((s) => `${short(s.id)}${s.value}`).join(' ');
+    const warn = [...new Set(z.warnings.map((w) => w.icon))].join('');
     console.log(
-      `  ${zoneLabel(d, s, z.id).padEnd(14)} L${v.light} F${v.moisture} D${v.density} T${v.deadwood}  ` +
-        `${[...new Set(w)].join('')}`.padEnd(4) +
-        ` Nachbarn ${z.neighbors.map((n) => n.toUpperCase()).join('')}${tags}  ▸ ${animals}`,
+      `  ${i + 1}) ${z.geographyName.padEnd(10)} ${z.form.name.padEnd(20)} ${KIND[z.form.kind].padEnd(10)} ` +
+        `Stufe ${z.level} ${bar(z.levelProgress)}  ${stats.padEnd(16)} ${warn}`,
     );
-  }
-  console.log('  Hand:');
-  s.hand.forEach((c, i) => {
-    const card = getCard(d, c.card);
-    console.log(`   ${i + 1}) ${card.name.de.padEnd(12)} ${describeCard(d, card)}`);
   });
-  const r = report(d, s);
-  console.log(
-    `  Wertung jetzt: ${r.points} Punkte (${r.species.map((a) => animalName(d, a)).join(', ') || 'keine Tiere'})`,
-  );
+  console.log(`  Hand (gespielt ${v.playsThisTurn}, Pflicht ${v.minPlays}):`);
+  v.hand.forEach((c, i) => {
+    const mark = c.playable ? ' ' : '·';
+    console.log(`   ${mark}${i + 1}) ${c.name.padEnd(12)} [${c.cost} Odem] ${c.text}`);
+  });
 }
 
-function renderAnimals(d: GameData, s: ExpeditionState, nb: Notebook): void {
-  console.log('\n  Feldnotizen:');
-  for (const a of d.animals.values()) {
-    if (!isDiscovered(nb, a.id)) {
-      const seen = s.arrivedSpecies.includes(a.id) ? a.name.de : '???';
-      console.log(`   ? ${seen.padEnd(14)} Stufe ${a.tier} – Bedingungen unbekannt (erst nach Dokumentation sichtbar)`);
-      continue;
+const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+const short = (stat: string) => data.stats.get(stat)?.short ?? stat;
+
+function describe(d: GameData, e: GameEvent): string | null {
+  const stat = (id: string) => d.stats.get(id)?.name.de ?? id;
+  const zone = (id: string) => d.geographies.get(d.zones.find((z) => z.id === id)?.geography ?? '')?.name.de ?? id;
+  const form = (id: string) => d.forms.get(id)?.form.name.de ?? id;
+  switch (e.type) {
+    case 'cardPlayed':
+      return `  ▶ ${d.cards.get(e.card)?.name.de ?? e.card} auf ${Object.values(e.targets).map(zone).join(' → ') || 'alle'}`;
+    case 'triggered': {
+      const t = d.cards.get(e.card)?.triggers.find((x) => x.id === e.trigger);
+      return `    ${t?.icon ?? '!'} ${t?.name.de ?? e.trigger} in ${zone(e.zone)}${e.disturbance ? ' (Störung)' : ''}`;
     }
-    const ok = s.zones
-      .filter((z) => holdsAll(a.conditions, { data: d, state: s, zone: z }))
-      .map((z) => z.id.toUpperCase());
-    console.log(
-      `   ✓ ${a.name.de.padEnd(14)} Stufe ${a.tier} – ${a.conditions.map((c) => describeCondition(d, c)).join(', ')}` +
-        `  → Karte ${cardName(d, a.card)}${a.eats.length ? `, frisst ${a.eats.map((x) => animalName(d, x)).join(', ')}` : ''}` +
-        (ok.length ? `  [erfüllt in ${ok.join('')}]` : ''),
-    );
+    case 'statChanged':
+      return `    ${zone(e.zone)}: ${stat(e.stat)} ${e.from} → ${e.to}  (${cause(d, e.cause)})`;
+    case 'formChanged':
+      return `  ◆ ${zone(e.zone)} wird ${form(e.to)} (vorher ${form(e.from)})`;
+    case 'levelChanged':
+      return `  ◆ ${zone(e.zone)}: Stufe ${e.from} → ${e.to}${e.reason === 'rise' ? '' : ` (${LEVEL_REASON[e.reason]})`}`;
+    case 'harmonyChanged':
+      return `  ♥ Harmonie ${fmt(e.from)} → ${fmt(e.to)}`;
+    case 'breathChanged':
+      return e.cause === 'income' ? `  ✦ Odem ${e.from} → ${e.to}` : null;
+    case 'deckReshuffled':
+      return `  ↻ Ablage gemischt (${e.cards} Karten)`;
+    case 'collapsed':
+      return `\n  ☠ Die Welt kollabiert in Runde ${e.round}.`;
+    case 'seasonApplied':
+      return `  ~ ${d.seasons.find((s) => s.id === e.season)?.name.de ?? e.season} wirkt`;
+    case 'couplingApplied':
+      return `  ~ ${d.couplings.find((c) => c.id === e.coupling)?.name.de ?? e.coupling}: ${zone(e.from)} → ${zone(e.to)}`;
+    case 'roundStarted':
+    case 'cardDrawn':
+    case 'disturbance':
+    case 'turnEnded':
+      return null;
   }
 }
 
-async function chooseTargets(d: GameData, s: ExpeditionState, uid: number): Promise<Choices | null> {
-  const card = getCard(d, s.hand.find((c) => c.uid === uid)!.card);
-  const choices: Choices = {};
+const LEVEL_REASON = { rise: 'Aufstieg', disturbance: 'Störung', degraded: 'verödet', formChanged: 'Formwechsel' };
+
+function cause(d: GameData, c: string): string {
+  const [kind, id = ''] = c.split(':');
+  if (kind === 'card') return d.cards.get(id)?.name.de ?? id;
+  if (kind === 'trigger') return 'Schwelle';
+  if (kind === 'season') return d.seasons.find((s) => s.id === id)?.name.de ?? id;
+  if (kind === 'coupling') return d.couplings.find((x) => x.id === id)?.name.de ?? id;
+  if (kind === 'healing') return 'Selbstheilung';
+  return c;
+}
+
+/** Ziele Slot für Slot aus den legalen Zügen dieser Karte wählen. */
+async function chooseTargets(v: GameView, s: GameState, uid: number): Promise<Targets | null> {
+  const card = v.hand.find((c) => c.uid === uid)!;
+  let options = legalPlays(data, s).filter((p) => p.uid === uid);
+  const chosen: Targets = {};
   for (const slot of card.slots) {
-    const opts = slotOptions(d, s, slot, choices, uid);
-    if (opts.length === 0) {
-      console.log('  Kein gültiges Ziel.');
-      return null;
+    const values = [...new Set(options.map((p) => p.targets[slot.id]!))];
+    const label = (id: string) => {
+      const z = v.zones.find((x) => x.id === id)!;
+      return `${v.zones.indexOf(z) + 1}=${z.geographyName}`;
+    };
+    let pickd: string | undefined;
+    if (values.length === 1) {
+      pickd = values[0]!;
+      console.log(`  ${slot.label}: ${label(pickd)}`);
+    } else {
+      const a = await ask(`  ${slot.label}? ${values.map(label).join('  ')}  (leer = abbrechen): `);
+      if (!a) return null;
+      pickd = v.zones[Number(a) - 1]?.id;
+      if (!pickd || !values.includes(pickd)) {
+        console.log('  Ungültige Auswahl.');
+        return null;
+      }
     }
-    const label = (o: string) =>
-      slot.kind === 'animal'
-        ? animalName(d, o)
-        : slot.kind === 'handCard'
-          ? cardName(d, s.hand.find((c) => String(c.uid) === o)!.card)
-          : zoneLabel(d, s, o);
-    if (opts.length === 1) {
-      choices[slot.id] = opts[0]!;
-      console.log(`  ${slotPrompt(slot)}: ${label(opts[0]!)}`);
-      continue;
-    }
-    const byLetter = slot.kind === 'zone' || slot.kind === 'neighbor' || slot.kind === 'otherZone';
-    const list = opts.map((o, i) => (byLetter ? label(o) : `${i + 1}=${label(o)}`)).join('  ');
-    const a = (await ask(`  ${slotPrompt(slot)}? ${list}  (leer = abbrechen): `)).toLowerCase();
-    if (!a) return null;
-    const pickd = byLetter ? opts.find((o) => o === a) : opts[Number(a) - 1];
-    if (!pickd) {
-      console.log('  Ungültige Auswahl.');
-      return null;
-    }
-    choices[slot.id] = pickd;
+    chosen[slot.id] = pickd;
+    options = options.filter((p) => p.targets[slot.id] === pickd);
   }
-  return choices;
+  return chosen;
 }
 
 async function main(): Promise<void> {
-  const nb = loadNotebook(args.notebook!);
-  const deck = args.deck ? args.deck.split(',').map((x) => x.trim()) : defaultDeck(data, nb);
-  const problems = validateDeck(data, nb, deck);
-  if (problems.length) {
-    console.error(`Deck ungültig:\n  ${problems.join('\n  ')}\nPool: ${cardPool(data, nb).join(', ')}`);
-    process.exit(1);
-  }
-  const s = createExpedition(data, { deck, scenario: args.scenario, seed: args.seed ?? Date.now() });
-  console.log(`Expedition ${nb.expeditions + 1} · Szenario ${data.scenarios.get(s.scenario)!.name.de}`);
-  console.log(`Deck: ${deck.map((c) => cardName(data, c)).join(', ')}`);
-  console.log('Befehle: 1–9 Karte spielen · z Zug beenden · x Expedition beenden · t Tiere · q abbrechen');
+  const seed = args.seed ?? String(Date.now());
+  let state = newGame(data, { seed, scenario: args.scenario });
+  console.log(`Being God (ain't easy) · Szenario ${data.scenarios.get(state.scenario)!.name.de} · Seed ${seed}`);
+  console.log('Befehle: 1–9 Karte spielen · z Runde beenden · q aufhören');
 
-  let seen = s.log.length;
-  const flush = () => {
-    for (const e of s.log.slice(seen)) {
-      const line = describeEvent(data, s, e);
-      if (line) console.log(line);
-    }
-    seen = s.log.length;
-  };
-
-  while (s.phase === 'play') {
-    renderState(data, s);
+  while (state.phase === 'play') {
+    const v = view(data, state, 'de');
+    render(v);
     const cmd = (await ask('> ')).toLowerCase();
+    let action: Action | null = null;
+    if (cmd === 'q') {
+      console.log('Aufgehört.');
+      rl.close();
+      return;
+    } else if (cmd === 'z') {
+      if (!v.canEndTurn) console.log(`  Kartenzwang: erst mindestens ${v.minPlays} Karte spielen.`);
+      else action = { type: 'endTurn' };
+    } else if (/^\d+$/.test(cmd)) {
+      const c = v.hand[Number(cmd) - 1];
+      if (!c) console.log('  Keine solche Karte.');
+      else if (!c.playable) console.log('  Diese Karte ist gerade nicht spielbar (Odem oder Ziel fehlt).');
+      else {
+        const targets = await chooseTargets(v, state, c.uid);
+        if (targets) action = { type: 'play', uid: c.uid, targets };
+      }
+    }
+    if (!action) continue;
     try {
-      if (cmd === 'q') {
-        console.log('Abgebrochen, nichts gespeichert.');
-        rl.close();
-        return;
-      } else if (cmd === 't') {
-        renderAnimals(data, s, nb);
-      } else if (cmd === 'z') {
-        if (!canEndTurn(data, s))
-          console.log(`  Kartenzwang: erst mindestens ${data.config.hand.minPlaysPerTurn} Karte spielen.`);
-        else endTurn(data, s);
-      } else if (cmd === 'x') {
-        if (!canEndExpedition(s)) console.log('  Aussteigen geht nur zu Zugbeginn.');
-        else endExpedition(s);
-      } else if (/^\d+$/.test(cmd)) {
-        const inst = s.hand[Number(cmd) - 1];
-        if (!inst) console.log('  Keine solche Karte.');
-        else if (!legalPlays(data, s).some((p) => p.uid === inst.uid))
-          console.log('  Diese Karte ist gerade nicht spielbar.');
-        else {
-          const choices = await chooseTargets(data, s, inst.uid);
-          if (choices) playCard(data, s, inst.uid, choices);
-        }
+      const r = step(data, state, action);
+      state = r.state;
+      for (const e of r.events) {
+        const line = describe(data, e);
+        if (line) console.log(line);
       }
     } catch (e) {
       if (e instanceof RuleError) console.log(`  ${e.message}`);
       else throw e;
     }
-    flush();
   }
-
-  const r = report(data, s);
-  const fresh = recordExpedition(data, nb, s);
-  saveNotebook(args.notebook!, nb);
-  console.log(`\n══ Feldbericht (${endLabel(s.endReason!)}) nach ${s.turn} Zügen ══`);
-  console.log(`  Dokumentiert: ${r.species.map((a) => animalName(data, a)).join(', ') || 'nichts'}`);
-  console.log(`  Punkte: ${r.points} · höchste Stufe: ${r.highestTier}`);
-  if (fresh.length) console.log(`  Neu im Notizbuch: ${fresh.map((a) => animalName(data, a)).join(', ')}`);
-  console.log(`  Notizbuch gespeichert: ${args.notebook}`);
+  console.log(`\n══ Ende nach ${state.round} Runden (Jahr ${view(data, state).year}) ══`);
   rl.close();
 }
 

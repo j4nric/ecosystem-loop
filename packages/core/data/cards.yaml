@@ -1,168 +1,198 @@
-# Karten sind Eingriffe. Feste Effekte, Variabilität steckt in der Zone (Schwellen).
+# Karten sind Eingriffe des Gottes (Konzept 6.2). Kosten in Odem, Zahlen sind Platzhalter.
 #
-# slots     – was der Spieler wählt: zone | neighbor (of) | otherZone (of, kein Nachbar) |
-#             animal (in) | handCard. Optional "when": Bedingungen an die gewählte Zone.
-# effects   – werden der Reihe nach angewendet.
-# triggers  – Schwellen. "when" wird VOR dem Grundeffekt geprüft (check: before),
-#             mit check: after danach. Folgen mit disturbance: true zählen als Störung.
-# Effekt-Ziele: "at" = Slot, scope: self (Standard) | neighbors (alle Nachbarn).
+# slots     – was der Spieler wählt: zone | neighbor (of: früherer Slot). Optional "when": Bedingungen an die Zone.
+# effects   – werden der Reihe nach angewendet. Ziel "at" = Slot-Id, scope: self | neighbors | area | all.
+#             Effekte auf Werte, die eine Zone nicht hat, verpuffen.
+# triggers  – Schwellen: "when" wird VOR dem Grundeffekt geprüft (check: before), mit check: after danach.
+#             disturbance: true = die Folge ist eine Störung der Zone (Zonenstufe, Harmonie, Selektionsdruck).
+# Der Kartentext wird aus Effekten und Schwellen erzeugt.
+
+categories:
+  - { id: force, name: { de: Naturgewalt, en: Force of nature } }
+  - { id: gift, name: { de: Gabe, en: Gift } }
+  - { id: miracle, name: { de: Wunder, en: Miracle } }
 
 cards:
-  # ---------- Grundkräfte ----------
+  # ---------- Naturgewalten (0 Odem, grob, mit Schwellen) ----------
   - id: thunderstorm
-    name: { de: Gewitter }
-    source: base
-    slots:
-      - { id: zone, kind: zone }
+    name: { de: Gewitter, en: Thunderstorm }
+    category: force
+    cost: 0
+    slots: [{ id: zone, kind: zone }]
     effects:
       - { adjust: moisture, by: 2, at: zone }
     triggers:
       - id: fire
-        name: { de: Feuer }
+        name: { de: Feuer, en: Fire }
         icon: '🔥'
         at: zone
-        when: [{ stat: moisture, lte: 1 }, { noTag: fireproof }]
+        when: [{ stat: moisture, lte: 1 }, { stat: vegetation, gte: 1 }]
         disturbance: true
         effects:
-          - { set: density, value: 0, at: zone }
+          - { set: vegetation, value: 0, at: zone }
           - { adjust: deadwood, by: 3, at: zone }
-      - id: flood # VORSCHLAG – im Handover erwähnt ("im Sumpf eine Flut"), aber nicht definiert
-        name: { de: Flut }
+      - id: deluge
+        name: { de: Flut, en: Deluge }
         icon: '🌊'
         at: zone
         when: [{ stat: moisture, gte: 4 }]
         disturbance: true
         effects:
-          - { adjust: density, by: -1, at: zone }
+          - { adjust: vegetation, by: -1, at: zone }
           - { adjust: moisture, by: 1, at: zone, scope: neighbors }
 
+  - id: drought
+    name: { de: Dürre, en: Drought }
+    category: force
+    cost: 0
+    slots: [{ id: zone, kind: zone }]
+    effects:
+      - { adjust: moisture, by: -2, at: zone }
+      - { adjust: water, by: -1, at: zone }
+    triggers:
+      - id: wilting
+        name: { de: Welke, en: Wilting }
+        icon: '🥀'
+        at: zone
+        check: after
+        when: [{ stat: moisture, eq: 0 }]
+        effects:
+          - { adjust: vegetation, by: -1, at: zone }
+
   - id: storm
-    name: { de: Sturm }
-    source: base
+    name: { de: Sturm, en: Storm }
+    category: force
+    cost: 0
     slots:
       - { id: zone, kind: zone }
-      - { id: fall, kind: neighbor, of: zone } # Richtung, in die ein Baum stürzt
+      - { id: fall, kind: neighbor, of: zone, label: { de: Fallrichtung, en: Direction of fall } }
     effects:
-      - { adjust: density, by: -1, at: zone }
+      - { adjust: vegetation, by: -1, at: zone }
       - { adjust: deadwood, by: 1, at: zone }
     triggers:
       - id: windthrow
-        name: { de: Baumsturz }
+        name: { de: Baumsturz, en: Windthrow }
         icon: '🌲'
         at: zone
-        when: [{ stat: density, gte: 4 }]
+        when: [{ stat: vegetation, gte: 4 }]
         disturbance: true
         effects:
-          - { adjust: light, by: 2, at: fall }
+          - { adjust: light, by: 2, at: zone }
+          - { adjust: vegetation, by: -1, at: fall }
+          - { adjust: deadwood, by: 1, at: fall }
 
-  - id: drought
-    name: { de: Dürre }
-    source: base
-    slots:
-      - { id: zone, kind: zone }
+  - id: frost
+    name: { de: Frost, en: Frost }
+    category: force
+    cost: 0
+    slots: [{ id: zone, kind: zone }]
     effects:
-      - { adjust: moisture, by: -2, at: zone }
-    # Sumpf → Lichtung bei Feuchte 0 regelt zones.yaml (Zonenwechsel am Zugende)
+      - { adjust: vegetation, by: -1, at: zone }
+      - { adjust: snow, by: 1, at: zone }
+    triggers:
+      - id: ice_break
+        name: { de: Eisbruch, en: Ice break }
+        icon: '🧊'
+        at: zone
+        when: [{ stat: moisture, gte: 4 }]
+        effects:
+          - { adjust: vegetation, by: -1, at: zone }
+          - { adjust: deadwood, by: 1, at: zone }
+
+  # ---------- Gaben (1–2 Odem, präzise: ein Wert ±1) ----------
+  - id: rain
+    name: { de: Regen, en: Rain }
+    category: gift
+    cost: 1
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ adjust: moisture, by: 1, at: zone }]
+
+  - id: dry_wind
+    name: { de: Trockenwind, en: Dry wind }
+    category: gift
+    cost: 1
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ adjust: moisture, by: -1, at: zone }]
+
+  - id: sun
+    name: { de: Sonne, en: Sun }
+    category: gift
+    cost: 1
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ adjust: light, by: 1, at: zone }]
+
+  - id: shade
+    name: { de: Schatten, en: Shade }
+    category: gift
+    cost: 1
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ adjust: light, by: -1, at: zone }]
 
   - id: seeds
-    name: { de: Samenflug }
-    source: base
-    slots:
-      - { id: zone, kind: zone }
-    effects:
-      - { adjust: density, by: 1, at: zone }
-    triggers:
-      - id: meadow
-        name: { de: Blütenwiese }
-        icon: '🌼'
-        at: zone
-        when: [{ stat: light, gte: 3 }]
-        effects:
-          - { addTag: flowers, at: zone }
+    name: { de: Samen, en: Seeds }
+    category: gift
+    cost: 1
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ adjust: vegetation, by: 1, at: zone }]
 
-  # ---------- Tierkarten ----------
-  - id: decomposition
-    name: { de: Zersetzung }
-    source: animal
-    slots:
-      - { id: zone, kind: zone }
-    effects:
-      - { adjust: deadwood, by: -1, at: zone }
-      - { adjust: moisture, by: 1, at: zone }
+  - id: fertilizer
+    name: { de: Dünger, en: Fertiliser }
+    category: gift
+    cost: 1
+    slots: [{ id: zone, kind: zone, when: [{ hasStat: soil }] }]
+    effects: [{ adjust: soil, by: 1, at: zone }]
 
-  - id: pollination
-    name: { de: Bestäubung }
-    source: animal
-    slots:
-      - { id: zone, kind: zone }
-      - { id: target, kind: neighbor, of: zone }
-    effects:
-      - { adjust: density, by: 1, at: target }
+  - id: snowfall
+    name: { de: Schneefall, en: Snowfall }
+    category: gift
+    cost: 2
+    slots: [{ id: zone, kind: zone, when: [{ hasStat: snow }] }]
+    effects: [{ adjust: snow, by: 1, at: zone }]
 
-  - id: mist
-    name: { de: Nebel }
-    source: animal
-    slots:
-      - { id: zone, kind: zone }
-    effects:
-      - { adjust: moisture, by: 1, at: zone, scope: neighbors }
+  - id: spring_water
+    name: { de: Quelle, en: Spring }
+    category: gift
+    cost: 2
+    slots: [{ id: zone, kind: zone, when: [{ hasStat: water }] }]
+    effects: [{ adjust: water, by: 1, at: zone }]
 
-  - id: tree_hollow
-    name: { de: Baumhöhle }
-    source: animal
-    slots:
-      - { id: zone, kind: zone }
-    effects:
-      - { addTag: nest, at: zone }
+  - id: low_tide
+    name: { de: Ebbe, en: Low tide }
+    category: gift
+    cost: 2
+    slots: [{ id: zone, kind: zone, when: [{ hasStat: salt }] }]
+    effects: [{ adjust: salt, by: -1, at: zone }]
 
-  - id: long_flight
-    name: { de: Fernflug }
-    source: animal
-    slots:
-      - { id: zone, kind: zone }
-    effects:
-      - { adjust: density, by: 1, at: zone }
+  - id: leaf_fall
+    name: { de: Laubfall, en: Leaf fall }
+    category: gift
+    cost: 1
+    slots: [{ id: zone, kind: zone, when: [{ hasStat: deadwood }] }]
+    effects: [{ adjust: deadwood, by: 1, at: zone }]
 
-  - id: shy
-    name: { de: Scheu }
-    source: animal
-    slots:
-      - { id: zone, kind: zone, when: [{ hasAnimals: true }] }
-      - { id: animal, kind: animal, in: zone }
-      - { id: to, kind: neighbor, of: zone }
-    effects:
-      - { moveAnimal: animal, from: zone, to: to }
+  # ---------- Wunder (3–5 Odem, Korrektur von Fehlern) ----------
+  - id: healing
+    name: { de: Heilung, en: Healing }
+    category: miracle
+    cost: 4
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ restore: all, at: zone }]
 
-  - id: trail
-    name: { de: Trampelpfad }
-    source: animal
-    slots:
-      - { id: zone, kind: zone }
-      - { id: other, kind: otherZone, of: zone }
-    effects:
-      - { connect: [zone, other] }
+  - id: balance
+    name: { de: Ausgleich, en: Balance }
+    category: miracle
+    cost: 3
+    slots: [{ id: zone, kind: zone }]
+    effects: [{ restore: all, steps: 1, at: zone, scope: area }]
 
-  - id: fruit_rain
-    name: { de: Fruchtregen }
-    source: animal
-    slots:
-      - { id: zone, kind: zone }
-    effects:
-      - { include: seeds } # Samenflug inkl. seiner Schwelle
-      - { addTag: fruit, at: zone, scope: neighbors } # "Nahrung" – noch ohne Wirkung
+  - id: inspiration
+    name: { de: Eingebung, en: Inspiration }
+    category: miracle
+    cost: 3
+    effects: [{ draw: 2 }]
 
-  - id: aerie
-    name: { de: Horst }
-    source: animal
-    slots:
-      - { id: zone, kind: zone }
-    effects:
-      - { addTag: fireproof, at: zone } # dauerhaft: Zone brennt nie mehr
-
-  - id: carrion
-    name: { de: Kadaver }
-    source: animal
-    slots:
-      - { id: zone, kind: zone }
-    effects:
-      - { addTag: carrion, at: zone } # lockt Aasfresser (zweite Ebene, noch nicht ausgearbeitet)
+  - id: blessing
+    name: { de: Segen, en: Blessing }
+    category: miracle
+    cost: 5
+    effects: [{ adjust: vegetation, by: 1, scope: all }]

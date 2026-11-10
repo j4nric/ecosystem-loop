@@ -1,15 +1,38 @@
-# Startzustände des Waldes. "adjust" verschiebt die Werte der Karte (zones.yaml),
-# "zones" überschreibt einzelne Zonen gezielt.
+# Startwelten. adjust verschiebt einen Wert in allen Zonen, die ihn haben; zones überschreibt einzelne Zonen.
+# harmony/breath überschreiben die Startwerte aus harmony.yaml bzw. config.yaml.
 
 scenarios:
   - id: standard
-    name: { de: Unberührt }
-  - id: dry
-    name: { de: Ausgetrocknet }
+    name: { de: Ruhende Insel, en: Resting island }
+    description:
+      de: 'Alle Zonen in ihrem natürlichen Zustand.'
+      en: 'Every zone in its natural state.'
+
+  - id: drought
+    name: { de: Dürrejahr, en: Year of drought }
+    description:
+      de: 'Die Insel ist ausgetrocknet, der Fluss führt kaum Wasser.'
+      en: 'The island is parched and the river runs low.'
     adjust: { moisture: -2 }
-  - id: flooded
-    name: { de: Überflutet }
-    adjust: { moisture: 2, light: -1 }
-  - id: burnt
-    name: { de: Abgebrannt }
-    adjust: { density: -3, deadwood: 2, light: 1 }
+    zones:
+      river: { stats: { water: 1 } }
+      mountains: { stats: { snow: 1 } }
+
+  - id: wet
+    name: { de: Regenzeit, en: Rainy season }
+    description:
+      de: 'Alles ist nass, der Fluss steht hoch.'
+      en: 'Everything is wet and the river runs high.'
+    adjust: { moisture: 1, light: -1 }
+    zones:
+      river: { stats: { water: 4 } }
+
+  - id: fragile
+    name: { de: Zerbrechliche Welt, en: Fragile world }
+    description:
+      de: 'Weniger Harmonie und Odem zu Beginn, der Wald ist abgebrannt.'
+      en: 'Less harmony and breath at the start; the forest has burnt down.'
+    harmony: 40
+    breath: 2
+    zones:
+      forest: { stats: { vegetation: 1, deadwood: 4 } }

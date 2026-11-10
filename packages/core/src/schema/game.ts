@@ -1,0 +1,92 @@
+/** Schemas für Konfiguration, Harmonie und Szenarien sowie die geprüften Spieldaten (GameData). */
+import { z } from 'zod';
+import type { Card, CardCategory } from './cards.ts';
+import { FORM_KINDS, Id, Text, type FormKindSchema } from './common.ts';
+import type { Coupling, FormDef, Geography, MapZone, Season, StatDef } from './world.ts';
+
+export const Config = z.strictObject({
+  /** Skala aller Zonenwerte. */
+  scale: z.strictObject({ min: z.number().int(), max: z.number().int() }),
+  turn: z.strictObject({
+    handSize: z.number().int().positive(),
+    /** Kartenzwang: so viele Karten pro Runde, sofern eine bezahlbare spielbar ist. */
+    minPlays: z.number().int().nonnegative(),
+    maxPlays: z.number().int().positive().nullable(),
+  }),
+  deck: z.strictObject({ minSize: z.number().int().positive(), maxSize: z.number().int().positive() }),
+  /** Reihenfolge der Natur-Phase (Modul-Ids aus src/rules). */
+  pipeline: z.array(Id).min(1),
+  /** Parameter je Regel-Modul; geprüft vom Schema des Moduls. */
+  rules: z.record(Id, z.unknown()).default({}),
+  starterDeck: z.array(Id),
+  /** Textbausteine für erzeugte Texte (Kartentext), Platzhalter in {geschweiften Klammern}. */
+  texts: z.record(z.string(), Text),
+});
+export type Config = z.infer<typeof Config>;
+
+const KindWeights = z.strictObject(
+  Object.fromEntries(FORM_KINDS.map((k) => [k, z.number()])) as Record<z.infer<typeof FormKindSchema>, z.ZodNumber>,
+);
+
+export const HarmonyFile = z.strictObject({
+  start: z.number(),
+  max: z.number().positive(),
+  /** Bei diesem Wert oder darunter kollabiert die Welt. */
+  collapseAt: z.number(),
+  perRound: z.strictObject({
+    /** Beitrag je Zone nach Art ihrer Form. */
+    formKind: KindWeights,
+    /** Beitrag je Zone mit Störung in dieser Runde. */
+    disturbance: z.number(),
+    /** Ab Phase 2: */
+    perSpecies: z.number(),
+    extinction: z.number(),
+    hungerPerZone: z.number(),
+    perHuman: z.number(),
+  }),
+});
+export type HarmonyData = z.infer<typeof HarmonyFile>;
+
+export const Scenario = z.strictObject({
+  id: Id,
+  name: Text,
+  description: Text.optional(),
+  /** Verschiebt den Startwert eines Werts in allen Zonen, die ihn haben. */
+  adjust: z.record(Id, z.number().int()).default({}),
+  /** Überschreibt Startwerte/-stufe einzelner Zonen. */
+  zones: z
+    .record(
+      Id,
+      z.strictObject({ stats: z.record(Id, z.number().int()).default({}), level: z.number().int().optional() }),
+    )
+    .default({}),
+  harmony: z.number().optional(),
+  breath: z.number().int().nonnegative().optional(),
+});
+export type Scenario = z.infer<typeof Scenario>;
+
+export const ScenariosFile = z.strictObject({ scenarios: z.array(Scenario).min(1) });
+
+export interface FormRef {
+  geography: string;
+  form: FormDef;
+}
+
+/** Alle Spieldaten, geprüft und mit Lookup-Tabellen. */
+export interface GameData {
+  config: Config;
+  /** Geprüfte Parameter je Regel-Modul (Defaults ergänzt). */
+  params: Record<string, unknown>;
+  stats: Map<string, StatDef>;
+  commonStats: string[];
+  geographies: Map<string, Geography>;
+  forms: Map<string, FormRef>;
+  zones: MapZone[];
+  seasons: Season[];
+  startSeason: number;
+  couplings: Coupling[];
+  categories: Map<string, CardCategory>;
+  cards: Map<string, Card>;
+  harmony: HarmonyData;
+  scenarios: Map<string, Scenario>;
+}
