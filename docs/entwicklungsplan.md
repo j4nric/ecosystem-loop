@@ -12,8 +12,8 @@ Regeln und Zahlen in YAML, Fortschritt im Cockpit.
 | Phase                                | Status      |
 | ------------------------------------ | ----------- |
 | H0 – Prototyp „Die Herde“            | ✅ erledigt |
-| H1 – Engine: Insel, Herde, Wölfe     | offen       |
-| H2 – App: Insel und Herde            | offen       |
+| H1 – Engine: Insel, Herde, Wölfe     | ✅ erledigt |
+| H2 – App: Insel und Herde            | ✅ erledigt |
 | H3 – Entwicklung der Herde, Meta     | offen       |
 | H4 – Jahreskreis, Ereignisse, Inseln | offen       |
 | H5 – Balancing                       | offen       |
