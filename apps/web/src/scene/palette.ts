@@ -17,7 +17,59 @@ export const COLORS = {
   trunkBurnt: '#3b302b',
   select: '#ffffff',
   target: '#ffd66b',
+  /** Nebel bei niedriger Harmonie – nah an der Hintergrundfarbe, damit die Insel „verblasst“. */
+  fog: '#dcd8e6',
+  paleSky: '#e4e2ea',
+  burst: '#fff3b8',
 } as const;
+
+/** Lichtfarbe der Sonne je Jahreszeit (leichte Tönung). */
+export const SEASON_LIGHT: Record<string, { sun: string; sky: string }> = {
+  spring: { sun: '#fff4e2', sky: '#f4f1ff' },
+  summer: { sun: '#fff0c2', sky: '#f8f4ea' },
+  autumn: { sun: '#ffd6ae', sky: '#f6ece6' },
+  winter: { sun: '#e0e9ff', sky: '#eef2ff' },
+};
+
+/** Darstellungsgruppen der Arten (nur Optik; die Regeln kennen keine Gruppen). */
+export type SpeciesGroup = 'water' | 'insect' | 'reptile' | 'bird' | 'mammal' | 'human';
+export const SPECIES_GROUPS: SpeciesGroup[] = ['water', 'insect', 'reptile', 'bird', 'mammal', 'human'];
+
+export const GROUP_COLORS: Record<SpeciesGroup, string> = {
+  water: '#3f8fd0',
+  insect: '#e7b43c',
+  reptile: '#5aa85a',
+  bird: '#f2f2f6',
+  mammal: '#a8714a',
+  human: '#e2876a',
+};
+
+/**
+ * Gruppe und Farbe je bekannter Art. Unbekannte Arten fallen über ihre Stufe in eine Gruppe.
+ * AUSLEGUNG: Frösche zählen optisch zu „Reptil“ (Amphibien und Reptilien).
+ */
+const SPECIES_STYLE: Record<string, { group: SpeciesGroup; color: string }> = {
+  plankton: { group: 'water', color: '#a6e3ea' },
+  fish: { group: 'water', color: '#3f8fd0' },
+  beetle: { group: 'insect', color: '#5b4a78' },
+  bee: { group: 'insect', color: '#f2c230' },
+  frog: { group: 'reptile', color: '#4fae5a' },
+  lizard: { group: 'reptile', color: '#9ab53f' },
+  small_mammal: { group: 'mammal', color: '#c09062' },
+  bird: { group: 'bird', color: '#f4f4f8' },
+  deer: { group: 'mammal', color: '#a0603a' },
+  wolf: { group: 'mammal', color: '#8d8f9c' },
+  raptor: { group: 'bird', color: '#7d5b45' },
+  primate: { group: 'mammal', color: '#6b4a35' },
+  human: { group: 'human', color: '#e2876a' },
+};
+
+export function speciesStyle(species: string, tier: number): { group: SpeciesGroup; color: string } {
+  const known = SPECIES_STYLE[species];
+  if (known) return known;
+  const group: SpeciesGroup = tier <= 1 ? 'insect' : tier <= 4 ? 'reptile' : tier <= 6 ? 'mammal' : 'human';
+  return { group, color: GROUP_COLORS[group] };
+}
 
 const TOP: Record<string, Record<FormKind, string>> = {
   mountains: { ideal: '#9fcd6f', normal: '#a9a6b4', degraded: '#b8ab98', disturbance: '#e8eef6' },
@@ -44,10 +96,3 @@ export const CROWN: Record<FormKind, string> = {
   degraded: '#6f7d4a',
   disturbance: '#a35b2c',
 };
-
-/** Figurenfarbe nach Entwicklungsstufe der Art (1 Plankton … 7 Mensch). */
-export const TIER_COLORS = ['#f2f2f2', '#9fd8e8', '#7aa6e0', '#e0b36c', '#c98a5a', '#e07a7a', '#b088d0', '#f5d36b'];
-
-export function tierColor(tier: number): string {
-  return TIER_COLORS[Math.max(0, Math.min(TIER_COLORS.length - 1, tier))] ?? '#ffffff';
-}

@@ -22,11 +22,15 @@ export function useGame(client: GameClient) {
     () => client.getView(),
   );
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [incompatible, setIncompatible] = useState(false);
   const nextId = useRef(1);
 
   useEffect(() => {
     const timers = new Set<number>();
-    const unsubscribe = client.subscribeNotices((notices) => {
+    const unsubscribe = client.subscribeNotices((all) => {
+      if (all.some((n) => n.type === 'incompatible')) setIncompatible(true);
+      const notices = all.filter((n) => n.type !== 'incompatible');
+      if (notices.length === 0) return;
       const fresh = notices.map((n) => ({ id: nextId.current++, ...noticeToast(n) }));
       // Ein großer Schritt (Rundenende) verdrängt ältere Meldungen; seine wichtigsten stehen vorn.
       setToasts((list) =>
@@ -49,14 +53,30 @@ export function useGame(client: GameClient) {
   const dispatch = useCallback((action: Action) => client.dispatch(action), [client]);
   const newGame = useCallback(() => {
     setToasts([]);
+    setIncompatible(false);
     client.newGame();
   }, [client]);
+  const dismissIncompatible = useCallback(() => setIncompatible(false), []);
 
-  return { view, dispatch, newGame, toasts };
+  return { view, dispatch, newGame, toasts, incompatible, dismissIncompatible };
 }
 
-function noticeToast(n: Notice): Omit<Toast, 'id'> {
+const deltas = (list: { species: string; delta: number }[]) =>
+  list.map((x) => t.popDelta(x.species, x.delta)).join(', ');
+
+function noticeToast(n: Exclude<Notice, { type: 'incompatible' }>): Omit<Toast, 'id'> {
   switch (n.type) {
+    case 'overgrazed':
+      return { text: t.toastOvergrazed(n.zone, n.foods.join(', ')), tone: 'bad' };
+    case 'hunted':
+      return { text: t.toastHunted(n.zone, deltas(n.losses)), tone: 'bad' };
+    case 'populationShift':
+      return {
+        text: t.toastPopulationShift(n.card, n.zone, deltas(n.changes)),
+        tone: n.changes.every((c) => c.delta > 0) ? 'good' : 'info',
+      };
+    case 'rejected':
+      return { text: t.toastRejected, tone: 'bad' };
     case 'round':
       return { text: t.toastRound(n.round, n.season), tone: 'info' };
     case 'played':

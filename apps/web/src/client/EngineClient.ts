@@ -1,22 +1,29 @@
 import {
+  RuleError,
   describeEvent,
   legalPlays,
+  newBook,
   newGame,
   preview,
+  recordGame,
+  slotOptions,
   step,
   view,
+  type CreationBook,
   type GameData,
   type GameEvent,
   type GameState,
 } from '@being-god/core';
 import type { Action, GameView, Locale, Targets } from '@core/api';
-import type { GameClient, Notice, PreviewView } from './GameClient.ts';
-import type { SaveStore } from './SaveStore.ts';
+import type { BookView, GameClient, GameResult, Notice, PreviewView } from './GameClient.ts';
+import { MemoryBookStore, type BookStore, type SaveStore } from './SaveStore.ts';
 
 export interface EngineClientOptions {
   data: GameData;
   locale: Locale;
   store: SaveStore;
+  /** Ablage des Schöpfungsbuchs; Standard: flüchtig. */
+  books?: BookStore;
   /** Fester Seed für eine neue Partie (Tests, `?seed=`); sonst zufällig. */
   seed?: string;
 }
@@ -27,6 +34,9 @@ export class EngineClient implements GameClient {
   private readonly data: GameData;
   private readonly locale: Locale;
   private readonly store: SaveStore;
+  private readonly books: BookStore;
+  private book: CreationBook;
+  private result: GameResult | null = null;
   private readonly fixedSeed: string | undefined;
   private seed: string;
   private state: GameState;
@@ -38,6 +48,8 @@ export class EngineClient implements GameClient {
     this.data = options.data;
     this.locale = options.locale;
     this.store = options.store;
+    this.books = options.books ?? new MemoryBookStore();
+    this.book = this.books.load() ?? newBook();
     this.fixedSeed = options.seed;
     const resumed = this.resume();
     if (resumed) {
@@ -46,7 +58,7 @@ export class EngineClient implements GameClient {
       this.view = resumed.view;
     } else {
       this.seed = this.freshSeed();
-      this.state = newGame(this.data, { seed: this.seed });
+      this.state = newGame(this.data, { seed: this.seed, book: this.book });
       this.view = view(this.data, this.state, this.locale);
       this.persist();
     }
@@ -72,30 +84,30 @@ export class EngineClient implements GameClient {
     try {
       result = step(this.data, this.state, action);
     } catch (error) {
-      // Ungültige Aktion (z. B. veraltete Ansicht): Zustand bleibt, Oberfläche zeigt weiter die alte View.
-      console.warn('Aktion abgelehnt:', error);
+      // Ungültige Aktion (z. B. veraltete Ansicht): Zustand bleibt, die Oberfläche meldet „Zug nicht möglich“.
+      // Wirft die Engine bei einem laut `legalPlays` gültigen Zug oder mit einem unerwarteten Fehler, passt der
+      // Spielstand nicht zu den Daten – dann bietet die Oberfläche eine neue Partie an.
+      const incompatible = !(error instanceof RuleError) || !this.fitsData(this.state) || this.isLegal(action);
+      console.warn(incompatible ? 'Spielstand passt nicht zu den Spieldaten:' : 'Aktion abgelehnt:', error);
+      this.emitNotices([{ type: incompatible ? 'incompatible' : 'rejected' }]);
       return;
     }
     this.state = result.state;
+    if (this.state.phase === 'over') this.record();
     this.persist();
     this.publish(this.toNotices(result.events));
   }
 
   legalTargets(uid: number, chosen: Targets): string[] {
-    const inst = this.state.hand.find((c) => c.uid === uid);
-    const card = inst && this.data.cards.get(inst.card);
-    if (!card) return [];
-    const slot = card.slots.find((s) => chosen[s.id] === undefined);
-    if (!slot) return [];
-    const out = new Set<string>();
-    for (const play of legalPlays(this.data, this.state)) {
-      if (play.uid !== uid) continue;
-      if (Object.entries(chosen).every(([k, v]) => play.targets[k] === v)) {
-        const target = play.targets[slot.id];
-        if (target !== undefined) out.add(target);
-      }
+    try {
+      return slotOptions(this.data, this.state, uid, chosen);
+    } catch {
+      return [];
     }
-    return [...out];
+  }
+
+  speciesName(speciesId: string): string {
+    return this.data.species.get(speciesId)?.name[this.locale] ?? speciesId;
   }
 
   preview(uid: number, targets: Targets): PreviewView | null {
@@ -105,40 +117,82 @@ export class EngineClient implements GameClient {
     } catch {
       return null;
     }
+    const named = <T extends { zone: string; zoneName?: string | null }>(x: T) => x.zoneName ?? x.zone;
     return {
       cost: p.cost,
       affordable: p.affordable,
-      changes: p.changes.map((c) => ({
-        ...c,
-        zoneName: this.zoneName(c.zone),
-        statName: this.data.stats.get(c.stat)?.name[this.locale] ?? c.stat,
-      })),
-      triggers: p.triggers.map((t) => ({ zone: t.zone, zoneName: this.zoneName(t.zone), name: t.name, icon: t.icon })),
+      changes: p.changes.map((c) => ({ ...c, zoneName: named(c), statName: c.statName ?? c.stat })),
+      triggers: p.triggers.map((x) => ({ zone: x.zone, zoneName: named(x), name: x.name, icon: x.icon })),
       formChanges: p.formChanges.map((f) => ({
         zone: f.zone,
-        zoneName: this.zoneName(f.zone),
-        from: this.formName(f.from),
-        to: this.formName(f.to),
-        kind: this.data.forms.get(f.to)?.form.kind ?? 'normal',
+        zoneName: named(f),
+        from: f.fromName ?? f.from,
+        to: f.toName ?? f.to,
+        kind: f.kind ?? 'normal',
       })),
+      populationChanges: p.populationChanges ?? [],
+      eventChanges: (p.eventChanges ?? []).map((e) => ({ name: e.name, change: e.change, round: e.round ?? null })),
     };
+  }
+
+  getBook(): BookView {
+    const lc = this.locale;
+    const b = this.book;
+    return {
+      games: b.games,
+      species: Object.entries(b.species)
+        .map(([id, rec]) => {
+          const sp = this.data.species.get(id);
+          return { id, name: sp?.name[lc] ?? id, tier: sp?.tier ?? 0, firstGame: rec.firstGame };
+        })
+        .sort((x, y) => x.tier - y.tier || x.name.localeCompare(y.name)),
+      speciesTotal: this.data.species.size,
+      milestones: this.data.meta.milestones.map((m) => ({
+        id: m.id,
+        name: m.name[lc],
+        description: m.description[lc],
+        reached: m.id in b.milestones,
+      })),
+      best: { ...b.best },
+      totals: { ...b.totals },
+    };
+  }
+
+  lastResult(): GameResult | null {
+    return this.result;
   }
 
   newGame(): void {
     this.store.clear();
     this.seed = this.freshSeed(true);
-    this.state = newGame(this.data, { seed: this.seed });
+    this.result = null;
+    this.state = newGame(this.data, { seed: this.seed, book: this.book });
     this.persist();
     this.publish([]);
   }
 
   // --- intern -------------------------------------------------------------------------------------
 
+  /** Beendete Partie ins Schöpfungsbuch eintragen (genau einmal, beim Übergang zu „over“). */
+  private record(): void {
+    const lc = this.locale;
+    const update = recordGame(this.data, this.book, this.state);
+    this.book = update.book;
+    this.books.save(this.book);
+    this.result = {
+      discovered: update.discovered.map((id) => this.speciesName(id)),
+      milestones: update.milestones.map((id) => this.data.meta.milestones.find((m) => m.id === id)?.name[lc] ?? id),
+      unlocked: update.unlocked.map((id) => this.data.cards.get(id)?.name[lc] ?? id),
+      records: update.records,
+    };
+  }
+
   private resume(): { seed: string; state: GameState; view: GameView } | null {
     const saved = this.store.load();
     if (!saved) return null;
     try {
       // Passt der Spielstand nicht mehr zu den Daten (neue Version), verwerfen statt abstürzen.
+      if (!this.fitsData(saved.state)) throw new Error('Spielstand benutzt unbekannte Daten-Ids.');
       return { seed: saved.seed, state: saved.state, view: view(this.data, saved.state, this.locale) };
     } catch (error) {
       console.warn('Gespeicherter Spielstand passt nicht zu den Spieldaten und wird verworfen.', error);
@@ -161,16 +215,49 @@ export class EngineClient implements GameClient {
   private publish(notices: Notice[]): void {
     this.view = view(this.data, this.state, this.locale);
     for (const listener of this.listeners) listener();
+    this.emitNotices(notices);
+  }
+
+  private emitNotices(notices: Notice[]): void {
     if (notices.length > 0) for (const listener of this.noticeListeners) listener(notices);
+  }
+
+  /** Grobe Prüfung, ob ein Zustand nur Karten, Geografien, Formen und Arten der geladenen Daten benutzt. */
+  private fitsData(state: GameState): boolean {
+    const d = this.data;
+    return (
+      [...state.hand, ...state.drawPile, ...state.discardPile].every((c) => d.cards.has(c.card)) &&
+      state.zones.every(
+        (z) =>
+          d.geographies.has(z.geography) &&
+          d.forms.has(z.form) &&
+          Object.keys(z.populations).every((s) => d.species.has(s)),
+      )
+    );
+  }
+
+  /** Ist die Aktion laut Engine gültig? Wirft die Prüfung selbst, gilt der Zustand als unpassend. */
+  private isLegal(action: Action): boolean {
+    try {
+      if (action.type === 'endTurn') return this.view.canEndTurn;
+      return legalPlays(this.data, this.state).some(
+        (p) =>
+          p.uid === action.uid &&
+          Object.keys(p.targets).length === Object.keys(action.targets).length &&
+          Object.entries(p.targets).every(([k, v]) => action.targets[k] === v),
+      );
+    } catch {
+      return true;
+    }
+  }
+
+  private statOrSpeciesName(id: string): string {
+    return this.data.species.has(id) ? this.speciesName(id) : (this.data.stats.get(id)?.name[this.locale] ?? id);
   }
 
   private zoneName(zoneId: string): string {
     const zone = this.state.zones.find((z) => z.id === zoneId);
     return (zone && this.data.geographies.get(zone.geography)?.name[this.locale]) ?? zoneId;
-  }
-
-  private speciesName(id: string): string {
-    return this.data.species.get(id)?.name[this.locale] ?? id;
   }
 
   private formName(formId: string): string {
@@ -182,6 +269,11 @@ export class EngineClient implements GameClient {
     const lc = this.locale;
     const head: Notice[] = [];
     const body: Notice[] = [];
+    // Zusammenfassungen je Zone (Reihenfolge des ersten Auftretens bleibt erhalten)
+    const overgrazed = new Map<string, Set<string>>();
+    const hunted = new Map<string, Map<string, number>>();
+    const shifted = new Map<string, { zone: string; card: string; changes: Map<string, number> }>();
+    const add = (m: Map<string, number>, key: string, delta: number) => m.set(key, (m.get(key) ?? 0) + delta);
     for (const e of events) {
       switch (e.type) {
         case 'roundStarted': {
@@ -250,6 +342,29 @@ export class EngineClient implements GameClient {
             card: this.data.cards.get(e.card)?.name[lc] ?? e.card,
           });
           break;
+        case 'overpopulation': {
+          const foods = overgrazed.get(e.zone) ?? new Set<string>();
+          foods.add(e.food);
+          overgrazed.set(e.zone, foods);
+          break;
+        }
+        case 'populationChanged': {
+          // Hunger, Wanderung und Entstehung haben eigene Meldungen; hier nur Jagd durch Menschen und Karten.
+          const delta = e.to - e.from;
+          if (delta === 0) break;
+          if (e.cause === 'hunted') {
+            const m = hunted.get(e.zone) ?? new Map<string, number>();
+            add(m, e.species, delta);
+            hunted.set(e.zone, m);
+          } else if (e.cause.startsWith('card:') || e.cause.startsWith('trigger:')) {
+            const card = e.cause.slice(e.cause.indexOf(':') + 1).split('.')[0] ?? '';
+            const key = `${e.zone}|${card}`;
+            const entry = shifted.get(key) ?? { zone: e.zone, card, changes: new Map<string, number>() };
+            add(entry.changes, e.species, delta);
+            shifted.set(key, entry);
+          }
+          break;
+        }
         case 'eventForecast':
         case 'eventOccurred':
         case 'eventCancelled':
@@ -263,8 +378,6 @@ export class EngineClient implements GameClient {
             });
           break;
         }
-        case 'populationChanged': // Details; zusammengefasst über Hunger, Wanderung, Entstehung
-        case 'overpopulation':
         case 'scored':
         case 'cardDrawn':
         case 'deckReshuffled':
@@ -277,6 +390,28 @@ export class EngineClient implements GameClient {
           break;
       }
     }
+    const losses = (m: Map<string, number>) =>
+      [...m].filter(([, d]) => d !== 0).map(([species, delta]) => ({ species: this.speciesName(species), delta }));
+    for (const { zone, card, changes } of shifted.values()) {
+      const list = losses(changes);
+      if (list.length > 0)
+        body.push({
+          type: 'populationShift',
+          zone: this.zoneName(zone),
+          card: this.data.cards.get(card)?.name[lc] ?? card,
+          changes: list,
+        });
+    }
+    for (const [zone, m] of hunted) {
+      const list = losses(m);
+      if (list.length > 0) body.push({ type: 'hunted', zone: this.zoneName(zone), losses: list });
+    }
+    for (const [zone, foods] of overgrazed)
+      body.push({
+        type: 'overgrazed',
+        zone: this.zoneName(zone),
+        foods: [...foods].map((f) => this.statOrSpeciesName(f)),
+      });
     const rank: Partial<Record<Notice['type'], number>> = {
       collapsed: 0,
       extinct: 1,

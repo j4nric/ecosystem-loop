@@ -1,5 +1,5 @@
 import type { Action, CardView, FormKind, GameView, Locale, Targets, ZoneView } from '@core/api';
-import type { GameClient, Notice, PreviewView } from './GameClient.ts';
+import type { BookView, GameClient, GameResult, Notice, PreviewView } from './GameClient.ts';
 
 /**
  * Vorschau-Implementierung ohne Engine: liefert eine realistische GameView und simuliert Aktionen grob
@@ -276,6 +276,14 @@ export class MockClient implements GameClient {
     return this.state.zones.map((z) => z.geo.id);
   }
 
+  speciesName(speciesId: string): string {
+    for (const zone of this.view.zones) {
+      const pop = zone.populations.find((p) => p.species === speciesId);
+      if (pop) return pop.name;
+    }
+    return speciesId;
+  }
+
   preview(uid: number, targets: Targets): PreviewView | null {
     const entry = this.state.hand.find((h) => h.uid === uid);
     const zone = this.state.zones.find((z) => z.geo.id === targets['zone']);
@@ -296,7 +304,24 @@ export class MockClient implements GameClient {
       changes,
       triggers: [],
       formChanges: [],
+      populationChanges: [],
+      eventChanges: [],
     };
+  }
+
+  getBook(): BookView {
+    return {
+      games: 0,
+      species: [],
+      speciesTotal: 0,
+      milestones: [],
+      best: { score: 0, rounds: 0, tier: 0 },
+      totals: { rounds: 0, extinctions: 0, events: 0 },
+    };
+  }
+
+  lastResult(): GameResult | null {
+    return null;
   }
 
   newGame(): void {

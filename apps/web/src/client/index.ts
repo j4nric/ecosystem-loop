@@ -3,10 +3,10 @@ import { EngineClient } from './EngineClient.ts';
 import type { GameClient } from './GameClient.ts';
 import { loadGameData } from './gameData.ts';
 import { MockClient } from './MockClient.ts';
-import { LocalSaveStore, MemorySaveStore } from './SaveStore.ts';
+import { LocalBookStore, LocalSaveStore, MemoryBookStore, MemorySaveStore } from './SaveStore.ts';
 
-export type { GameClient, Notice, PreviewView } from './GameClient.ts';
-export type { SavedGame, SaveStore } from './SaveStore.ts';
+export type { BookView, GameClient, GameResult, Notice, PreviewView } from './GameClient.ts';
+export type { BookStore, SavedGame, SaveStore } from './SaveStore.ts';
 
 /**
  * Die einzige Stelle, an der die Implementierung gewählt wird. Standard ist die echte Engine.
@@ -19,6 +19,7 @@ export function createGameClient(locale: Locale): GameClient {
     data: loadGameData(),
     locale,
     store: params.has('nosave') ? new MemorySaveStore() : new LocalSaveStore(),
+    books: params.has('nosave') ? new MemoryBookStore() : new LocalBookStore(),
     seed: params.get('seed') ?? undefined,
   });
 }
