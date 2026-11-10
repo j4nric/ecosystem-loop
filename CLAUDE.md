@@ -14,6 +14,16 @@ Bots/Simulation/Konsole in `packages/sim`, App später in `apps/mobile`.
 - Nie Tests überspringen, deaktivieren oder Schwellen senken, um grün zu werden.
 - Produktentscheidungen (Spielregeln, Konzept-Vorschläge mit 💡) mit dem Inhaber im Chat klären, nicht im PR.
 
+## Cockpit
+
+Projekt-Cockpit: https://claude.ai/artifact/HUkj8htTK7SRZccDfGUqS4 (Datenmodell: `docs/cockpit/README.md`).
+
+- Zu Beginn jeder Sitzung: offene Antworten (`questions` mit `status: answered`, die noch nicht verarbeitet sind)
+  und neues Feedback (`feedback` mit `status: new`) lesen, umsetzen bzw. beantworten (`reply`, `status: seen`).
+- Nach jedem gemergten PR: Meilensteine in `phases`, `cockpit/status` und ggf. `decisions` aktualisieren.
+- Nach jedem Balancing-Lauf: Messreihe in `simruns` anlegen.
+- Neue Produktfragen als `questions` stellen.
+
 ## Konventionen
 
 - TypeScript strict, ESM, Imports mit `.ts`-Endung innerhalb eines Pakets, zwischen Paketen über `@being-god/*`.
