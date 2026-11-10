@@ -1,4 +1,4 @@
-import { STATE_VERSION, type GameState } from '@being-god/core';
+import { parseBook, STATE_VERSION, type CreationBook, type GameState } from '@being-god/core';
 
 /** Ein gespeicherter Spielstand: Engine-Zustand (reines JSON) und der Seed, mit dem die Partie begann. */
 export interface SavedGame {
@@ -64,5 +64,45 @@ export class MemorySaveStore implements SaveStore {
   }
   clear(): void {
     this.game = null;
+  }
+}
+
+/** Ablage des Schöpfungsbuchs – getrennt vom Spielstand, überlebt „Neue Partie“. Methoden werfen nie. */
+export interface BookStore {
+  load(): CreationBook | null;
+  save(book: CreationBook): void;
+}
+
+const BOOK_KEY = 'being-god.book.v1';
+
+export class LocalBookStore implements BookStore {
+  constructor(private readonly key: string = BOOK_KEY) {}
+
+  load(): CreationBook | null {
+    try {
+      const raw = window.localStorage.getItem(this.key);
+      return raw ? parseBook(JSON.parse(raw)) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  save(book: CreationBook): void {
+    try {
+      window.localStorage.setItem(this.key, JSON.stringify(book));
+    } catch {
+      // Speichern ist Komfort
+    }
+  }
+}
+
+/** Flüchtiges Buch (Tests, `?nosave`). */
+export class MemoryBookStore implements BookStore {
+  private book: CreationBook | null = null;
+  load(): CreationBook | null {
+    return this.book ? structuredClone(this.book) : null;
+  }
+  save(book: CreationBook): void {
+    this.book = structuredClone(book);
   }
 }

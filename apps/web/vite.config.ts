@@ -15,6 +15,22 @@ export default defineConfig({
   server: { host: true },
   build: {
     target: 'es2022',
-    chunkSizeWarningLimit: 1500,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        // Bibliotheken in eigene, selten wechselnde Chunks: Ein App-Update lädt dann nur den kleinen App-Teil neu.
+        codeSplitting: {
+          groups: [
+            {
+              name: 'three',
+              test: /[\\/]node_modules[\\/](three|@react-three|three-stdlib|troika-[^\\/]+|camera-controls|maath|meshline|zustand|its-fine|suspend-react|stats-gl|@monogrid|@use-gesture|hls\.js|tunnel-rat)[\\/]/,
+              priority: 2,
+            },
+            { name: 'react', test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 1 },
+            { name: 'vendor', test: /[\\/]node_modules[\\/]/, priority: 0 },
+          ],
+        },
+      },
+    },
   },
 });

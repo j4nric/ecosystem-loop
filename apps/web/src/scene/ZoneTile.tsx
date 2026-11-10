@@ -1,11 +1,11 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
-import type { Group, Mesh, MeshBasicMaterial } from 'three';
+import { Color, type Group, type Mesh, type MeshBasicMaterial, type MeshLambertMaterial } from 'three';
 import type { ZoneView } from '@core/api';
 import { GEO } from './geometries.ts';
 import { COLORS, topColor } from './palette.ts';
 import { TOP_Y } from './layout.ts';
+import type { SceneRegistry } from './registry.ts';
 
 interface Props {
   zone: ZoneView;
@@ -15,28 +15,53 @@ interface Props {
   targetable: boolean;
   /** true: Zielwahl läuft, aber diese Zone ist kein gültiges Ziel. */
   dimmed: boolean;
+  reducedMotion: boolean;
+  registry: SceneRegistry;
   onTap: (zoneId: string) => void;
 }
 
 const TAP_TOLERANCE_PX = 8;
+/** Höhe der Beschriftung über der Kachel (Berge: über den Gipfeln). */
+const LABEL_HEIGHT: Record<string, number> = { mountains: 1.95 };
+const BLACK = new Color('#000000');
 const stat = (zone: ZoneView, index: number) => zone.stats[index]?.value ?? 0;
 
-export function ZoneTile({ zone, position, selected, targetable, dimmed, onTap }: Props) {
+export function ZoneTile({ zone, position, selected, targetable, dimmed, reducedMotion, registry, onTap }: Props) {
   const group = useRef<Group>(null);
   const ring = useRef<Mesh>(null);
+  const topMaterial = useRef<MeshLambertMaterial>(null);
   const kind = zone.form.kind;
-  const top = useMemo(() => topColor(zone.geography, kind), [zone.geography, kind]);
+  const top = useMemo(() => new Color(topColor(zone.geography, kind)), [zone.geography, kind]);
+  // Startfarbe nur beim ersten Rendern setzen – danach blendet useFrame weich über.
+  const [initialTop] = useState(() => topColor(zone.geography, kind));
+
+  // Formwechsel: Kachel hebt sich kurz an und setzt wieder auf (Wert 1 → 0).
+  const bump = useRef(0);
+  const lastForm = useRef(zone.form.id);
+  useEffect(() => {
+    if (lastForm.current === zone.form.id) return;
+    lastForm.current = zone.form.id;
+    if (!reducedMotion) bump.current = 1;
+  }, [zone.form.id, reducedMotion]);
 
   useFrame((state, delta) => {
     const g = group.current;
     if (g) {
-      const lift = selected ? 0.18 : targetable ? 0.08 : 0;
-      g.position.y += (lift - g.position.y) * Math.min(1, delta * 10);
+      bump.current = Math.max(0, bump.current - delta * 1.1);
+      const hop = Math.sin((1 - bump.current) * Math.PI) * (bump.current > 0 ? 0.3 : 0);
+      const lift = (selected ? 0.18 : targetable ? 0.08 : 0) + hop;
+      g.position.y = reducedMotion ? lift : g.position.y + (lift - g.position.y) * Math.min(1, delta * 10);
+    }
+    const mat = topMaterial.current;
+    if (mat) {
+      mat.color.lerp(top, reducedMotion ? 1 : 1 - Math.exp(-delta * 2.5));
+      if (dimmed) mat.emissive.copy(BLACK);
+      else mat.emissive.copy(mat.color);
     }
     const r = ring.current;
     if (r) {
-      const mat = r.material as MeshBasicMaterial;
-      mat.opacity = targetable ? 0.55 + 0.35 * Math.sin(state.clock.elapsedTime * 5) : 0.95;
+      const m = r.material as MeshBasicMaterial;
+      m.opacity = targetable && !reducedMotion ? 0.55 + 0.35 * Math.sin(state.clock.elapsedTime * 5) : 0.95;
     }
   });
 
@@ -48,10 +73,16 @@ export function ZoneTile({ zone, position, selected, targetable, dimmed, onTap }
 
   return (
     <group position={position}>
-      <group ref={group}>
+      <group
+        ref={(g) => {
+          group.current = g;
+          registry.register(registry.tiles, zone.id, g);
+        }}
+        userData={{ zoneId: zone.id }}
+      >
         {/* Sockel: Grasdecke, Erde, Schichtkante, Felsunterseite */}
         <mesh geometry={GEO.top} position={[0, TOP_Y - 0.11, 0]} onClick={handleClick}>
-          <meshLambertMaterial flatShading color={top} emissive={dimmed ? '#000000' : top} emissiveIntensity={0.06} />
+          <meshLambertMaterial ref={topMaterial} flatShading color={initialTop} emissiveIntensity={0.06} />
         </mesh>
         <mesh geometry={GEO.earth} position={[0, TOP_Y - 0.595, 0]} onClick={handleClick}>
           <meshLambertMaterial flatShading color={COLORS.earth} />
@@ -71,16 +102,11 @@ export function ZoneTile({ zone, position, selected, targetable, dimmed, onTap }
           </mesh>
         )}
 
-        <Html position={[0, TOP_Y + 1.05, 0]} center zIndexRange={[10, 0]} style={{ pointerEvents: 'none' }}>
-          <div className={`zone-label${selected ? ' is-selected' : ''}${dimmed ? ' is-dimmed' : ''}`}>
-            {zone.warnings.map((w) => (
-              <span key={`${w.card}-${w.trigger}`} className="zone-label__warn" title={w.name}>
-                {w.icon}
-              </span>
-            ))}
-            <span>{zone.geographyName}</span>
-          </div>
-        </Html>
+        {/* Anker der Beschriftung; die Beschriftung selbst liegt als DOM über der Szene (ZoneLabels). */}
+        <object3D
+          position={[0, TOP_Y + (LABEL_HEIGHT[zone.geography] ?? 1.05), 0]}
+          ref={(o) => registry.register(registry.anchors, zone.id, o)}
+        />
       </group>
     </group>
   );

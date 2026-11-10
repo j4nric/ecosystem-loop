@@ -1,21 +1,19 @@
 import type { ZoneView } from '@core/api';
 import type { InstanceSpec } from './Instanced.tsx';
-import { HEX_RADIUS, pointInHex, seeded, TOP_Y } from './layout.ts';
-import { COLORS, CROWN, tierColor } from './palette.ts';
+import { pointInHex, seeded, TOP_Y } from './layout.ts';
+import { COLORS, CROWN } from './palette.ts';
 
 /** Platzhalter-Ausstattung aller Zonen, gesammelt je Geometrie für Instancing. */
 export interface PropSet {
   crowns: InstanceSpec[];
   trunks: InstanceSpec[];
   rocks: InstanceSpec[];
-  bodies: InstanceSpec[];
-  heads: InstanceSpec[];
 }
 
 const stat = (zone: ZoneView, index: number) => zone.stats[index]?.value ?? 0;
 
 /** Bereiche, die frei bleiben (Bergspitzen, Fluss, Wasser). */
-function blocked(zone: ZoneView, x: number, z: number): boolean {
+export function blocked(zone: ZoneView, x: number, z: number): boolean {
   switch (zone.geography) {
     case 'mountains':
       return Math.hypot(x + 0.1, z + 0.15) < 0.95;
@@ -32,7 +30,7 @@ function blocked(zone: ZoneView, x: number, z: number): boolean {
 }
 
 export function buildProps(zones: ZoneView[], positions: Map<string, [number, number, number]>): PropSet {
-  const set: PropSet = { crowns: [], trunks: [], rocks: [], bodies: [], heads: [] };
+  const set: PropSet = { crowns: [], trunks: [], rocks: [] };
   for (const zone of zones) {
     const base = positions.get(zone.id);
     if (!base) continue;
@@ -78,21 +76,6 @@ export function buildProps(zones: ZoneView[], positions: Map<string, [number, nu
         color: rand() < 0.5 ? COLORS.rock : COLORS.rockDark,
       });
     }
-
-    // Bestände: kleine Figuren, eine je Tier (höchstens 5 pro Art), in Grüppchen
-    zone.populations.forEach((pop, p) => {
-      const angle = (p / Math.max(1, zone.populations.length)) * Math.PI * 2 + 0.6;
-      const cx = Math.cos(angle) * HEX_RADIUS * 0.5;
-      const cz = Math.sin(angle) * HEX_RADIUS * 0.5;
-      const color = tierColor(pop.tier);
-      for (let i = 0; i < Math.min(5, pop.count); i++) {
-        const x = cx + (rand() - 0.5) * 0.45;
-        const z = cz + (rand() - 0.5) * 0.45;
-        const s = 0.8 + pop.tier * 0.06;
-        set.bodies.push({ position: at(x, z, 0.09 * s), scale: [s, s, s], color });
-        set.heads.push({ position: at(x, z, 0.22 * s), scale: [s, s, s], color });
-      }
-    });
   }
   return set;
 }
