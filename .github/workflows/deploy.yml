@@ -100,10 +100,20 @@ jobs:
         if: steps.secrets.outputs.ready == 'true' && vars.DEPLOY_URL != ''
         env:
           URL: ${{ vars.DEPLOY_URL }}
+        # Beim allerersten Abruf holt der Haushalt-Caddy das Zertifikat bei Let's Encrypt;
+        # bis dahin antwortet er mit „tlsv1 alert internal error“. Deshalb bis zu 3 Minuten warten.
         run: |
-          for i in 1 2 3 4 5 6; do
-            if curl -fsS "$URL/version.json" | grep -q "$GITHUB_SHA"; then echo "Live: $URL"; exit 0; fi
-            sleep 5
+          for i in $(seq 1 18); do
+            if curl -fsS --max-time 10 "$URL/version.json" 2>/tmp/curl.err | grep -q "$GITHUB_SHA"; then
+              echo "Live: $URL"
+              exit 0
+            fi
+            sleep 10
           done
-          echo "::error::$URL liefert nicht den neuen Stand aus. Siehe deploy/README.md, Fehlersuche."
+          echo "Letzte Antwort: $(cat /tmp/curl.err)"
+          if grep -q "alert internal error" /tmp/curl.err; then
+            echo "::error::Der Haushalt-Caddy hat kein Zertifikat für $URL. Ist der Block für die Domain im Repo j4nric/haushalt-app ausgerollt? Siehe deploy/README.md, Fehlersuche."
+          else
+            echo "::error::$URL liefert nicht den neuen Stand aus. Siehe deploy/README.md, Fehlersuche."
+          fi
           exit 1
