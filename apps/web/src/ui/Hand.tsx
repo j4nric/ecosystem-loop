@@ -19,7 +19,10 @@ interface Props {
   pointer: CardPointerHandlers;
 }
 
-/** Kartenleiste am unteren Rand: Name, Kosten, Kurztext. Antippen oder auf die Insel ziehen. */
+/**
+ * Kartenleiste am unteren Rand: Name, Kosten, Kurztext (`short`). Antippen oder auf die Insel ziehen; langer Druck
+ * zeigt den vollen Text. Der volle Text steht auch im Screenreader-Label.
+ */
 export function Hand({ cards, activeUid, draggingUid, onCardTap, pointer }: Props) {
   return (
     <div className="hand" role="list">
@@ -47,7 +50,7 @@ export function Hand({ cards, activeUid, draggingUid, onCardTap, pointer }: Prop
               {card.cost === 0 ? t.free : `✦${card.cost}`}
             </span>
             <span className="card__name">{card.name}</span>
-            <span className="card__text">{card.text}</span>
+            <span className="card__text">{card.short ?? card.text}</span>
           </button>
         );
       })}

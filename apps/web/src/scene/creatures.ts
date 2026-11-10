@@ -30,13 +30,22 @@ function fits(group: SpeciesGroup, zone: ZoneView, x: number, z: number): boolea
 }
 
 export function buildCreatures(zones: ZoneView[], positions: Map<string, [number, number, number]>): CreatureSet {
-  const set: CreatureSet = { water: [], insect: [], reptile: [], bird: [], mammal: [], human: [], heads: [] };
+  const set: CreatureSet = {
+    water: [],
+    insect: [],
+    amphibian: [],
+    reptile: [],
+    bird: [],
+    mammal: [],
+    human: [],
+    heads: [],
+  };
   for (const zone of zones) {
     const base = positions.get(zone.id);
     if (!base) continue;
     const pops = zone.populations.filter((p) => p.count > 0);
     pops.forEach((pop, p) => {
-      const { group, color } = speciesStyle(pop.species, pop.tier);
+      const { group, color } = speciesStyle(pop);
       const rand = seeded(`${zone.id}:${pop.species}`);
       // Grüppchen je Art um einen Punkt im Ring um die Kachelmitte
       const angle = (p / Math.max(1, pops.length)) * Math.PI * 2 + 0.6;
@@ -69,6 +78,7 @@ export function buildCreatures(zones: ZoneView[], positions: Map<string, [number
 const GROUND: Record<SpeciesGroup, number> = {
   water: 0.05,
   insect: 0.05,
+  amphibian: 0.035,
   reptile: 0.03,
   bird: 0,
   mammal: 0.1,
@@ -79,6 +89,7 @@ const GROUND: Record<SpeciesGroup, number> = {
 const HEAD: Record<SpeciesGroup, [number, number] | null> = {
   water: null,
   insect: null,
+  amphibian: [0.05, 0.035],
   reptile: null,
   bird: null,
   mammal: [0.1, 0.06],

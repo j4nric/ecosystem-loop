@@ -121,6 +121,7 @@ function Island({
         <Instanced geometry={GEO.rock} items={props.rocks} />
         <Instanced geometry={GEO.fish} items={creatures.water} />
         <Instanced geometry={GEO.insect} items={creatures.insect} />
+        <Instanced geometry={GEO.amphibian} items={creatures.amphibian} />
         <Instanced geometry={GEO.reptile} items={creatures.reptile} />
         <Instanced geometry={GEO.mammal} items={creatures.mammal} />
         <Instanced geometry={GEO.human} items={creatures.human} />
@@ -138,6 +139,7 @@ function Island({
 // --- Licht, Jahreszeit und Harmonie-Nebel ---------------------------------------------------------
 
 const scratchColor = new Color();
+const scratchColor2 = new Color();
 
 /** Nebelstärke 0–1: beginnt unter etwa 55 % Harmonie, voll bei 10 %. */
 export function mistAmount(harmony: number): number {
@@ -162,7 +164,7 @@ function Atmosphere({ harmony, season, reducedMotion }: { harmony: number; seaso
     mist.current += (mistAmount(harmony) - mist.current) * k;
     const m = mist.current;
     if (sky.current) {
-      scratchColor.set(light.sky).lerp(scratchColor.clone().set(COLORS.paleSky), m);
+      scratchColor.set(light.sky).lerp(scratchColor2.set(COLORS.paleSky), m);
       sky.current.color.lerp(scratchColor, k);
       sky.current.intensity = 1.6 + 0.2 * m;
     }
@@ -227,10 +229,9 @@ function NewLifeBursts({
       if (!base) continue;
       for (const pop of zone.populations) {
         if (pop.count <= 0 || before.present.get(zone.id)?.has(pop.species)) continue;
-        bursts.current = [
-          ...bursts.current,
-          { position: base, color: speciesStyle(pop.species, pop.tier).color, start: null },
-        ].slice(-BURST_SLOTS);
+        bursts.current = [...bursts.current, { position: base, color: speciesStyle(pop).color, start: null }].slice(
+          -BURST_SLOTS,
+        );
       }
     }
   }, [zones, positions, round]);

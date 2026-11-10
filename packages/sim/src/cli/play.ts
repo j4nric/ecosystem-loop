@@ -105,6 +105,8 @@ function describe(d: GameData, e: GameEvent): string | null {
       return `  ↻ Ablage gemischt (${e.cards} Karten)`;
     case 'collapsed':
       return `\n  ☠ Die Welt kollabiert in Runde ${e.round}.`;
+    case 'gameOver':
+      return `  Endstand: ${e.score} Punkte nach ${e.round} Runden.`;
     case 'seasonApplied':
       return `  ~ ${d.seasons.find((s) => s.id === e.season)?.name.de ?? e.season} wirkt`;
     case 'couplingApplied':

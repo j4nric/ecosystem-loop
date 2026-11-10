@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { GameView } from '@core/api';
 import { t } from '../i18n/index.ts';
+import { useEscape } from './useEscape.ts';
 
 interface Props {
   view: GameView;
@@ -22,6 +23,12 @@ export function Hud({ view, isMock, reducedMotion, onNewGame, onHelp, onBook }: 
   const meter = useRef<HTMLDivElement>(null);
   const number = useRef<HTMLSpanElement>(null);
   const shown = useRef<number | null>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  useEscape(() => {
+    setMenuOpen(false);
+    menuButton.current?.focus();
+  }, menuOpen);
+  useEscape(() => setForecastOpen(false), forecastOpen && !menuOpen);
 
   // Zahl zählt zum neuen Wert, der Balken blinkt kurz grün bzw. rot (Web Animations, ohne React-Rendern).
   // Die Zahl gehört allein diesem Effekt (das Element hat keine React-Kinder).
@@ -99,6 +106,7 @@ export function Hud({ view, isMock, reducedMotion, onNewGame, onHelp, onBook }: 
             ?
           </button>
           <button
+            ref={menuButton}
             type="button"
             className="icon-btn"
             onClick={() => setMenuOpen((o) => !o)}
@@ -112,6 +120,7 @@ export function Hud({ view, isMock, reducedMotion, onNewGame, onHelp, onBook }: 
               <button
                 type="button"
                 role="menuitem"
+                autoFocus
                 onClick={() => {
                   setMenuOpen(false);
                   onBook();
@@ -134,25 +143,33 @@ export function Hud({ view, isMock, reducedMotion, onNewGame, onHelp, onBook }: 
         </div>
       </div>
       {view.forecast && (
-        <button
-          type="button"
-          className={`forecast${forecastOpen ? ' is-open' : ''}${(view.forecast.inRounds ?? 0) <= 0 ? ' is-now' : ''}`}
-          aria-expanded={forecastOpen}
-          title={t.forecastShowText}
-          onClick={() => setForecastOpen((o) => !o)}
-        >
-          <span className="forecast__icon" aria-hidden>
-            {view.forecast.icon ?? '⚠'}
-          </span>
-          <span className="forecast__main">
-            <b>{view.forecast.name}</b>
-            <small>
-              {t.forecastWhen(view.forecast.inRounds ?? 0)}
-              {view.forecast.zoneName ? ` · ${t.forecastZone(view.forecast.zoneName)}` : ''}
-            </small>
-            {forecastOpen && <span className="forecast__text">{view.forecast.text}</span>}
-          </span>
-        </button>
+        <div className="forecast-wrap">
+          <button
+            type="button"
+            className={`forecast${forecastOpen ? ' is-open' : ''}${(view.forecast.inRounds ?? 0) <= 0 ? ' is-now' : ''}`}
+            aria-expanded={forecastOpen}
+            aria-controls="forecast-details"
+            title={t.forecastShowText}
+            onClick={() => setForecastOpen((o) => !o)}
+          >
+            <span className="forecast__pill">
+              <span className="forecast__icon" aria-hidden>
+                {view.forecast.icon ?? '⚠'}
+              </span>
+              <b className="forecast__name">{view.forecast.name}</b>
+              <span className="forecast__when">{t.forecastWhen(view.forecast.inRounds ?? 0)}</span>
+              <span className="forecast__chevron" aria-hidden>
+                {forecastOpen ? '▴' : '▾'}
+              </span>
+            </span>
+          </button>
+          {forecastOpen && (
+            <div id="forecast-details" className="forecast__details" onClick={() => setForecastOpen(false)}>
+              {view.forecast.zoneName && <b>{t.forecastZone(view.forecast.zoneName)}</b>}
+              <span>{view.forecast.text}</span>
+            </div>
+          )}
+        </div>
       )}
       {(view.eventShield ?? 0) > 0 && (
         <div className="shield">

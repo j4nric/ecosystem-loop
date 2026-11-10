@@ -8,32 +8,49 @@ interface Props {
   preview: PreviewView | null;
   /** Zone, die das Sheet zeigt – bei ihren Wertänderungen entfällt der Zonenname. */
   shownZone: string | null;
-  onPlay: () => void;
-  onCancel: () => void;
   /** Zusatz unter dem Kartentext, z. B. die Artauswahl. */
   children?: ReactNode;
 }
 
-/** Vorschau eines Kartenzugs vor dem Bestätigen: ausgelöste Schwellen, Formwechsel, Wertänderungen. */
-export function PlayPreview({ card, preview, shownZone, onPlay, onCancel, children }: Props) {
-  const affordable = preview?.affordable ?? card.playable;
+/**
+ * Vorschau eines Kartenzugs vor dem Bestätigen: voller Kartentext, ausgelöste Schwellen, Formwechsel,
+ * Wertänderungen. Die Knöpfe (`PlayActions`) stehen getrennt in der festen Fußleiste des Sheets.
+ */
+export function PlayPreview({ card, preview, shownZone, children }: Props) {
   return (
     <div className="play-preview">
       <div className="play-preview__card">
         <b>{card.name}</b>
         <span className="muted">{card.cost === 0 ? t.free : `✦${card.cost}`}</span>
       </div>
-      <small className="muted">{card.text}</small>
+      <p className="play-preview__text">{card.text}</p>
       {children}
       {preview && <PreviewList preview={preview} shownZone={shownZone} />}
-      <div className="play-preview__actions">
-        <button type="button" className="btn" onClick={onCancel}>
-          {t.cancel}
-        </button>
-        <button type="button" className="btn btn--primary" disabled={!affordable} onClick={onPlay}>
-          {affordable ? t.play : t.notAffordable}
-        </button>
-      </div>
+    </div>
+  );
+}
+
+/** „Abbrechen“ / „Spielen“ – in der Daumenzone, außerhalb des scrollenden Inhalts. */
+export function PlayActions({
+  card,
+  preview,
+  onPlay,
+  onCancel,
+}: {
+  card: CardView;
+  preview: PreviewView | null;
+  onPlay: () => void;
+  onCancel: () => void;
+}) {
+  const affordable = preview?.affordable ?? card.playable;
+  return (
+    <div className="play-actions">
+      <button type="button" className="btn" onClick={onCancel}>
+        {t.cancel}
+      </button>
+      <button type="button" className="btn btn--primary" disabled={!affordable} onClick={onPlay}>
+        {affordable ? t.play : t.notAffordable}
+      </button>
     </div>
   );
 }

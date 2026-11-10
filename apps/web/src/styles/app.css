@@ -144,7 +144,7 @@ textarea {
 
 .breath,
 .calendar,
-.forecast {
+.forecast__pill {
   background: var(--panel);
   border-radius: 12px;
   padding: 6px 10px;
@@ -218,13 +218,6 @@ textarea {
 .calendar__meta {
   font-size: 12px;
   color: var(--ink-soft);
-}
-
-.forecast {
-  font-size: 12px;
-  color: var(--ink-soft);
-  align-self: flex-start;
-  max-width: 100%;
 }
 
 .mock-badge {
@@ -462,10 +455,9 @@ textarea {
   font-size: 11px;
   line-height: 1.25;
   color: var(--ink-soft);
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  overflow-wrap: break-word;
+  -webkit-hyphens: auto;
+  hyphens: auto;
 }
 
 .target-banner {
@@ -496,11 +488,11 @@ textarea {
 /* ---- Bottom-Sheet ---------------------------------------------------------------------------- */
 
 .sheet {
+  display: flex;
+  flex-direction: column;
   max-height: 46dvh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  padding: 4px 16px 14px;
+  overflow: hidden;
+  padding: 4px 16px 0;
   border-radius: 20px;
   background: var(--panel-strong);
   box-shadow: 0 8px 30px rgba(60, 50, 90, 0.25);
@@ -795,14 +787,6 @@ textarea {
   align-items: baseline;
   font-size: 16px;
 }
-.play-preview small {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  overflow: hidden;
-  font-size: 12px;
-}
 .play-preview__list {
   margin: 0;
   padding: 0;
@@ -817,19 +801,6 @@ textarea {
 }
 .play-preview__list .is-good {
   color: var(--good);
-}
-.play-preview__actions {
-  /* Bleibt am unteren Rand des Sheets sichtbar, auch wenn die Vorschau länger ist (Daumenzone). */
-  position: sticky;
-  bottom: -14px;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 8px;
-  margin: 4px -12px -10px;
-  padding: 8px 12px 10px;
-  border-radius: 0 0 14px 14px;
-  background: #f7f0dc;
 }
 .stat:has(.stat__value s) {
   grid-template-columns: 96px 1fr 40px;
@@ -1154,39 +1125,6 @@ textarea {
 }
 
 /* ---------- Phase 3 in der App: Ereignis-Vorschau, Menü, Schöpfungsbuch ---------- */
-button.forecast {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-height: var(--tap);
-  border: 0;
-  border-left: 4px solid var(--mid);
-  text-align: left;
-  font-size: 13px;
-  color: var(--ink);
-  pointer-events: auto;
-  cursor: pointer;
-}
-button.forecast.is-now {
-  border-left-color: var(--low);
-}
-.forecast__icon {
-  font-size: 22px;
-  line-height: 1.2;
-}
-.forecast__main {
-  display: flex;
-  flex-direction: column;
-}
-.forecast__main small {
-  color: var(--ink-soft);
-  font-size: 12px;
-}
-.forecast__text {
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--ink);
-}
 .shield {
   align-self: flex-start;
   padding: 4px 10px;
@@ -1285,4 +1223,283 @@ button.forecast.is-now {
 }
 .book .pops b {
   white-space: nowrap;
+}
+
+/* ---------- Phase 5 (Teil 2): Sheet mit fester Fußleiste, Kartendetails, kompakte Ereignis-Box ---------- */
+.sheet__head {
+  flex: none;
+}
+.sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  /* Abstand zum Rand bzw. zur Fußleiste: letzter Chip/Wert bleibt vollständig sichtbar. */
+  padding-bottom: 14px;
+}
+.sheet__footer {
+  flex: none;
+  margin: 0 -16px;
+  padding: 8px 16px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-strong);
+}
+.play-actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+}
+.play-preview {
+  margin-bottom: 4px;
+}
+.play-preview__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+.card {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.card-detail {
+  box-shadow:
+    0 8px 30px rgba(60, 50, 90, 0.25),
+    inset 0 4px 0 var(--card-color, #999);
+}
+.card-detail .sheet__body {
+  padding-top: 10px;
+}
+.card-detail__cost {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--breath);
+}
+.card-detail__text {
+  margin: 10px 0 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.forecast-wrap {
+  position: relative;
+  align-self: flex-start;
+  max-width: 100%;
+  pointer-events: auto;
+}
+button.forecast {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  max-width: 100%;
+  margin: -6px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.forecast__pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  height: 30px;
+  padding: 0 10px 0 8px;
+  border-radius: 999px;
+  border-left: 3px solid var(--mid);
+  font-size: 13px;
+  white-space: nowrap;
+}
+button.forecast.is-now .forecast__pill {
+  border-left-color: var(--low);
+}
+.forecast__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.forecast__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.forecast__when {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+button.forecast.is-now .forecast__when {
+  color: var(--low);
+  font-weight: 700;
+}
+.forecast__chevron {
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+.forecast__details {
+  position: absolute;
+  z-index: 3;
+  top: calc(100% + 4px);
+  left: 0;
+  width: min(320px, calc(100vw - 20px));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--panel-strong);
+  box-shadow: 0 8px 24px rgba(40, 30, 70, 0.22);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* ---------- Startdeck-Auswahl ---------- */
+.btn--small {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  position: relative;
+}
+.btn--small::after {
+  /* Tippfläche auf 44 px erweitern, ohne den Knopf größer zu zeichnen */
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+.overlay__panel.deck {
+  max-width: 440px;
+  height: 100%;
+}
+.deck .help__head {
+  align-items: flex-start;
+  gap: 8px;
+}
+.deck .help__head p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.deck__status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 12px;
+  background: rgba(60, 50, 90, 0.06);
+}
+.deck__status > span {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+.deck__status small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.deck .help__body {
+  flex: 1;
+  min-height: 0;
+}
+.deck__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.deck__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 3px 0 0 var(--card-color, #999),
+    inset 0 0 0 1px var(--line);
+}
+.deck__row.is-in {
+  background: rgba(228, 184, 74, 0.16);
+}
+.deck__info {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 4px 6px 12px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.deck__name {
+  font-weight: 700;
+  font-size: 14px;
+}
+.deck__name small {
+  margin-left: 4px;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--breath);
+}
+.deck__text {
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--ink-soft);
+  overflow-wrap: break-word;
+}
+.deck__stepper {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.deck__stepper .icon-btn {
+  font-size: 20px;
+  font-weight: 700;
+  background: var(--panel-strong);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.deck__stepper .icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.deck__copies {
+  width: 18px;
+  text-align: center;
+  font-weight: 800;
+}
+.deck__issues {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(106, 166, 79, 0.14);
+  color: #3f7a2f;
+  font-size: 13px;
+  font-weight: 600;
+}
+.deck__issues.is-bad {
+  background: #fbe4d8;
+  color: #a8402f;
+}
+.overlay__panel.deck .deck__issues p {
+  margin: 0;
+  font-size: 13px;
+  color: inherit;
+}
+.overlay .btn--small {
+  width: auto;
+  flex: none;
 }

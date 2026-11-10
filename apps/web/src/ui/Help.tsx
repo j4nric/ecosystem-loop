@@ -1,17 +1,19 @@
 import type { FormKind } from '@core/api';
 import { t } from '../i18n/index.ts';
+import { useEscape } from './useEscape.ts';
 import { GROUP_COLORS, SPECIES_GROUPS } from '../scene/palette.ts';
 
 const KINDS: FormKind[] = ['ideal', 'normal', 'degraded', 'disturbance'];
 
 /** Hilfe-Ansicht: Formen-Arten, Symbole und Figuren der Insel; von hier aus die Einführung erneut zeigen. */
 export function Help({ onClose, onTutorial }: { onClose: () => void; onTutorial: () => void }) {
+  useEscape(onClose);
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" onClick={onClose}>
       <div className="overlay__panel help" onClick={(e) => e.stopPropagation()}>
         <header className="help__head">
           <h2 id="help-title">{t.helpTitle}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label={t.close}>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label={t.close} autoFocus>
             ✕
           </button>
         </header>

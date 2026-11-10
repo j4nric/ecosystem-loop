@@ -51,11 +51,14 @@ export function useGame(client: GameClient) {
   }, [client]);
 
   const dispatch = useCallback((action: Action) => client.dispatch(action), [client]);
-  const newGame = useCallback(() => {
-    setToasts([]);
-    setIncompatible(false);
-    client.newGame();
-  }, [client]);
+  const newGame = useCallback(
+    (deck?: readonly string[]) => {
+      setToasts([]);
+      setIncompatible(false);
+      client.newGame(deck);
+    },
+    [client],
+  );
   const dismissIncompatible = useCallback(() => setIncompatible(false), []);
 
   return { view, dispatch, newGame, toasts, incompatible, dismissIncompatible };

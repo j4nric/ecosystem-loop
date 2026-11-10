@@ -1,4 +1,4 @@
-import type { ChipOption } from '../state/useTargeting.ts';
+import type { ChipOption } from '../logic/targeting.ts';
 
 interface Props {
   options: ChipOption[];

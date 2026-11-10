@@ -1,8 +1,10 @@
 import type { BookView } from '../client/index.ts';
 import { t } from '../i18n/index.ts';
+import { useEscape } from './useEscape.ts';
 
 /** Schöpfungsbuch: entdeckte Arten mit Stufe, Meilensteine, Bestwerte und Summen über alle Partien. */
 export function Book({ book, onClose }: { book: BookView; onClose: () => void }) {
+  useEscape(onClose);
   return (
     <div
       className="overlay overlay--top"
@@ -17,7 +19,7 @@ export function Book({ book, onClose }: { book: BookView; onClose: () => void })
             <h2 id="book-title">{t.book}</h2>
             <p className="muted">{t.bookGames(book.games)}</p>
           </div>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label={t.close}>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label={t.close} autoFocus>
             ✕
           </button>
         </header>
