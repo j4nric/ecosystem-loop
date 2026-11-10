@@ -1,5 +1,5 @@
 /**
- * Fassade der Herde-Engine: newGame, step, view, legalPlays, validateState.
+ * Fassade der Herde-Engine: newGame, step, view, legalPlays, legalActions, validateState.
  * `step` ist rein: Der Eingangszustand wird nie verändert, Zufall läuft über den Seed im Zustand.
  */
 import type { Action, NewGameOptions, StepResult } from './api.ts';
@@ -8,9 +8,10 @@ import { advance } from './month.ts';
 import { nextInt, seedFrom, type RngHolder } from './rng.ts';
 import type { HerdeData } from './schema.ts';
 import { STATE_VERSION, type CellState, type HerdeEvent, type HerdeState } from './state.ts';
+import { evolve, maturityOf, pickTrait } from './traits.ts';
 import { RuleError } from './world.ts';
 
-export { view, intentOf, forecastOf } from './view.ts';
+export { view, intentOf, forecastOf, evolutionOf } from './view.ts';
 export { validateState } from './validate.ts';
 
 const rand = (h: RngHolder, n: number) => (n > 0 ? nextInt(h, n) : 0);
@@ -40,6 +41,11 @@ export function newGame(data: HerdeData, options: NewGameOptions): HerdeState {
       fat: p.herd.fat,
       thirst: 0,
       trail: [],
+      traits: [],
+      traitsAtStage: 0,
+      experience: Object.fromEntries([...data.experiences.keys()].map((id) => [id, 0])),
+      offer: [],
+      offerTurn: 0,
     },
     packs: [],
     nextPackId: 1,
@@ -62,7 +68,10 @@ export function newGame(data: HerdeData, options: NewGameOptions): HerdeState {
   return s;
 }
 
-/** Eine Aktion ausführen: Karte ausspielen oder einen Monat weiter. Wirft RuleError bei ungültigen Zügen. */
+/**
+ * Eine Aktion ausführen: Karte ausspielen, einen Monat weiter, Merkmal wählen oder zur nächsten Stufe springen.
+ * Wirft RuleError bei ungültigen Zügen.
+ */
 export function step(data: HerdeData, state: HerdeState, action: Action): StepResult {
   if (state.over) throw new RuleError('Die Partie ist vorbei.');
   const next = structuredClone(state);
@@ -74,6 +83,12 @@ export function step(data: HerdeData, state: HerdeState, action: Action): StepRe
       break;
     case 'advance':
       advance(data, next, emit);
+      break;
+    case 'pickTrait':
+      pickTrait(data, next, action.trait, emit);
+      break;
+    case 'evolve':
+      evolve(data, next, emit);
       break;
     default:
       throw new RuleError(`Unbekannte Aktion: ${(action as { type: unknown }).type}`);
@@ -90,5 +105,18 @@ export function legalPlays(data: HerdeData, state: HerdeState): Action[] {
     if (card.global) out.push({ type: 'play', hand });
     else for (const t of targetsOf(data, state, card)) out.push({ type: 'play', hand, x: t.x, y: t.y });
   });
+  return out;
+}
+
+/**
+ * Alle gültigen Aktionen: Kartenzüge (wie `legalPlays`), jedes angebotene Merkmal, der Sprung (wenn reif) und
+ * `advance`. Leer, wenn die Partie vorbei ist.
+ */
+export function legalActions(data: HerdeData, state: HerdeState): Action[] {
+  if (state.over) return [];
+  const out = legalPlays(data, state);
+  for (const trait of state.herd.offer) out.push({ type: 'pickTrait', trait });
+  if (maturityOf(data, state).mature) out.push({ type: 'evolve' });
+  out.push({ type: 'advance' });
   return out;
 }

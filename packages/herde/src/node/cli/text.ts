@@ -24,6 +24,8 @@ export const ARROW: Record<string, string> = {
 export function describe(data: HerdeData, e: HerdeEvent): string | null {
   const land = (id: string) => data.landscapes.get(id)?.name.de ?? id;
   const card = (id: string) => data.cards.get(id)?.name.de ?? id;
+  const trait = (id: string) => data.traits.get(id)?.name.de ?? id;
+  const stage = (id: string) => data.stages.get(id)?.name.de ?? id;
   switch (e.type) {
     case 'cardPlayed':
       return `${card(e.card)} gelegt${e.x !== undefined ? ` auf (${e.x},${e.y})` : ''} · Wildnis +${e.wild}`;
@@ -77,5 +79,13 @@ export function describe(data: HerdeData, e: HerdeEvent): string | null {
       return `Geschafft: ${e.survivors} Tiere haben überlebt`;
     case 'gameLost':
       return 'Die Herde ist ausgestorben';
+    case 'traitOffered':
+      return `Merkmale im Angebot: ${e.traits.map(trait).join(', ')}`;
+    case 'traitPicked':
+      return `Neues Merkmal: ${trait(e.trait)}`;
+    case 'matured':
+      return `Die Herde ist reif für die nächste Stufe: ${stage(e.next)}`;
+    case 'herdEvolved':
+      return `Die Herde wird zu: ${stage(e.to)}`;
   }
 }

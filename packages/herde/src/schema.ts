@@ -77,8 +77,6 @@ export const CardsFile = z.strictObject({ cards: z.array(Card).min(1) });
 export const Season = z.strictObject({
   id: Id,
   name: Text,
-  water: z.boolean().default(false),
-  shelter: z.boolean().default(false),
   fire: z.boolean().default(false),
 });
 export type Season = z.infer<typeof Season>;
@@ -89,12 +87,41 @@ export const SeasonsFile = z.strictObject({
 });
 export type SeasonsFile = z.infer<typeof SeasonsFile>;
 
+/** Jahreszeiten, in denen ein Bedürfnis gilt: Liste von Jahreszeit-Ids oder `all` (ganzjährig). */
+export const SeasonSet = z.union([z.literal('all'), z.array(Id)]);
+export type SeasonSet = z.infer<typeof SeasonSet>;
+
+/** Futter einer Landschaft für eine Stufe (überlagert food und grow der Landschaft). */
+export const Forage = z.strictObject({ food: Count, grow: z.record(Id, Count) });
+export type Forage = z.infer<typeof Forage>;
+
+/**
+ * Was die Stufe zur Reife für `next` braucht: so viele Merkmale, optional eines aus `oneOf`. `scope` legt fest,
+ * welche Merkmale zählen: `stage` (Standard) nur die auf dieser Stufe gewählten, `all` alle der Herde.
+ */
+export const Maturity = z.strictObject({
+  traits: Count,
+  oneOf: z.array(Id).optional(),
+  scope: z.enum(['stage', 'all']).optional(),
+});
+export type Maturity = z.infer<typeof Maturity>;
+
 export const Stage = z.strictObject({
   id: Id,
   name: Text,
   eats: z.array(Id),
   water: z.array(Id),
   shelter: z.array(Id),
+  /** in welchen Jahreszeiten Wasser bzw. Schutz nötig ist (Durst, Kälte, Herdenwahl) */
+  needs: z.strictObject({ water: SeasonSet, shelter: SeasonSet }),
+  /** Futter-Maximum und Wachstum je Landschaft für diese Stufe; fehlt eine Landschaft, gelten ihre eigenen Werte */
+  forage: z.record(Id, Forage).default({}),
+  /** Landschaften, die diese Stufe nicht betritt (zusätzlich zu walk: false) */
+  blocked: z.array(Id).default([]),
+  /** Felder, die die Herde je Monat höchstens zieht (Weg nur über begehbare Felder) */
+  move: z.number().int().positive().default(1),
+  /** Umkreis für Fressen, Wasser und Schutz */
+  reach: z.number().int().positive().default(1),
   foodPerAnimal: z.number().positive(),
   eatFactor: z.number().min(1),
   fatCap: Rate,
@@ -104,6 +131,8 @@ export const Stage = z.strictObject({
   thirstLoss: Rate,
   coldLoss: Rate,
   fireLoss: Rate,
+  /** jedes reißende Rudel reißt so viele Tiere weniger */
+  wolfGuard: Count.default(0),
   trail: Count,
   choice: z.strictObject({
     food: Rate,
@@ -113,9 +142,80 @@ export const Stage = z.strictObject({
     recent: Rate,
     stay: Rate,
   }),
+  /** Folgestufe (fester Weg); ohne Angabe ist die Stufe die letzte */
+  next: Id.optional(),
+  /** Reife für `next` (Pflicht, wenn `next` gesetzt ist) */
+  mature: Maturity.optional(),
 });
 export type Stage = z.infer<typeof Stage>;
 export const StagesFile = z.strictObject({ stages: z.array(Stage).min(1) });
+
+/** Zahlen einer Stufe, die Merkmale verändern dürfen. Ganzzahlige Werte werden nach der Änderung gerundet. */
+export const STAGE_STATS = [
+  'foodPerAnimal',
+  'eatFactor',
+  'fatCap',
+  'starveRate',
+  'birthRate',
+  'thirstAfter',
+  'thirstLoss',
+  'coldLoss',
+  'fireLoss',
+  'wolfGuard',
+  'trail',
+  'move',
+  'reach',
+] as const;
+export type StageStat = (typeof STAGE_STATS)[number];
+
+/** Wirkung eines Merkmals auf einen Stufenwert: Wert × mul + add. */
+export const TraitEffect = z
+  .strictObject({ stat: z.enum(STAGE_STATS), mul: Rate.optional(), add: z.number().optional() })
+  .refine((e) => e.mul !== undefined || e.add !== undefined, 'mul oder add angeben');
+export type TraitEffect = z.infer<typeof TraitEffect>;
+
+/**
+ * Bedingung einer Erfahrung, je Monat geprüft (nach Fressen, Durst, Kälte und Wölfen, nur wenn die Herde lebt):
+ * sheltered – Schutz in der Nähe in einer Jahreszeit, in der die Stufe Schutz braucht (+1)
+ * watered   – Wasser in der Nähe in einer Jahreszeit, in der die Stufe Wasser braucht (+1)
+ * hunted    – Wölfe haben gerissen, die Herde lebt (+1)
+ * fire      – ein Waldbrand hat das Feld der Herde oder ein Nachbarfeld erfasst (+1)
+ * ate       – die Herde steht auf einer der Landschaften `lands` und hat gefressen (+1)
+ * on        – die Herde steht auf einer der Landschaften `lands` (+1)
+ * moved     – gegangene Felder (+ Zahl der Felder)
+ */
+export const ExperienceWhen = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('sheltered') }),
+  z.strictObject({ type: z.literal('watered') }),
+  z.strictObject({ type: z.literal('hunted') }),
+  z.strictObject({ type: z.literal('fire') }),
+  z.strictObject({ type: z.literal('ate'), lands: z.array(Id).min(1) }),
+  z.strictObject({ type: z.literal('on'), lands: z.array(Id).min(1) }),
+  z.strictObject({ type: z.literal('moved') }),
+]);
+export type ExperienceWhen = z.infer<typeof ExperienceWhen>;
+
+export const Experience = z.strictObject({ id: Id, name: Text, when: ExperienceWhen });
+export type Experience = z.infer<typeof Experience>;
+
+export const Trait = z.strictObject({
+  id: Id,
+  name: Text,
+  text: Text,
+  icon: z.string(),
+  /** Erfahrung (Id) und Schwelle, ab der das Merkmal angeboten werden kann */
+  from: Id,
+  at: z.number().int().positive(),
+  effects: z.array(TraitEffect).min(1),
+});
+export type Trait = z.infer<typeof Trait>;
+
+export const TraitsFile = z.strictObject({
+  /** so viele verfügbare Merkmale werden zu Beginn einer Jahreszeit höchstens angeboten */
+  offerSize: z.number().int().positive(),
+  experiences: z.array(Experience).min(1),
+  traits: z.array(Trait).min(1),
+});
 
 export const Params = z.strictObject({
   herd: z.strictObject({
@@ -178,6 +278,10 @@ export interface HerdeData {
   /** Monatsnamen eines Jahres (Länge = Jahreszeiten × monthsPerSeason) */
   months: Text[];
   stages: Map<string, Stage>;
+  experiences: Map<string, Experience>;
+  traits: Map<string, Trait>;
+  /** Merkmale je Angebot höchstens */
+  offerSize: number;
   params: Params;
   islands: Map<string, Island>;
 }

@@ -10,6 +10,8 @@ import {
   Params,
   SeasonsFile,
   StagesFile,
+  TraitsFile,
+  type SeasonSet,
   type HerdeData,
   type Island,
 } from './schema.ts';
@@ -20,6 +22,7 @@ export interface RawData {
   cards: unknown;
   seasons: unknown;
   stages: unknown;
+  traits: unknown;
   params: unknown;
   islands: unknown;
 }
@@ -30,6 +33,7 @@ export const DATA_FILES: Readonly<Record<keyof RawData, string>> = {
   cards: 'cards.yaml',
   seasons: 'seasons.yaml',
   stages: 'stages.yaml',
+  traits: 'traits.yaml',
   params: 'params.yaml',
   islands: 'islands.yaml',
 };
@@ -62,14 +66,17 @@ export function buildData(raw: RawData): HerdeData {
   const cardsFile = parse('cards', CardsFile);
   const seasonsFile = parse('seasons', SeasonsFile);
   const stagesFile = parse('stages', StagesFile);
+  const traitsFile = parse('traits', TraitsFile);
   const params = parse('params', Params);
   const islandsFile = parse('islands', IslandsFile);
-  if (!landscapesFile || !cardsFile || !seasonsFile || !stagesFile || !params || !islandsFile)
+  if (!landscapesFile || !cardsFile || !seasonsFile || !stagesFile || !traitsFile || !params || !islandsFile)
     throw new DataError(problems);
 
   const landscapes = byId(landscapesFile.landscapes, DATA_FILES.landscapes, problems);
   const cards = byId(cardsFile.cards, DATA_FILES.cards, problems);
   const stages = byId(stagesFile.stages, DATA_FILES.stages, problems);
+  const experiences = byId(traitsFile.experiences, DATA_FILES.traits, problems);
+  const traits = byId(traitsFile.traits, DATA_FILES.traits, problems);
   const seasonIds = seasonsFile.seasons.map((s) => s.id);
   if (new Set(seasonIds).size !== seasonIds.length) problems.push(`${DATA_FILES.seasons}: Jahreszeit doppelt`);
   const yearLength = seasonIds.length * seasonsFile.monthsPerSeason;
@@ -116,9 +123,53 @@ export function buildData(raw: RawData): HerdeData {
     problems.push(`${DATA_FILES.seasons}: ${seasonsFile.months.length} Monatsnamen statt ${yearLength}`);
 
   // Stufen
-  for (const s of stages.values())
-    for (const key of ['eats', 'water', 'shelter'] as const)
-      for (const id of s[key]) land(DATA_FILES.stages, `Stufe ${s.id} → ${key}`, id);
+  const seasonsOk = (where: string, set: SeasonSet) => {
+    if (set === 'all') return;
+    for (const id of set)
+      if (!seasonIds.includes(id)) problems.push(`${DATA_FILES.stages}: ${where}: unbekannte Jahreszeit ${id}`);
+  };
+  for (const s of stages.values()) {
+    const where = `Stufe ${s.id}`;
+    for (const key of ['eats', 'water', 'shelter', 'blocked'] as const)
+      for (const id of s[key]) land(DATA_FILES.stages, `${where} → ${key}`, id);
+    seasonsOk(`${where} → needs.water`, s.needs.water);
+    seasonsOk(`${where} → needs.shelter`, s.needs.shelter);
+    for (const [id, f] of Object.entries(s.forage)) {
+      land(DATA_FILES.stages, `${where} → forage`, id);
+      if (Object.keys(f.grow).length !== seasonIds.length || seasonIds.some((x) => !(x in f.grow)))
+        problems.push(
+          `${DATA_FILES.stages}: ${where} → forage ${id}: grow braucht genau die Jahreszeiten ${seasonIds.join(', ')}`,
+        );
+    }
+    if (s.next !== undefined) {
+      if (!stages.has(s.next)) problems.push(`${DATA_FILES.stages}: ${where} → next: unbekannte Stufe ${s.next}`);
+      if (!s.mature) problems.push(`${DATA_FILES.stages}: ${where}: next ohne mature`);
+    } else if (s.mature) problems.push(`${DATA_FILES.stages}: ${where}: mature ohne next`);
+    for (const id of s.mature?.oneOf ?? [])
+      if (!traits.has(id)) problems.push(`${DATA_FILES.stages}: ${where} → mature.oneOf: unbekanntes Merkmal ${id}`);
+    if (s.mature && s.mature.traits > traits.size)
+      problems.push(`${DATA_FILES.stages}: ${where}: mature.traits ${s.mature.traits} > Zahl der Merkmale`);
+  }
+  // Fester Weg: Von jeder Stufe aus führt `next` nie im Kreis.
+  for (const s of stages.values()) {
+    const seen = new Set<string>([s.id]);
+    for (let n = s.next; n !== undefined; n = stages.get(n)?.next) {
+      if (seen.has(n)) {
+        problems.push(`${DATA_FILES.stages}: Stufe ${s.id}: next führt im Kreis`);
+        break;
+      }
+      seen.add(n);
+    }
+  }
+
+  // Erfahrungen und Merkmale
+  for (const e of experiences.values())
+    if (e.when.type === 'ate' || e.when.type === 'on')
+      for (const id of e.when.lands) land(DATA_FILES.traits, `Erfahrung ${e.id} → when.lands`, id);
+  for (const t of traits.values()) {
+    if (!experiences.has(t.from))
+      problems.push(`${DATA_FILES.traits}: Merkmal ${t.id} → from: unbekannte Erfahrung ${t.from}`);
+  }
 
   // Parameter
   if (!stages.has(params.herd.stage))
@@ -184,6 +235,9 @@ export function buildData(raw: RawData): HerdeData {
     monthsPerSeason: seasonsFile.monthsPerSeason,
     months: seasonsFile.months,
     stages,
+    experiences,
+    traits,
+    offerSize: traitsFile.offerSize,
     params,
     islands,
   };

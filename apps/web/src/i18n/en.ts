@@ -1,4 +1,4 @@
-import type { Strings } from './de.ts';
+import type { SeasonSet, Strings } from './de.ts';
 
 const ordinal = (n: number): string => {
   const tens = n % 100;
@@ -6,6 +6,15 @@ const ordinal = (n: number): string => {
   return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 };
 const months = (n: number) => `${n} ${n === 1 ? 'month' : 'months'}`;
+const list = (names: string[]) =>
+  names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+const orList = (names: string[]) =>
+  names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
+/** “in summer”, “in spring and summer”, “all year”, “never” */
+const when = (s: SeasonSet) =>
+  s.all ? 'all year' : s.names.length === 0 ? 'never' : `in ${list(s.names.map((n) => n.toLowerCase()))}`;
+const fields = (n: number) => `${n} ${n === 1 ? 'field' : 'fields'}`;
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** UI strings (English). Names of landscapes, cards, seasons and months come from the game data (`name.en`). */
 export const en: Strings = {
@@ -18,16 +27,24 @@ export const en: Strings = {
   iceLeft: (n) => `${n} mo. left`,
   statusLabel: (herd, fat, fatMax, wolves) => `Herd ${herd}, reserve ${fat} of ${fatMax}, wolves ${wolves}`,
   date: (year, month) => `Year ${year} · ${month}`,
-  seasonHint: (season, r) => {
-    const hint = (
+  seasonHint: (season, r, needs) => {
+    const base = (
       {
         spring: 'Grass grows',
-        summer: 'The herd needs water, old forest may burn',
+        summer: '',
         autumn: 'Grass grows slower, build up reserves',
-        winter: 'No grass, the herd needs shelter',
+        winter: 'No grass',
       } as Record<string, string>
     )[season];
-    return hint && r.birthSeason === season ? `${hint}, calves in the ${ordinal(r.birthMonth)} month` : hint;
+    if (base === undefined) return undefined;
+    const need = [needs.water ? 'water' : '', needs.shelter ? 'shelter' : ''].filter(Boolean);
+    const parts = [
+      base,
+      need.length > 0 ? `the herd needs ${list(need)}` : '',
+      needs.fire ? 'old forest may burn' : '',
+      r.birthSeason === season ? `calves in the ${ordinal(r.birthMonth)} month` : '',
+    ].filter(Boolean);
+    return parts.length > 0 ? capitalize(parts.join(', ')) : undefined;
   },
   seasonHintFallback: 'The herd moves on',
   iceHint: (n) => `Ice age: ${n} more ${n === 1 ? 'month' : 'months'} of winter`,
@@ -35,7 +52,7 @@ export const en: Strings = {
     avoidWolves: 'avoids the wolves',
     seekWater: 'is looking for water',
     seekShelter: 'seeks shelter from the cold',
-    freshGrass: 'heads for fresh grass',
+    freshGrass: 'heads for fresh food',
     stay: 'keeps grazing here',
   },
   intentLine: (reason) => `The herd ${reason}`,
@@ -74,9 +91,15 @@ export const en: Strings = {
   forecastAge: (to, n, fertile) =>
     `Turns into ${fertile ? 'fertile ' : ''}${to} in ${n} ${n === 1 ? 'month' : 'months'}.`,
   infoWildfire: 'Dry: may catch fire by itself in the fire season.',
-  infoWater: 'Water: the herd drinks here in summer.',
-  infoShelter: 'Woodland: shelter in winter, home of the wolves.',
+  infoWater: (s) => `Water: the herd drinks here ${when(s)}.`,
+  infoShelter: (s) => `Shelter for the herd ${when(s)}.`,
+  infoWolves: 'Woodland: home of the wolves.',
   infoBlocked: 'The herd cannot go here.',
+  infoStageBlocked: (stage) => `Impassable for this stage (${stage}).`,
+  infoNoFood: (stage) => `No food for the stage ${stage}.`,
+  previewBlocked: 'Afterwards impassable for this stage.',
+  previewWasBlocked: 'So far impassable for this stage.',
+  previewStillBlocked: 'Impassable for this stage.',
   infoSparse: 'Barren: grows only a little in spring.',
   infoHerd: (n) => `The herd stands here (${n} animals).`,
   infoPack: (size, hungry) =>
@@ -109,6 +132,10 @@ export const en: Strings = {
   evIceBegan: (n) => `The ice age begins: ${n} months of winter.`,
   evIceEnded: (n) => `The ice age is over. ${n} animals survived.`,
   evLost: 'The herd has died out.',
+  evTraitOffered: (traits) => `Traits to choose: ${traits}.`,
+  evTraitPicked: (trait, effect) => `The herd develops ${trait}: ${effect}`,
+  evMatured: (next) => `The herd is ready for the leap: ${next}.`,
+  evEvolved: (from, to) => `New stage: ${to} (was ${from}).`,
   evRejected: 'That is not possible here.',
   wonTitle: 'You made it',
   wonText: (n) => `The herd survived the ice age. ${n} ${n === 1 ? 'animal' : 'animals'} made it.`,
@@ -127,12 +154,15 @@ export const en: Strings = {
   incompatibleTitle: 'Save no longer fits',
   incompatibleText:
     'Your saved game does not match the current version of the game and has been discarded. A new game has started.',
+  outdatedTitle: 'The herd evolves now',
+  outdatedText:
+    'New: the herd gathers experience, gains traits and can evolve. Your save is from an older version and no longer fits – a new game has started.',
   ok: 'Continue',
   tutorial: (r) => [
     {
       icon: '🐑',
       title: 'The herd moves by itself',
-      text: 'Every month the herd moves at most one field – towards grass, to water in summer, into the shelter of woodland in winter, away from wolves. The arrow on the island shows where it wants to go next.',
+      text: `Every month the herd moves at most ${r.move === 1 ? 'one field' : `${r.move} fields`} – towards food, to water ${when(r.water)}, into the shelter of woodland ${when(r.shelter)}, away from wolves. The arrow on the island shows where it wants to go next.`,
     },
     {
       icon: '🌱',
@@ -143,6 +173,11 @@ export const en: Strings = {
       icon: '🌲',
       title: 'The world changes by itself',
       text: 'Ungrazed meadow turns to bush, bush to forest, forest to old forest, old forest may burn in summer, burnt land becomes fertile meadow. Wolves live in the woodland – forest corridors are wolf paths. Tap a field to see what will happen there.',
+    },
+    {
+      icon: '✨',
+      title: 'The herd evolves',
+      text: 'What the herd lives through makes it stronger: cold in shelter, wolf attacks, fires, long walks. At the start of a season it offers you traits – pick one or wait. With enough traits it is ready for the next stage: forest gatherers, wanderers, one day humans. Every stage needs a different island, and there is no way back. Prepare the land in time – forests do not grow overnight.',
     },
     {
       icon: '❄️',
@@ -167,7 +202,15 @@ export const en: Strings = {
     `Bring the herd through the ice age. It begins when the wildness reaches ${r.wildMax} – every month and every card makes it grow. Intervening a lot prepares you better, but calls the trial sooner.`,
   helpHerd: 'The herd',
   helpHerdText: (r) =>
-    `It moves at most one field per month and grazes on its own and the ${r.neighbors} neighbouring fields. Surplus becomes reserve, shortage eats into it, then animals die. Summer: thirst without water nearby. Winter: cold without woodland nearby. Spring: calves, depending on the reserve.`,
+    `It moves at most ${r.move === 1 ? 'one field' : `${r.move} fields`} per month and feeds on its own and the ${r.neighbors} neighbouring fields. Surplus becomes reserve, shortage eats into it, then animals die. ${capitalize(when(r.water))}: thirst without water nearby. ${capitalize(when(r.shelter))}: cold without shelter nearby. Calves are born depending on the reserve. What counts as food, water and shelter depends on the stage (see below).`,
+  helpEvolution: 'Evolution',
+  helpEvolutionText:
+    'The herd counts what it lives through. When an experience reaches its threshold, a trait becomes available; at the start of every season the herd offers some. Pick one or leave the offer – then others take their turn next season. The effect of traits stays through all stages. Once the herd has picked enough new traits on its stage (including a specific one) it is mature – earlier traits do not count for this: then you decide when it takes the leap to the next stage. No way back – and every stage needs different land. Tap the herd symbol at the bottom right for progress and a preview.',
+  helpTraits: 'Traits',
+  helpStages: 'Stages',
+  helpTraitFrom: (experience, at) => `from ${at} × ${experience}`,
+  helpStageMature: (traits, oneOf) =>
+    `Mature with ${traits} new ${traits === 1 ? 'trait' : 'traits'}${oneOf.length > 0 ? `, including ${orList(oneOf)}` : ''}.`,
   helpCards: 'Cards',
   helpCardsText: (r) =>
     `At the start of every season you draw new cards, at most ${r.handMax} in hand. Tap a card, then a glowing field – the preview shows what happens to the field and whether the herd changes its intention. Rain works on the whole island.`,
@@ -178,4 +221,63 @@ export const en: Strings = {
   helpControls: 'Controls',
   helpControlsText:
     '“Play season” runs the months until the next season, “1 month” just one. Drag to turn the island a little.',
+  evoOpen: 'Herd and evolution',
+  evoTitle: 'Herd and evolution',
+  evoNeeds: 'Needs',
+  evoTraits: 'Traits',
+  evoNoTraits: 'No traits yet. They grow from what the herd lives through.',
+  evoExperience: 'Experience',
+  evoExperienceNext: (trait) => `→ ${trait}`,
+  evoExperienceDone: 'all reached',
+  evoInOffer: 'on offer',
+  evoLater: 'reached – comes in a later offer',
+  evoForMaturity: 'for maturity',
+  evoMaturity: 'Maturity',
+  evoCounted: (n, required) =>
+    `Picked on this stage: ${n} of ${required} ${required === 1 ? 'trait' : 'traits'}. Earlier traits keep working but do not count.`,
+  evoCountsTag: 'counts for maturity',
+  evoEarlierTag: 'earlier stage – works, does not count',
+  evoMissing: (traits, oneOf) => {
+    const parts: string[] = [];
+    if (traits > 0) parts.push(`${traits} more ${traits === 1 ? 'trait' : 'traits'}`);
+    if (oneOf && oneOf.length > 0) parts.push(`including ${orList(oneOf)}`);
+    return parts.length > 0 ? `Still needed for maturity on this stage: ${parts.join(', ')}.` : 'Ready for the leap.';
+  },
+  evoMature: (next) => `Mature! The herd can become ${next}.`,
+  evoLast: 'Highest stage of this version. More stages will follow.',
+  evoNext: (stage) => `Next stage: ${stage}`,
+  evoNextLabel: 'Next stage',
+  evoCurrentLabel: 'Current stage',
+  evoNextIntro: 'What it needs – and what the island offers today:',
+  evoNextReady: 'The island already offers everything needed.',
+  evoNextMissing: (what) => `Prepare the island: ${list(what)} missing.`,
+  needFood: 'Food',
+  needWater: 'Water',
+  needShelter: 'Shelter',
+  needBlocked: 'Obstacle',
+  needMove: 'Range',
+  needLost: 'No longer food',
+  needSeason: (lands, s) => `${lands} · ${when(s)}`,
+  needMoveText: (move, reach) => `${move === 1 ? '1 field' : `${move} fields`} per month, radius ${reach}`,
+  needNone: '–',
+  onIsland: (n) => (n > 0 ? `${fields(n)} on the island` : 'missing on the island'),
+  blockedOnIsland: (n) => (n > 0 ? `${fields(n)} impassable` : 'none on the island'),
+  evolveButton: (stage) => `Evolve into ${stage}`,
+  evolveTitle: (stage) => `Evolve to the stage ${stage}?`,
+  evolveIntro: 'Afterwards new needs apply:',
+  evolveWarning:
+    'No way back: the leap is final. The traits keep working, but only new ones count towards the next maturity. What helped the herd so far may harm it now.',
+  evolveConfirm: 'Evolve',
+  evolveCancel: 'Not yet',
+  evolvedTitle: 'A new stage',
+  offerBanner: (n) => `✨ ${n === 1 ? 'A trait' : `${n} traits`} to choose`,
+  matureBanner: (stage) => `⬆ Ready for ${stage}`,
+  offerTitle: 'Choose a trait',
+  offerIntro: 'The herd has lived through enough. Choose a trait – it stays forever.',
+  offerFrom: (experience, at) => `${experience}: ${at}`,
+  offerHelpsMaturity: 'helps towards maturity',
+  offerPick: 'Take trait',
+  offerLater: 'Later',
+  offerLeave:
+    'You can leave the offer. Next season other reached traits take their turn; what maturity still needs stays in front. At most one trait per season.',
 };

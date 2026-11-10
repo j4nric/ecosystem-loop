@@ -1,7 +1,14 @@
-# Entwicklungsstufen der Herde und ihre Bedürfnisse. H1 kennt nur die Stufe des Prototyps; weitere Stufen
-# (Phase H3) kommen hier dazu, ohne dass die Engine umgebaut werden muss. Zahlen sind Platzhalter.
+# Entwicklungsstufen der Herde und ihre Bedürfnisse (Konzept 9.2). Fester Weg: jede Stufe nennt ihre Folgestufe
+# (next) und was sie zur Reife braucht (mature). Merkmale (traits.yaml) verändern die Zahlen einer Stufe.
+# Zahlen sind Platzhalter (Logik vor Balancing).
 #
 # eats / water / shelter   Landschaften, die als Futter, Wasser bzw. Schutz zählen
+# needs.water / .shelter   Jahreszeiten (Ids aus seasons.yaml oder all), in denen Wasser bzw. Schutz nötig ist
+# forage                   Futter je Landschaft für diese Stufe: food (Maximum) und grow (je Jahreszeit); überlagert
+#                          die Werte der Landschaft. Ohne Eintrag gelten food und grow aus landscapes.yaml.
+# blocked                  Landschaften, die diese Stufe nicht betritt (Hindernis)
+# move                     Felder je Monat (der Weg führt nur über begehbare Felder); Standard 1
+# reach                    Umkreis für Fressen, Wasser und Schutz; Standard 1
 # foodPerAnimal            Futterbedarf je Tier und Monat
 # eatFactor                frisst bis zu Bedarf × eatFactor (aufgerundet); Überschuss über den Bedarf wird Vorrat
 # fatCap                   Vorrat höchstens fatCap × Herdengröße
@@ -10,16 +17,22 @@
 # thirstAfter, thirstLoss  ab so vielen Monaten ohne Wasser in einer Wasser-Jahreszeit sterben Größe × thirstLoss
 # coldLoss                 ohne Schutz in einer Schutz-Jahreszeit sterben Größe × coldLoss
 # fireLoss                 brennt das Feld der Herde, sterben Größe × fireLoss
+# wolfGuard                jedes reißende Rudel reißt so viele Tiere weniger (Standard 0)
 # trail                    so viele zuletzt besuchte Felder meidet sie
 # choice                   Gewichte der Herdenwahl (Konzept 5): food × Futter in Reichweite (gedeckelt auf den
 #                          Fressbedarf); water, shelter, wolves (je Rudelstärke) und recent jeweils × Herdengröße;
 #                          stay ist ein kleiner Bonus für das eigene Feld
+# next, mature             Folgestufe und Reife: mature.traits Merkmale, davon eines aus mature.oneOf.
+#                          mature.scope: welche Merkmale zählen – stage (Standard): nur die auf dieser Stufe
+#                          gewählten; all: alle der Herde. Die Wirkung früherer Merkmale bleibt in beiden Fällen.
+#                          Verfügbare Merkmale aus mature.oneOf stehen im Angebot zuerst.
 stages:
   - id: herd
-    name: { de: Herde, en: Herd }
+    name: { de: Grasende Herde, en: Grazing herd }
     eats: [steppe, meadow, bush, forest]
     water: [river]
     shelter: [bush, forest, old]
+    needs: { water: [summer], shelter: [winter] }
     foodPerAnimal: 1
     eatFactor: 1.5
     fatCap: 2
@@ -30,6 +43,66 @@ stages:
     coldLoss: 0.1
     fireLoss: 0.2
     trail: 4
+    choice:
+      food: 1
+      water: 0.6
+      shelter: 0.6
+      wolves: 0.8
+      recent: 0.3
+      stay: 0.01
+    next: gatherer
+    mature: { traits: 2, oneOf: [forest_wise], scope: stage }
+
+  # Waldsammler: Früchte in Busch, Wald und Altwald; Wiese zählt nicht; Wasser das ganze Jahr.
+  - id: gatherer
+    name: { de: Waldsammler, en: Forest gatherers }
+    eats: [bush, forest, old]
+    water: [river]
+    shelter: [bush, forest, old]
+    needs: { water: all, shelter: [winter] }
+    forage:
+      bush: { food: 3, grow: { spring: 1, summer: 2, autumn: 2, winter: 0 } }
+      forest: { food: 4, grow: { spring: 1, summer: 2, autumn: 2, winter: 0 } }
+      old: { food: 3, grow: { spring: 1, summer: 1, autumn: 1, winter: 0 } }
+    foodPerAnimal: 1
+    eatFactor: 1.5
+    fatCap: 2
+    starveRate: 0.5
+    birthRate: 0.25
+    thirstAfter: 2
+    thirstLoss: 0.1
+    coldLoss: 0.1
+    fireLoss: 0.2
+    trail: 4
+    choice:
+      food: 1
+      water: 0.6
+      shelter: 0.6
+      wolves: 0.8
+      recent: 0.3
+      stay: 0.01
+    next: wanderer
+    mature: { traits: 3, oneOf: [far_sight, endurance], scope: stage }
+
+  # Wanderer der offenen Landschaft: Wiese und Steppe, Wasser, weite Wege; Altwald ist ein Hindernis.
+  - id: wanderer
+    name: { de: Wanderer der offenen Landschaft, en: Wanderers of the open land }
+    eats: [steppe, meadow]
+    water: [river]
+    shelter: [bush, forest]
+    needs: { water: all, shelter: [winter] }
+    blocked: [old]
+    move: 2
+    foodPerAnimal: 1
+    eatFactor: 1.5
+    fatCap: 2
+    starveRate: 0.5
+    birthRate: 0.25
+    thirstAfter: 2
+    thirstLoss: 0.1
+    coldLoss: 0.1
+    fireLoss: 0.2
+    trail: 6
     choice:
       food: 1
       water: 0.6

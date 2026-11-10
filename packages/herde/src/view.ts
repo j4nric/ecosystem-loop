@@ -1,11 +1,14 @@
-/** Lesemodell für Oberflächen: Insel, Herde, Rudel, Absicht, Hand mit Zielen, Wildnis, Eiszeit, Ende. */
-import type { CellForecast, HerdeView, IntentView } from './api.ts';
+/**
+ * Lesemodell für Oberflächen: Insel, Herde, Rudel, Absicht, Hand mit Zielen, Wildnis, Eiszeit, Entwicklung, Ende.
+ */
+import type { CellForecast, EvolutionView, HerdeView, IntentView, StageNeedsView } from './api.ts';
 import { getCard, targetsOf } from './cards.ts';
 import { chooseMove } from './herd.ts';
 import { runNature } from './nature.ts';
-import type { HerdeData } from './schema.ts';
+import type { HerdeData, SeasonSet } from './schema.ts';
 import type { CellState, HerdeState } from './state.ts';
-import { islandOf, landOf, maxFood, seasonOf, stageOf, yearLength } from './world.ts';
+import { availableTraits, maturityOf } from './traits.ts';
+import { islandOf, landOf, maxFood, seasonOf, stageOf, walkable, yearLength } from './world.ts';
 
 /**
  * Absicht der Herde: Die Herde wählt nach Wachstum, Sukzession und Waldbrand dieses Monats (Schritte 1–3).
@@ -34,6 +37,51 @@ export function forecastOf(data: HerdeData, s: HerdeState, c: CellState): CellFo
   return { to: rule.to, inMonths: Math.max(1, inMonths), clock: rule.clock, fertile: (rule.fertile ?? 0) > 0 };
 }
 
+/** Bedürfnisse einer Stufe; mit dem Zustand der Herde inklusive der Wirkung ihrer Merkmale auf Schritte und Umkreis. */
+export function stageNeeds(data: HerdeData, s: HerdeState, stageId: string): StageNeedsView {
+  const sim: HerdeState = { ...s, herd: { ...s.herd, stage: stageId } };
+  const stage = stageOf(data, sim);
+  const seasons = (set: SeasonSet) => (set === 'all' ? data.seasons.map((x) => x.id) : [...set]);
+  const food: Record<string, number> = {};
+  for (const id of stage.eats) food[id] = stage.forage[id]?.food ?? data.landscapes.get(id)!.food;
+  return {
+    id: stage.id,
+    eats: [...stage.eats],
+    food,
+    water: [...stage.water],
+    waterSeasons: seasons(stage.needs.water),
+    shelter: [...stage.shelter],
+    shelterSeasons: seasons(stage.needs.shelter),
+    blocked: [...stage.blocked],
+    move: stage.move,
+    reach: stage.reach,
+  };
+}
+
+/** Entwicklung: Stufe, Merkmale, Angebot, Fortschritt der Erfahrungen, Reife, Vorschau der nächsten Stufe. */
+export function evolutionOf(data: HerdeData, s: HerdeState): EvolutionView {
+  const m = maturityOf(data, s);
+  const experience = [...data.experiences.values()].map((e) => {
+    const value = s.herd.experience[e.id] ?? 0;
+    let next: { trait: string; at: number } | null = null;
+    for (const t of data.traits.values())
+      if (t.from === e.id && t.at > value && !s.herd.traits.includes(t.id) && (!next || t.at < next.at))
+        next = { trait: t.id, at: t.at };
+    return { id: e.id, value, next };
+  });
+  return {
+    stage: stageNeeds(data, s, s.herd.stage),
+    traits: [...s.herd.traits],
+    counted: m.counted,
+    offer: [...s.herd.offer],
+    available: availableTraits(data, s),
+    experience,
+    mature: m.mature && !s.over,
+    missing: m.next === null ? null : { required: m.required, traits: m.missingTraits, oneOf: m.missingOneOf },
+    next: m.next === null ? null : stageNeeds(data, s, m.next),
+  };
+}
+
 export function view(data: HerdeData, s: HerdeState): HerdeView {
   const island = islandOf(data, s);
   const stage = stageOf(data, s);
@@ -57,12 +105,13 @@ export function view(data: HerdeData, s: HerdeState): HerdeView {
         y,
         land: c.land,
         food: c.food,
-        maxFood: maxFood(data, c),
+        maxFood: maxFood(data, s, c),
         fertile: c.fertile > 0 && l.fertileBonus > 0,
         walkable: l.walk,
         forecast: forecastOf(data, s, c),
         wildfire: l.fireChance > 0,
         herd: s.herd.x === x && s.herd.y === y,
+        blocked: l.walk && !walkable(data, s, c.land),
         pack: s.packs.find((p) => p.x === x && p.y === y)?.id ?? null,
       };
     }),
@@ -88,6 +137,7 @@ export function view(data: HerdeData, s: HerdeState): HerdeView {
       return { index, card: id, global: card.global, wild: card.wild, targets: s.over ? [] : targetsOf(data, s, card) };
     }),
     handMax: data.params.cards.handMax,
+    evolution: evolutionOf(data, s),
     over: s.over,
   };
 }

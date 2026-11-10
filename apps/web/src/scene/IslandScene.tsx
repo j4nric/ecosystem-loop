@@ -20,7 +20,7 @@ import { FxLayer } from './FxLayer.tsx';
 import { GEO } from './geometries.ts';
 import { capacityFor, Instanced, type InstanceSpec } from './Instanced.tsx';
 import { BOTTOM, buildIsland, cellCenter, type Grid } from './islandModel.ts';
-import { COLORS, SEASON_LIGHT } from './palette.ts';
+import { COLORS, SEASON_LIGHT, stageLook } from './palette.ts';
 
 interface Props {
   data: HerdeData;
@@ -108,6 +108,14 @@ function Island({
   };
 
   // Herde: bis zu 20 Figuren, größere Herden werden größer dargestellt; Rudel: eine Figur je Stärke.
+  // Aussehen je Stufe (grasende Tiere, Waldsammler, Wanderer).
+  const look = stageLook(view.herd.stage);
+  const herdGeometry =
+    look.figure === 'grazer'
+      ? { body: GEO.animalBody, head: GEO.animalHead }
+      : look.figure === 'walker'
+        ? { body: GEO.walkerBody, head: GEO.walkerHead }
+        : { body: GEO.uprightBody, head: GEO.uprightHead };
   const herdPos = at(view.herd);
   const groups: FigureGroup[] =
     view.herd.size > 0
@@ -116,10 +124,13 @@ function Island({
             id: 'herd',
             position: herdPos,
             count: Math.min(20, view.herd.size),
-            size: view.herd.size > 20 ? Math.min(1.5, 1 + (view.herd.size - 20) / 40) : 1,
-            spread: 0.085,
-            body: COLORS.herdBody,
-            head: COLORS.herdHead,
+            // Aufrechte Gestalten sind schmaler und werden etwas größer gezeigt, damit sie zwischen Bäumen sichtbar bleiben.
+            size:
+              (look.figure === 'grazer' ? 1 : 1.3) *
+              (view.herd.size > 20 ? Math.min(1.5, 1 + (view.herd.size - 20) / 40) : 1),
+            spread: look.figure === 'grazer' ? 0.085 : 0.075,
+            body: look.body,
+            head: look.head,
           },
         ]
       : [];
@@ -173,6 +184,12 @@ function Island({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [targetSet, model],
   );
+  // Für die Stufe unpassierbare Felder (z. B. Altwald für Wanderer): dezenter Rahmen, nicht beim Zielen.
+  const blockedSquares = useMemo(
+    () => (targets ? [] : view.cells.filter((c) => c.blocked).map((c) => at(c, 0.014))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [targets, view.cells, model],
+  );
   const grownSquares = useMemo(
     () => (grown ?? []).map((p) => at(p, 0.012)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -207,9 +224,10 @@ function Island({
         </mesh>
 
         <Figures
+          key={look.figure}
           groups={herdGroups}
-          bodyGeometry={GEO.animalBody}
-          headGeometry={GEO.animalHead}
+          bodyGeometry={herdGeometry.body}
+          headGeometry={herdGeometry.head}
           reducedMotion={reducedMotion}
         />
         <Figures
@@ -219,6 +237,7 @@ function Island({
           reducedMotion={reducedMotion}
         />
 
+        <Squares positions={blockedSquares} color={COLORS.blocked} opacity={0.8} frame />
         <Squares positions={dimSquares} color={COLORS.dim} opacity={0.38} />
         <Squares positions={targetSquares} color={COLORS.target} opacity={0.3} />
         <Squares positions={targetSquares} color={COLORS.target} opacity={0.95} pulse={!reducedMotion} frame />

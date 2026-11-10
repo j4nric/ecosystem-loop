@@ -13,8 +13,8 @@ export interface StepReport {
   fx: Fx[];
 }
 
-/** Hinweis beim Start: ein alter oder unpassender Spielstand wurde verworfen. */
-export type StartupNotice = 'legacy' | 'incompatible' | null;
+/** Hinweis beim Start: ein alter (Konzept 0.4), ein älterer (frühere STATE_VERSION) oder unpassender Stand wurde verworfen. */
+export type StartupNotice = 'legacy' | 'incompatible' | 'outdated' | null;
 
 /**
  * Adapter zwischen App und Engine. Die App kennt nur dieses Interface:

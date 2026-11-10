@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import type { HerdeData } from '@being-god/herde';
-import { t } from '../i18n/index.ts';
-import { ruleNumbers } from '../logic/format.ts';
+import { locale, t } from '../i18n/index.ts';
+import { ruleNumbers, type StageRules } from '../logic/format.ts';
 
 /** Geführte erste Partie: kurze Hinweis-Karten, jederzeit überspringbar. */
-export function Tutorial({ data, onDone }: { data: HerdeData; onDone: () => void }) {
+export function Tutorial({ data, stage, onDone }: { data: HerdeData; stage: StageRules; onDone: () => void }) {
   const [step, setStep] = useState(0);
-  const steps = useMemo(() => t.tutorial(ruleNumbers(data)), [data]);
+  const steps = useMemo(() => t.tutorial(ruleNumbers(data, locale, stage)), [data, stage]);
   const card = steps[step];
   if (!card) return null;
   const last = step === steps.length - 1;

@@ -18,6 +18,8 @@ const problems = (fn: (r: any) => void): string[] => {
 };
 const land = (r: any, id: string) => r.landscapes.landscapes.find((l: any) => l.id === id);
 const card = (r: any, id: string) => r.cards.cards.find((c: any) => c.id === id);
+const stage = (r: any, id: string) => r.stages.stages.find((x: any) => x.id === id);
+const trait = (r: any, id: string) => r.traits.traits.find((x: any) => x.id === id);
 
 describe('Spieldaten', () => {
   it('die mitgelieferten Daten sind gültig', () => {
@@ -38,6 +40,20 @@ describe('Spieldaten', () => {
     expect(d.months).toHaveLength(12);
     expect(d.islands.get('start')).toMatchObject({ width: 7, height: 9, herd: { x: 1, y: 5 } });
     expect(d.stages.get('herd')!.water).toEqual(['river']);
+    expect([...d.stages.keys()]).toEqual(['herd', 'gatherer', 'wanderer']);
+    expect(d.stages.get('herd')).toMatchObject({ next: 'gatherer', move: 1, reach: 1, wolfGuard: 0, forage: {} });
+    expect(d.stages.get('wanderer')).toMatchObject({ blocked: ['old'], move: 2 });
+    expect(d.stages.get('wanderer')!.next).toBeUndefined();
+    expect([...d.traits.keys()]).toEqual([
+      'thick_fur',
+      'vigilant',
+      'frugal',
+      'fire_wary',
+      'forest_wise',
+      'far_sight',
+      'endurance',
+    ]);
+    expect(d.offerSize).toBe(3);
   });
 
   it.each<[string, (r: any) => void, RegExp]>([
@@ -59,6 +75,25 @@ describe('Spieldaten', () => {
     ['Jahreszeit doppelt', (r) => r.seasons.seasons.push(r.seasons.seasons[0]), /Jahreszeit doppelt/],
     ['Stufe mit unbekanntem Wasser', (r) => r.stages.stages[0].water.push('lake'), /Stufe herd → water/],
     ['Startstufe', (r) => (r.params.herd.stage = 'human'), /unbekannte Stufe human/],
+    ['Stufe: Hindernis unbekannt', (r) => stage(r, 'wanderer').blocked.push('lava'), /wanderer → blocked/],
+    ['Stufe: Jahreszeit unbekannt', (r) => (stage(r, 'herd').needs.water = ['monsoon']), /needs.water: unbekannte/],
+    ['Stufe: forage auf Unbekanntes', (r) => (stage(r, 'gatherer').forage.lava = { food: 1, grow: {} }), /forage/],
+    ['Stufe: forage ohne Jahreszeit', (r) => delete stage(r, 'gatherer').forage.bush.grow.winter, /forage bush: grow/],
+    ['Stufe: next unbekannt', (r) => (stage(r, 'gatherer').next = 'hunter'), /next: unbekannte Stufe hunter/],
+    ['Stufe: next ohne mature', (r) => delete stage(r, 'herd').mature, /next ohne mature/],
+    ['Stufe: mature ohne next', (r) => (stage(r, 'wanderer').mature = { traits: 1 }), /mature ohne next/],
+    ['Stufe: oneOf unbekannt', (r) => stage(r, 'herd').mature.oneOf.push('wings'), /unbekanntes Merkmal wings/],
+    ['Stufe: zu viele Merkmale', (r) => (stage(r, 'herd').mature.traits = 99), /mature.traits 99/],
+    ['Stufe: Kreis', (r) => Object.assign(stage(r, 'wanderer'), { next: 'herd', mature: { traits: 1 } }), /im Kreis/],
+    ['Merkmal: Erfahrung unbekannt', (r) => (trait(r, 'vigilant').from = 'flight'), /unbekannte Erfahrung flight/],
+    ['Merkmal: Wirkung ohne Zahl', (r) => (trait(r, 'vigilant').effects = [{ stat: 'coldLoss' }]), /mul oder add/],
+    ['Merkmal: unbekannter Wert', (r) => (trait(r, 'vigilant').effects[0].stat = 'eats'), /traits.yaml: traits/],
+    ['Merkmal doppelt', (r) => r.traits.traits.push(trait(r, 'vigilant')), /Id vigilant doppelt/],
+    [
+      'Erfahrung: Landschaft unbekannt',
+      (r) => r.traits.experiences.find((e: any) => e.id === 'open').when.lands.push('lava'),
+      /Erfahrung open → when.lands/,
+    ],
     ['Geburtsmonat', (r) => (r.params.herd.birthMonth = 12), /birthMonth 12/],
     ['Eiszeit-Jahreszeit', (r) => (r.params.ice.season = 'monsoon'), /unbekannte Jahreszeit monsoon/],
     ['Starthand', (r) => (r.params.cards.startHand = 6), /startHand > handMax/],

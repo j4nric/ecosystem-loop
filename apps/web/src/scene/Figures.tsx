@@ -18,6 +18,8 @@ export interface FigureGroup {
 
 const CAPACITY = 64;
 const MOVE_SECONDS = 0.7;
+/** Weitere Züge (Wanderer: 2 Felder je Monat) dauern etwas länger, bleiben aber unter der Monatspause. */
+const MOVE_SECONDS_MAX = 0.95;
 const HOP = 0.14;
 /** Goldener Winkel: Figuren als Sonnenblumen-Muster um die Mitte. */
 const GOLDEN = 2.39996;
@@ -30,6 +32,8 @@ interface Track {
   t0: number | null;
   /** Blickrichtung (Drehung um y) */
   facing: number;
+  /** Dauer des laufenden Zugs in Sekunden */
+  duration: number;
 }
 
 const m = new Matrix4();
@@ -86,6 +90,7 @@ export function Figures({
           cur: target.clone(),
           t0: -1,
           facing: -Math.PI / 2,
+          duration: MOVE_SECONDS,
         });
       } else if (!track.to.equals(target)) {
         const dx = target.x - track.cur.x;
@@ -93,6 +98,8 @@ export function Figures({
         if (Math.abs(dx) + Math.abs(dz) > 1e-3) track.facing = Math.atan2(-dz, dx);
         track.from.copy(track.cur);
         track.to = target;
+        // Der Zug geht direkt zum Ziel (das Ereignis nennt kein Zwischenfeld); weite Züge etwas langsamer.
+        track.duration = Math.min(MOVE_SECONDS_MAX, MOVE_SECONDS * Math.max(1, Math.sqrt(Math.hypot(dx, dz))));
         track.t0 = reducedMotion ? -1 : null;
         if (reducedMotion) track.cur.copy(target);
       }
@@ -108,7 +115,7 @@ export function Figures({
     for (const track of tracks.current.values()) {
       if (track.t0 === -1) continue;
       if (track.t0 === null) track.t0 = now;
-      const k = Math.min(1, (now - track.t0) / MOVE_SECONDS);
+      const k = Math.min(1, (now - track.t0) / track.duration);
       const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
       track.cur.lerpVectors(track.from, track.to, e);
       track.cur.y += Math.sin(Math.PI * k) * HOP;

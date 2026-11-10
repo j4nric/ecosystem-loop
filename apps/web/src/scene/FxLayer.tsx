@@ -1,6 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Color, Matrix4, Quaternion, Vector3, type InstancedMesh, type Mesh, type MeshBasicMaterial } from 'three';
+import {
+  Color,
+  DoubleSide,
+  Matrix4,
+  Quaternion,
+  Vector3,
+  type InstancedMesh,
+  type Mesh,
+  type MeshBasicMaterial,
+} from 'three';
 import type { Fx, StepReport } from '../client/GameClient.ts';
 import { GEO } from './geometries.ts';
 import { cellCenter, jitter, type Grid } from './islandModel.ts';
@@ -12,6 +21,8 @@ const STREAKS = 48;
 const RING_SECONDS = 0.9;
 const FIRE_SECONDS = 1.6;
 const RAIN_SECONDS = 1.3;
+/** Sprung zur nächsten Stufe: goldene Lichtsäule über der Herde */
+const BEAM_SECONDS = 2.2;
 /** Reduzierte Bewegung: statt Flammen und Regen ein kurzes, ruhiges Einfärben der Felder */
 const TINTS = 64;
 const TINT_SECONDS = 1.4;
@@ -75,6 +86,8 @@ export function FxLayer({
   const tints = useRef<Tint[]>([]);
   const tintStart = useRef<number | null | undefined>(undefined);
   const tintMesh = useRef<InstancedMesh>(null);
+  const beamMesh = useRef<Mesh>(null);
+  const beam = useRef<{ x: number; y: number; z: number; start: number | null } | null>(null);
   const geo = useRef({ grid, topY, reducedMotion });
   useEffect(() => {
     geo.current = { grid, topY, reducedMotion };
@@ -130,6 +143,17 @@ export function FxLayer({
             case 'loss':
               ring(fx.x, fx.y, COLORS.loss, 1.8, 0.2);
               break;
+            case 'evolve': {
+              if (calm) {
+                tint([fx], COLORS.evolve);
+                ring(fx.x, fx.y, COLORS.evolve, 2);
+                break;
+              }
+              for (let k = 0; k < 3; k++) ring(fx.x, fx.y, COLORS.evolve, 2.6, k * 0.35);
+              const [px, py, pz] = at(fx.x, fx.y);
+              beam.current = { x: px, y: py, z: pz, start: null };
+              break;
+            }
             case 'rain':
               if (calm) tint(fx.cells, COLORS.grown);
               else rainStart.current = null;
@@ -207,6 +231,26 @@ export function FxLayer({
       }
     }
 
+    // Lichtsäule beim Sprung: wächst aus dem Boden, leuchtet auf und verblasst
+    const bm = beamMesh.current;
+    const b = beam.current;
+    if (bm) {
+      bm.visible = b !== null;
+      if (b) {
+        if (b.start === null) b.start = now;
+        const k = (now - b.start) / BEAM_SECONDS;
+        if (k >= 1) {
+          beam.current = null;
+          bm.visible = false;
+        } else {
+          bm.position.set(b.x, b.y, b.z);
+          bm.scale.set(1, Math.min(1, k * 4), 1);
+          bm.rotation.y = now * 1.5;
+          (bm.material as MeshBasicMaterial).opacity = 0.55 * Math.sin(Math.min(1, k * 1.2) * Math.PI);
+        }
+      }
+    }
+
     // Einfärben (reduzierte Bewegung): einmal einblenden und wieder aus, ohne Bewegung
     const tm = tintMesh.current;
     if (tm && tintStart.current !== undefined) {
@@ -235,7 +279,8 @@ export function FxLayer({
       flames.current.length > 0 ||
       (fm?.count ?? 0) > 0 ||
       rainStart.current !== undefined ||
-      tintStart.current !== undefined;
+      tintStart.current !== undefined ||
+      beam.current !== null;
     if (active) invalidate();
   });
 
@@ -254,6 +299,16 @@ export function FxLayer({
           <meshBasicMaterial transparent depthWrite={false} fog={false} />
         </mesh>
       ))}
+      <mesh ref={beamMesh} geometry={GEO.beam} visible={false} renderOrder={4} raycast={() => null}>
+        <meshBasicMaterial
+          color={COLORS.evolve}
+          transparent
+          opacity={0}
+          depthWrite={false}
+          fog={false}
+          side={DoubleSide}
+        />
+      </mesh>
       <instancedMesh ref={flameMesh} args={[GEO.flame, undefined, FLAMES]} count={0} frustumCulled={false}>
         <meshBasicMaterial transparent opacity={0.92} depthWrite={false} fog={false} />
       </instancedMesh>

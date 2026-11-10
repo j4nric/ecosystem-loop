@@ -33,7 +33,31 @@ export const COLORS = {
   born: '#8ff07a',
   loss: '#7a86a8',
   rain: '#a9d4f5',
+  evolve: '#ffd66b',
+  blocked: '#7a3040',
 } as const;
+
+/**
+ * Aussehen der Herde je Stufe (nur Optik): Figur, Farben, Symbol. Unbekannte Stufen (z. B. neue in den Daten)
+ * bekommen `STAGE_FALLBACK`.
+ */
+export interface StageLook {
+  /** grasende Tiere (vierbeinig) oder aufrechte Gestalten */
+  figure: 'grazer' | 'upright' | 'walker';
+  body: string;
+  head: string;
+  icon: string;
+}
+
+export const STAGE_LOOK: Record<string, StageLook> = {
+  herd: { figure: 'grazer', body: COLORS.herdBody, head: COLORS.herdHead, icon: '🐑' },
+  gatherer: { figure: 'upright', body: '#a8703f', head: '#5d4130', icon: '🫐' },
+  wanderer: { figure: 'walker', body: '#c4583e', head: '#e2b88f', icon: '🚶' },
+};
+
+export const STAGE_FALLBACK: StageLook = { figure: 'upright', body: '#b98a5a', head: '#5d4130', icon: '✨' };
+
+export const stageLook = (id: string): StageLook => STAGE_LOOK[id] ?? STAGE_FALLBACK;
 
 /** Lichtfarbe der Sonne je Jahreszeit (leichte Tönung); `ice` gilt in der Eiszeit. */
 export const SEASON_LIGHT: Record<string, { sun: string; sky: string }> = {

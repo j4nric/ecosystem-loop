@@ -1,5 +1,14 @@
 /** Kleine gemeinsame Abfragen auf Insel, Feldern und Jahreszeit sowie der Landschaftswandel. */
-import type { HerdeData, Island, Landscape, Season, Stage } from './schema.ts';
+import {
+  STAGE_STATS,
+  type HerdeData,
+  type Island,
+  type Landscape,
+  type Season,
+  type SeasonSet,
+  type Stage,
+  type StageStat,
+} from './schema.ts';
 import type { CellState, Emit, HerdeState, Pos } from './state.ts';
 
 /** Regelverstoß einer Aktion (ungültiger Zug, Partie vorbei …). */
@@ -41,10 +50,20 @@ export function landOf(data: HerdeData, cell: CellState): Landscape {
   return l;
 }
 
-/** Futter-Maximum eines Felds (inkl. Fruchtbarkeit). */
-export function maxFood(data: HerdeData, cell: CellState): number {
+/**
+ * Futter-Maximum eines Felds (inkl. Fruchtbarkeit) für die aktuelle Stufe: `forage` der Stufe überlagert das
+ * Maximum der Landschaft, der Fruchtbarkeitsbonus kommt immer von der Landschaft.
+ */
+export function maxFood(data: HerdeData, s: HerdeState, cell: CellState): number {
   const l = landOf(data, cell);
-  return l.food + (cell.fertile > 0 ? l.fertileBonus : 0);
+  const base = baseStageOf(data, s).forage[cell.land]?.food ?? l.food;
+  return base + (cell.fertile > 0 ? l.fertileBonus : 0);
+}
+
+/** Futter-Wachstum eines Felds je Monat in einer Jahreszeit (forage der Stufe vor den Werten der Landschaft). */
+export function growOf(data: HerdeData, s: HerdeState, cell: CellState, season: string): number {
+  const grow = baseStageOf(data, s).forage[cell.land]?.grow ?? landOf(data, cell).grow;
+  return grow[season] ?? 0;
 }
 
 export const yearLength = (data: HerdeData): number => data.seasons.length * data.monthsPerSeason;
@@ -57,15 +76,76 @@ export function seasonIndex(data: HerdeData, s: HerdeState): number {
 
 export const seasonOf = (data: HerdeData, s: HerdeState): Season => data.seasons[seasonIndex(data, s)]!;
 
-export function stageOf(data: HerdeData, s: HerdeState): Stage {
+/** Die Stufe der Herde, wie sie in den Daten steht (ohne Merkmale). */
+export function baseStageOf(data: HerdeData, s: HerdeState): Stage {
   const stage = data.stages.get(s.herd.stage);
   if (!stage) throw new RuleError(`Unbekannte Stufe: ${s.herd.stage}`);
   return stage;
 }
 
-/** Liegt im Umkreis 1 (inkl. Feld selbst) eine der Landschaften? */
-export function near(data: HerdeData, s: HerdeState, x: number, y: number, lands: readonly string[]): boolean {
-  return around(islandOf(data, s), x, y).some((p) => lands.includes(cellAt(data, s, p.x, p.y).land));
+/** Stufenwerte, die ganzzahlig bleiben, und Untergrenzen nach einer Änderung durch Merkmale (sonst 0). */
+const INT_STATS: ReadonlySet<StageStat> = new Set(['thirstAfter', 'move', 'reach', 'trail', 'wolfGuard']);
+const MIN_STATS: Partial<Record<StageStat, number>> = { eatFactor: 1, thirstAfter: 1, move: 1, reach: 1 };
+
+/**
+ * Die Stufe der Herde mit den Wirkungen ihrer Merkmale (Wert × mul + add, in der Reihenfolge der Wahl).
+ * Alle Regeln lesen ihre Werte hierüber. Ohne Merkmale ist es genau die Stufe aus den Daten.
+ */
+export function stageOf(data: HerdeData, s: HerdeState): Stage {
+  const base = baseStageOf(data, s);
+  if (s.herd.traits.length === 0) return base;
+  const stage: Stage = { ...base };
+  for (const id of s.herd.traits) {
+    const trait = data.traits.get(id);
+    if (!trait) throw new RuleError(`Unbekanntes Merkmal: ${id}`);
+    for (const e of trait.effects) stage[e.stat] = stage[e.stat] * (e.mul ?? 1) + (e.add ?? 0);
+  }
+  for (const stat of STAGE_STATS) {
+    const v = INT_STATS.has(stat) ? Math.round(stage[stat]) : stage[stat];
+    stage[stat] = Math.max(MIN_STATS[stat] ?? 0, v);
+  }
+  return stage;
+}
+
+/** Gilt ein Bedürfnis (Jahreszeiten aus `needs`) in dieser Jahreszeit? */
+export const inSeasons = (set: SeasonSet, season: Season): boolean => set === 'all' || set.includes(season.id);
+
+/** Braucht die Herde jetzt Wasser bzw. Schutz (nach ihrer Stufe und der Jahreszeit)? */
+export function needsNow(data: HerdeData, s: HerdeState, need: 'water' | 'shelter'): boolean {
+  return inSeasons(baseStageOf(data, s).needs[need], seasonOf(data, s));
+}
+
+/** Kann die Herde in ihrer Stufe die Landschaft betreten? */
+export function walkable(data: HerdeData, s: HerdeState, land: string): boolean {
+  return data.landscapes.get(land)?.walk === true && !baseStageOf(data, s).blocked.includes(land);
+}
+
+/** Liegt im Umkreis r (inkl. Feld selbst) eine der Landschaften? */
+export function near(data: HerdeData, s: HerdeState, x: number, y: number, lands: readonly string[], r = 1): boolean {
+  return around(islandOf(data, s), x, y, r).some((p) => lands.includes(cellAt(data, s, p.x, p.y).land));
+}
+
+/**
+ * Felder, die die Herde in diesem Monat erreichen kann: höchstens `steps` Schritte (8er-Nachbarschaft) nur über
+ * Felder, die ihre Stufe betreten kann. Das eigene Feld gehört immer dazu. Reihenfolge wie `around` (Zeile für
+ * Zeile von oben links) – sie entscheidet Gleichstände.
+ */
+export function reachable(data: HerdeData, s: HerdeState, from: Pos, steps: number): Pos[] {
+  const island = islandOf(data, s);
+  const key = (p: Pos) => p.y * island.width + p.x;
+  const seen = new Set<number>([key(from)]);
+  let frontier: Pos[] = [from];
+  for (let i = 0; i < steps; i++) {
+    const next: Pos[] = [];
+    for (const p of frontier)
+      for (const q of around(island, p.x, p.y)) {
+        if (seen.has(key(q)) || !walkable(data, s, cellAt(data, s, q.x, q.y).land)) continue;
+        seen.add(key(q));
+        next.push(q);
+      }
+    frontier = next;
+  }
+  return around(island, from.x, from.y, steps).filter((p) => seen.has(key(p)));
 }
 
 /** Summe der Rudelstärken im Umkreis 1. */
@@ -95,7 +175,7 @@ export function transform(data: HerdeData, s: HerdeState, pos: Pos, to: string, 
   // und bei Brand → Wiese; für alle anderen Ziele ist die Uhr bedeutungslos, das Ergebnis also gleich.
   cell.grazed = s.month;
   if (opts.fertile !== undefined) cell.fertile = opts.fertile;
-  cell.food = opts.food ?? Math.min(cell.food, maxFood(data, cell));
+  cell.food = opts.food ?? Math.min(cell.food, maxFood(data, s, cell));
   emit({ type: 'cellChanged', x: pos.x, y: pos.y, from, to, cause: opts.cause });
   if (!landOf(data, cell).wood) {
     const gone = s.packs.filter((p) => samePos(p, pos));
