@@ -39,16 +39,20 @@ Der Spielstand liegt auch in der App in `localStorage`; für dauerhafte Speicher
 ```
 src/client/   GameClient (Schnittstelle), HerdeClient, SaveStore, gameData.ts (YAML → buildData), index.ts
 src/logic/    events (Ereignisse → Meldungen und Effekte), preview (Vorschau über step + view), format (Texte,
-              Prognose, Pfeile) – reine Funktionen ohne DOM
+              Prognose, Pfeile, Regelzahlen der Stufe), evolution (Bedürfnisse mit Feldern auf der Insel, Merkmale,
+              Erfahrung, Reife, Hinweis, Aktionen) – reine Funktionen ohne DOM
 src/state/    useGame (View, Protokoll, Meldungen), monthRunner (schrittweises Ablaufen der Monate), motion,
               tutorialStore
 src/scene/    IslandScene (Kamera, Licht, Insel, Pfeile, Hervorhebungen), islandModel (Instanzen aus der View, rein),
               Figures (Herde und Rudel), FxLayer (Effekte), Instanced, geometries, palette
 src/ui/       StatusBar (Statusleiste, Jahreskreis, Absicht), Hand, Sheets (Karte/Vorschau, Feld-Info, Geschehen),
+              Evolution (Knopf, Hinweis, Panel „Herde und Entwicklung“, Merkmal-Angebot, Sprung-Dialog, Einblendung),
               GameOver, Help, Tutorial, Toasts
 src/i18n/     de.ts, en.ts, locale.ts – UI-Texte; Namen (Landschaften, Karten, Jahreszeiten, Monate) aus den Daten,
-              Regelzahlen (Geburtsmonat, Wildnis-Grenze, Eiszeit, Handgröße) aus `data.params` über `ruleNumbers`
+              Regelzahlen (Geburtsmonat, Wildnis-Grenze, Eiszeit, Handgröße) aus `data.params`, Schritte, Umkreis,
+              Wasser- und Schutzzeiten aus `view.evolution.stage` über `ruleNumbers`
 tests/        HerdeClient, SaveStore, logic (Meldungen, Texte, Regelzahlen, Prognose, Vorschau, Inselmodell),
+              evolution (Zählen aus der View, Texte je Stufe, Aktionen, Meldungen, Stand der Version 1),
               monthRunner (Fake-Timer), locale
 ```
 
@@ -60,7 +64,8 @@ tests/        HerdeClient, SaveStore, logic (Meldungen, Texte, Regelzahlen, Prog
 Build-Zeit als Text eingebunden und im Browser mit `buildData` geprüft. Jede Partie hat einen eigenen Seed.
 
 Spielstand: `localStorage` unter `being-god.herde.save.v1` (Zustand, Seed, Protokoll). Beim Start prüft
-`validateState` den Stand; passt er nicht, beginnt eine neue Partie mit Hinweis. Ein alter Spielstand der früheren
+`validateState` den Stand; passt er nicht, beginnt eine neue Partie mit Hinweis (ein Stand einer früheren
+`STATE_VERSION`, z. B. 1 vor der Entwicklung der Herde, bekommt einen eigenen Hinweis). Ein alter Spielstand der früheren
 Version (`being-god.save.v1`, dazu Buch, Startdeck und Einführung) wird verworfen; die App sagt das einmal freundlich.
 
 URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
@@ -91,12 +96,27 @@ URL-Schalter (kombinierbar, z. B. `?seed=abc&lang=en`):
 - **Zeit:** „Jahreszeit spielen“ lässt die Monate bis zur nächsten Jahreszeit einzeln ablaufen (die Herde hüpft
   sichtbar zum nächsten Feld, Effekte und Meldungen je Monat), „Anhalten“ bricht ab; „1 Monat“ geht einen Schritt.
 - **Feld antippen:** Landschaft, Futter, Prognose („wird in N Monaten zu Busch“ erst ab ≤ 3 Monaten, sonst „bleibt
-  Wiese, solange die Herde hier grast“), Feuer, Wasser, Schutz, Herde, Rudel.
+  Wiese, solange die Herde hier grast“), Feuer, Wasser und Schutz der aktuellen Stufe mit Jahreszeiten, Wölfe,
+  „für diese Stufe unpassierbar“ (`CellView.blocked`), „kein Futter für die Stufe“, Herde, Rudel.
+- **Herde und Entwicklung** (Knopf mit dem Symbol der Stufe neben 📜; Punkt mit Zahl bei einem Angebot, ⬆ bei
+  Reife; dazu ein goldener bzw. grüner Hinweis unter der Absicht): aktuelle Stufe mit Bedürfnissen (Futter mit
+  Maximum, Wasser und Schutz mit Jahreszeiten, Hindernis, Schritte und Umkreis) und der Zahl passender Felder auf der
+  Insel, gewählte Merkmale mit Wirkung, Erfahrungen mit Balken bis zur Schwelle und dem Merkmal, das dann kommt
+  (Reife-Merkmale zuerst, gold), was zur Reife fehlt, und die **Vorschau der nächsten Stufe**: was sie braucht, wie
+  viele Felder die Insel heute bietet, was nicht mehr als Futter zählt, was unpassierbar wird, und was ganz fehlt.
+  Alles wird aus `view.evolution` gelesen und aus `view.cells` gezählt, keine Regel nachgebaut.
+- **Merkmal-Angebot:** 1–3 Karten (Symbol, Name, Wirkung, Erfahrung und Schwelle, „hilft zur Reife“), wählen, dann
+  „Merkmal annehmen“ (`pickTrait`); „Später“ lässt das Angebot liegen (wird zur nächsten Jahreszeit erneuert).
+- **Sprung:** bei Reife „Weiterentwickeln zu …“ → Dialog im Spiel mit den neuen Bedürfnissen und „Kein Zurück“ →
+  `evolve`. Danach eine goldene Lichtsäule mit Ringen über der Herde und eine kurze Einblendung der neuen Stufe. Die
+  Figuren sehen je Stufe anders aus (grasende Tiere, gedrungene Waldsammler, schlanke Wanderer; `STAGE_LOOK` in
+  `palette.ts`). Wanderer ziehen bis zu 2 Felder je Monat (direkt; das Ereignis nennt kein Zwischenfeld), für die Stufe
+  unpassierbare Felder haben einen dezenten dunkelroten Rahmen.
 - **📜 Geschehen:** Protokoll aller Meldungen mit Monat (auch Zug der Herde und wandernde Rudel, die nicht als Toast
   erscheinen).
 - **Ende:** Sieg (Eiszeit überstanden) oder Niederlage mit Überlebenden, Dauer und Wildnis; „Insel ansehen“ oder
   „Neue Partie“.
-- Einführung (5 Karten) beim ersten Start, erneut über das Menü oder die Hilfe. `prefers-reduced-motion` kürzt
+- Einführung (6 Karten, darunter „Die Herde entwickelt sich“) beim ersten Start, erneut über das Menü oder die Hilfe. `prefers-reduced-motion` kürzt
   Animationen und die Pausen zwischen den Monaten, lässt Schweben, Pulsieren, Hüpfen, flackernde Flammen und
   fallenden Regen weg (stattdessen färben sich die betroffenen Felder kurz und ruhig ein) und zeichnet die Szene
   nur bei Änderungen neu (`frameloop="demand"`).

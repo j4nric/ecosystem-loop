@@ -97,6 +97,9 @@ function PreviewLines({ data, preview }: { data: HerdeData; preview: PlayPreview
         </li>
       )}
       {c && c.before.food !== c.after.food && <li>{t.previewFood(c.before.food, c.after.food)}</li>}
+      {c && !c.before.blocked && c.after.blocked && <li className="is-bad">{t.previewBlocked}</li>}
+      {c && c.before.blocked && !c.after.blocked && <li className="is-good">{t.previewWasBlocked}</li>}
+      {c && c.before.blocked && c.after.blocked && <li className="muted">{t.previewStillBlocked}</li>}
       {!c && preview.grown.length > 0 && <li>{t.previewGrow(preview.grown.length)}</li>}
       {preview.ignites && <li className="is-bad">{t.previewFire}</li>}
       {preview.packGone && <li className="is-good">{t.previewPackGone}</li>}
@@ -136,7 +139,7 @@ export function FieldSheet({
           </span>
         </div>
       )}
-      {forecastLines(t, data, locale, cell, view.herd.stage).map((line) => (
+      {forecastLines(t, data, locale, cell, view.evolution.stage).map((line) => (
         <p key={line}>{line}</p>
       ))}
       {cell.herd && <p className="is-herd">{t.infoHerd(view.herd.size)}</p>}

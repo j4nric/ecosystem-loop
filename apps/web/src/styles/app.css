@@ -890,11 +890,420 @@ textarea {
   flex: 1.4;
 }
 
+/* ---- Herde und Entwicklung ----------------------------------------------------------------- */
+
+.evo-btn {
+  position: relative;
+}
+
+.evo-btn__badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 20px;
+  box-shadow: 0 2px 6px rgba(60, 50, 90, 0.25);
+}
+
+.evo-btn--alert {
+  box-shadow:
+    0 0 0 2px var(--gold),
+    0 3px 12px rgba(60, 50, 90, 0.16);
+  animation: evo-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes evo-pulse {
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(228, 184, 74, 0.55),
+      0 3px 12px rgba(60, 50, 90, 0.16);
+  }
+}
+
+.evo-banner {
+  align-self: center;
+  min-height: var(--tap);
+  padding: 0 18px;
+  border: 0;
+  border-radius: 22px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  background: linear-gradient(180deg, #ffe7a3, var(--gold));
+  box-shadow: 0 4px 16px rgba(160, 110, 20, 0.3);
+  pointer-events: auto;
+  cursor: pointer;
+  animation: toast-in 0.25s ease-out;
+}
+
+.evo-banner--mature {
+  background: linear-gradient(180deg, #d9f2c4, #9fd27a);
+  box-shadow: 0 4px 16px rgba(60, 120, 40, 0.3);
+}
+
+.btn--gold {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+/* Unten verankertes Overlay (Panel, Angebot): Daumen erreicht alles, die Insel bleibt oben sichtbar. */
+.overlay--sheet {
+  align-items: flex-end;
+}
+
+.overlay--sheet .overlay__panel {
+  max-height: 82dvh;
+  animation: sheet-in 0.25s ease-out;
+}
+
+.overlay__panel.evo {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.evo__body h3 {
+  margin: 14px 0 4px;
+}
+
+.help__body h4 {
+  margin: 10px 0 2px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.evo .help__actions {
+  padding-top: 4px;
+  flex-wrap: wrap;
+}
+
+.evo .help__actions .btn {
+  white-space: normal;
+  min-width: 0;
+}
+
+.stage-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.stage-head__icon {
+  font-size: 30px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(228, 184, 74, 0.22);
+}
+
+.stage-head div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.stage-head small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.needs {
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.needs__row {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: rgba(60, 50, 90, 0.05);
+  border-left: 4px solid transparent;
+  font-size: 13px;
+}
+
+.needs__row dt {
+  font-weight: 700;
+}
+
+.needs__row dd {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.needs__row small {
+  color: var(--ink-soft);
+}
+
+.needs__row--ok {
+  border-left-color: var(--good);
+}
+
+.needs__row--missing {
+  border-left-color: var(--bad);
+  background: rgba(194, 72, 58, 0.08);
+}
+
+.needs__row--missing small {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+.needs__row--warn {
+  border-left-color: var(--wild);
+}
+
+.needs__row--warn small {
+  color: var(--wild);
+  font-weight: 600;
+}
+
+.trait-list {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trait-list li span {
+  display: inline-block;
+  width: 24px;
+  text-align: center;
+}
+
+.xp {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.xp__line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.xp .bar {
+  height: 6px;
+  border-radius: 3px;
+}
+
+.xp .bar i {
+  background: var(--accent);
+}
+
+.xp--maturity .bar i {
+  background: var(--gold);
+}
+
+.xp small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(228, 184, 74, 0.35);
+  color: #6b4a07;
+}
+
+.tag--good {
+  background: rgba(79, 154, 58, 0.18);
+  color: #2f6b22;
+}
+
+.evo__next {
+  margin: 16px 0 10px;
+  padding: 4px 10px 8px;
+  border-radius: 14px;
+  background: rgba(228, 184, 74, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(228, 184, 74, 0.45);
+}
+
+.evo__next p {
+  margin: 6px 0 2px;
+}
+
+/* Merkmal-Angebot */
+.offer__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trait-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(60, 50, 90, 0.12);
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.trait-card.is-active {
+  border-color: var(--gold);
+  background: #fff9e8;
+}
+
+.trait-card__icon {
+  font-size: 28px;
+  width: 40px;
+  flex: none;
+  text-align: center;
+}
+
+.trait-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.trait-card__text small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.offer__leave {
+  font-size: 13px;
+  margin: 12px 0 0 !important;
+}
+
+/* Sprung */
+.overlay__panel.evolve {
+  text-align: left;
+}
+
+.evolve__icons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  font-size: 36px;
+}
+
+.evolve__icons i {
+  font-style: normal;
+  font-size: 22px;
+  color: var(--ink-soft);
+}
+
+.overlay__panel .evolve__warning {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(194, 72, 58, 0.1);
+  color: #8a2e22;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.evolved {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 222, 130, 0.55), rgba(255, 222, 130, 0) 65%);
+  animation: evolved-glow 2.6s ease-out forwards;
+}
+
+.evolved__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 16px 26px;
+  border-radius: 20px;
+  background: var(--panel-strong);
+  box-shadow: 0 12px 40px rgba(160, 110, 20, 0.35);
+  animation: evolved-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.evolved__icon {
+  font-size: 46px;
+}
+
+.evolved__card small {
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+
+.evolved__card b {
+  font-size: 22px;
+}
+
+@keyframes evolved-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes evolved-glow {
+  0% {
+    opacity: 0;
+  }
+  15%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Kein Pulsieren; die Einblendung der neuen Stufe bleibt ruhig stehen, bis sie verschwindet. */
+  .evo-btn--alert,
+  .evolved,
+  .evolved__card {
+    animation: none !important;
   }
 }

@@ -1,13 +1,27 @@
 import type { HerdeData } from '@being-god/herde';
 import { locale, t } from '../i18n/index.ts';
-import { ruleNumbers, textOf } from '../logic/format.ts';
-import { landStyle } from '../scene/palette.ts';
+import { landName, ruleNumbers, textOf, traitName, type StageRules } from '../logic/format.ts';
+import { landStyle, stageLook } from '../scene/palette.ts';
 import { useEscape } from './useEscape.ts';
 
-/** Hilfe: Ziel, Herde, Karten (aus den Daten), lebende Welt, Landschaften mit Farbe; Einführung erneut zeigen. */
-export function Help({ data, onClose, onTutorial }: { data: HerdeData; onClose: () => void; onTutorial: () => void }) {
+/**
+ * Hilfe: Ziel, Herde (Schritte, Umkreis, Wasser- und Schutzzeiten der aktuellen Stufe), Karten (aus den Daten),
+ * Entwicklung mit Merkmalen und Stufen (aus den Daten), lebende Welt, Landschaften mit Farbe; Einführung erneut zeigen.
+ */
+export function Help({
+  data,
+  stage,
+  onClose,
+  onTutorial,
+}: {
+  data: HerdeData;
+  stage: StageRules;
+  onClose: () => void;
+  onTutorial: () => void;
+}) {
   useEscape(onClose);
-  const rules = ruleNumbers(data);
+  const rules = ruleNumbers(data, locale, stage);
+  const lands = (ids: readonly string[]) => ids.map((id) => landName(data, locale, id)).join(', ');
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" onClick={onClose}>
       <div className="overlay__panel help" onClick={(e) => e.stopPropagation()}>
@@ -30,6 +44,38 @@ export function Help({ data, onClose, onTutorial }: { data: HerdeData; onClose: 
                 <dt aria-hidden>{card.icon}</dt>
                 <dd>
                   <b>{textOf(card.name, locale)}</b> – {textOf(card.text, locale)} ({t.wildCost(card.wild)})
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <h3>{t.helpEvolution}</h3>
+          <p>{t.helpEvolutionText}</p>
+          <h4>{t.helpStages}</h4>
+          <dl className="help__list">
+            {[...data.stages.values()].map((s) => (
+              <div key={s.id}>
+                <dt aria-hidden>{stageLook(s.id).icon}</dt>
+                <dd>
+                  <b>{textOf(s.name, locale, s.id)}</b> – {t.needFood}: {lands(s.eats)}. {t.needWater}: {lands(s.water)}
+                  . {t.needShelter}: {lands(s.shelter)}.
+                  {s.blocked.length > 0 && ` ${t.needBlocked}: ${lands(s.blocked)}.`}
+                  {s.mature &&
+                    ` ${t.helpStageMature(
+                      s.mature.traits,
+                      (s.mature.oneOf ?? []).map((id) => traitName(data, locale, id)),
+                    )}`}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <h4>{t.helpTraits}</h4>
+          <dl className="help__list">
+            {[...data.traits.values()].map((trait) => (
+              <div key={trait.id}>
+                <dt aria-hidden>{trait.icon}</dt>
+                <dd>
+                  <b>{textOf(trait.name, locale, trait.id)}</b> – {textOf(trait.text, locale)} (
+                  {t.helpTraitFrom(textOf(data.experiences.get(trait.from)?.name, locale, trait.from), trait.at)})
                 </dd>
               </div>
             ))}

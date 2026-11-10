@@ -16,9 +16,36 @@ export interface RuleNumbers {
   iceMonths: number;
   /** höchstens so viele Karten auf der Hand */
   handMax: number;
-  /** Zahl der Nachbarfelder, aus denen die Herde frisst */
+  /** Zahl der Nachbarfelder, aus denen die Herde frisst (aus dem Umkreis der aktuellen Stufe) */
   neighbors: number;
+  /** Felder je Monat der aktuellen Stufe */
+  move: number;
+  /** Jahreszeiten (Namen), in denen die aktuelle Stufe Wasser bzw. Schutz braucht */
+  water: SeasonSet;
+  shelter: SeasonSet;
 }
+
+/** Jahreszeiten als Namen; `all`, wenn es alle Jahreszeiten sind. */
+export interface SeasonSet {
+  names: string[];
+  all: boolean;
+}
+
+/** Was in einer Jahreszeit gilt (für den Hinweis im Jahreskreis). */
+export interface SeasonNeeds {
+  water: boolean;
+  shelter: boolean;
+  fire: boolean;
+}
+
+const list = (names: string[]) =>
+  names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} und ${names[names.length - 1]}`;
+const orList = (names: string[]) =>
+  names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} oder ${names[names.length - 1]}`;
+/** „im Sommer“, „im Frühling und Sommer“, „das ganze Jahr“, „nie“ */
+const when = (s: SeasonSet) => (s.all ? 'das ganze Jahr' : s.names.length === 0 ? 'nie' : `im ${list(s.names)}`);
+const fields = (n: number) => `${n} ${n === 1 ? 'Feld' : 'Felder'}`;
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 const months = (n: number) => `${n} ${n === 1 ? 'Monat' : 'Monate'}`;
 
@@ -35,16 +62,25 @@ export const de = {
     `Herde ${herd}, Vorrat ${fat} von ${fatMax}, Wölfe ${wolves}`,
   // Jahreskreis
   date: (year: number, month: string) => `Jahr ${year} · ${month}`,
-  seasonHint: (season: string, r: RuleNumbers): string | undefined => {
-    const hint = (
+  /** Grundton der Jahreszeit (Gras), dazu die Bedürfnisse der aktuellen Stufe, Brandgefahr und Nachwuchs. */
+  seasonHint: (season: string, r: RuleNumbers, needs: SeasonNeeds): string | undefined => {
+    const base = (
       {
         spring: 'Gras wächst',
-        summer: 'Die Herde braucht Wasser, Altwald kann brennen',
+        summer: '',
         autumn: 'Das Gras wächst langsamer, Vorrat anfressen',
-        winter: 'Kein Gras, die Herde braucht Schutz',
+        winter: 'Kein Gras',
       } as Record<string, string>
     )[season];
-    return hint && r.birthSeason === season ? `${hint}, Nachwuchs im ${r.birthMonth}. Monat` : hint;
+    if (base === undefined) return undefined;
+    const need = [needs.water ? 'Wasser' : '', needs.shelter ? 'Schutz' : ''].filter(Boolean);
+    const parts = [
+      base,
+      need.length > 0 ? `die Herde braucht ${list(need)}` : '',
+      needs.fire ? 'Altwald kann brennen' : '',
+      r.birthSeason === season ? `Nachwuchs im ${r.birthMonth}. Monat` : '',
+    ].filter(Boolean);
+    return parts.length > 0 ? capitalize(parts.join(', ')) : undefined;
   },
   seasonHintFallback: 'Die Herde zieht weiter',
   iceHint: (n: number) => `Eiszeit: noch ${n} ${n === 1 ? 'Monat' : 'Monate'} Winter`,
@@ -53,7 +89,7 @@ export const de = {
     avoidWolves: 'weicht den Wölfen aus',
     seekWater: 'sucht Wasser',
     seekShelter: 'sucht Schutz vor der Kälte',
-    freshGrass: 'zieht zu frischem Gras',
+    freshGrass: 'zieht zu frischem Futter',
     stay: 'grast hier weiter',
   } as Record<string, string>,
   intentLine: (reason: string) => `Die Herde ${reason}`,
@@ -95,9 +131,15 @@ export const de = {
   forecastAge: (to: string, n: number, fertile: boolean) =>
     `Wird in ${n} ${n === 1 ? 'Monat' : 'Monaten'} zu ${fertile ? 'fruchtbarer ' : ''}${to}.`,
   infoWildfire: 'Trocken: kann in der Feuer-Jahreszeit von selbst brennen.',
-  infoWater: 'Wasser: Tränke für die Herde im Sommer.',
-  infoShelter: 'Gehölz: Schutz im Winter, Lebensraum der Wölfe.',
+  infoWater: (s: SeasonSet) => `Wasser: Tränke für die Herde ${when(s)}.`,
+  infoShelter: (s: SeasonSet) => `Schutz für die Herde ${when(s)}.`,
+  infoWolves: 'Gehölz: Lebensraum der Wölfe.',
   infoBlocked: 'Die Herde kann hier nicht hin.',
+  infoStageBlocked: (stage: string) => `Für diese Stufe unpassierbar (${stage}).`,
+  infoNoFood: (stage: string) => `Kein Futter für die Stufe ${stage}.`,
+  previewBlocked: 'Danach für diese Stufe unpassierbar.',
+  previewWasBlocked: 'Bisher für diese Stufe unpassierbar.',
+  previewStillBlocked: 'Für diese Stufe unpassierbar.',
   infoSparse: 'Karg: wächst nur im Frühling ein wenig.',
   infoHerd: (n: number) => `Hier steht die Herde (${n} Tiere).`,
   infoPack: (size: number, hungry: boolean) =>
@@ -131,10 +173,10 @@ export const de = {
   evIceBegan: (n: number) => `Die Eiszeit beginnt: ${n} Monate Winter.`,
   evIceEnded: (n: number) => `Die Eiszeit ist vorbei. ${n} Tiere haben überlebt.`,
   evLost: 'Die Herde ist ausgestorben.',
-  evTraitOffered: (traits: string) => `Die Herde kann ein Merkmal entwickeln: ${traits}.`,
-  evTraitPicked: (trait: string) => `Neues Merkmal: ${trait}.`,
-  evMatured: (next: string) => `Die Herde ist reif für die nächste Stufe: ${next}.`,
-  evEvolved: (stage: string) => `Die Herde wird zu: ${stage}.`,
+  evTraitOffered: (traits: string) => `Neues Merkmal zur Wahl: ${traits}.`,
+  evTraitPicked: (trait: string, effect: string) => `Die Herde entwickelt ${trait}: ${effect}`,
+  evMatured: (next: string) => `Die Herde ist reif für den Sprung: ${next}.`,
+  evEvolved: (from: string, to: string) => `Neue Stufe: ${to} (bisher ${from}).`,
   evRejected: 'Das geht hier nicht.',
   // Ende
   wonTitle: 'Geschafft',
@@ -156,13 +198,16 @@ export const de = {
   incompatibleTitle: 'Spielstand passt nicht mehr',
   incompatibleText:
     'Dein gespeicherter Spielstand passt nicht zur aktuellen Version des Spiels und wurde verworfen. Eine neue Partie hat begonnen.',
+  outdatedTitle: 'Die Herde entwickelt sich jetzt',
+  outdatedText:
+    'Neu: Die Herde sammelt Erfahrungen, bekommt Merkmale und kann sich weiterentwickeln. Dein Spielstand stammt aus einer älteren Version und passt nicht mehr – eine neue Partie hat begonnen.',
   ok: 'Weiter',
   // Einführung
   tutorial: (r: RuleNumbers) => [
     {
       icon: '🐑',
       title: 'Die Herde zieht selbst',
-      text: 'Jeden Monat zieht die Herde höchstens ein Feld weiter – zu Gras, im Sommer zu Wasser, im Winter in den Schutz von Gehölz, weg von Wölfen. Der Pfeil auf der Insel zeigt, wohin sie als Nächstes will.',
+      text: `Jeden Monat zieht die Herde höchstens ${r.move === 1 ? 'ein Feld' : `${r.move} Felder`} weiter – zu Futter, ${when(r.water)} zu Wasser, ${when(r.shelter)} in den Schutz von Gehölz, weg von Wölfen. Der Pfeil auf der Insel zeigt, wohin sie als Nächstes will.`,
     },
     {
       icon: '🌱',
@@ -173,6 +218,11 @@ export const de = {
       icon: '🌲',
       title: 'Die Welt verändert sich von selbst',
       text: 'Unbeweidete Wiese verbuscht, Busch wird Wald, Wald wird Altwald, Altwald kann im Sommer brennen, Brandfläche wird fruchtbare Wiese. Im Gehölz leben Wölfe – Waldkorridore sind Wolfswege. Tippe ein Feld, um zu sehen, was dort geschehen wird.',
+    },
+    {
+      icon: '✨',
+      title: 'Die Herde entwickelt sich',
+      text: 'Was die Herde erlebt, macht sie stärker: Kälte im Schutz, Wolfsangriffe, Brände, weite Wege. Zu Beginn einer Jahreszeit bietet sie dir Merkmale an – wähle eines oder warte. Mit genug Merkmalen ist sie reif für die nächste Stufe: Waldsammler, Wanderer, eines Tages Menschen. Jede Stufe braucht eine andere Insel, und der Sprung ist ohne Zurück. Bereite die Landschaft rechtzeitig vor – Wald wächst nicht über Nacht.',
     },
     {
       icon: '❄️',
@@ -198,7 +248,15 @@ export const de = {
     `Bring die Herde durch die Eiszeit. Sie beginnt, wenn die Wildnis ${r.wildMax} erreicht – jeder Monat und jede Karte lässt sie wachsen. Wer viel eingreift, ist besser vorbereitet, ruft die Prüfung aber früher herbei.`,
   helpHerd: 'Die Herde',
   helpHerdText: (r: RuleNumbers) =>
-    `Sie zieht jeden Monat höchstens ein Feld und frisst aus dem eigenen und den ${r.neighbors} Nachbarfeldern. Überschuss wird Vorrat, Mangel zehrt ihn auf, danach sterben Tiere. Sommer: Durst ohne Wasser in der Nähe. Winter: Kälte ohne Gehölz in der Nähe. Frühling: Nachwuchs, je nach Vorrat.`,
+    `Sie zieht jeden Monat höchstens ${r.move === 1 ? 'ein Feld' : `${r.move} Felder`} und frisst aus dem eigenen und den ${r.neighbors} Nachbarfeldern. Überschuss wird Vorrat, Mangel zehrt ihn auf, danach sterben Tiere. ${capitalize(when(r.water))}: Durst ohne Wasser in der Nähe. ${capitalize(when(r.shelter))}: Kälte ohne Schutz in der Nähe. Nachwuchs gibt es je nach Vorrat. Was Futter, Wasser und Schutz ist, hängt von der Stufe ab (siehe unten).`,
+  helpEvolution: 'Entwicklung',
+  helpEvolutionText:
+    'Die Herde zählt, was sie erlebt. Erreicht eine Erfahrung ihre Schwelle, wird ein Merkmal verfügbar; zu Beginn jeder Jahreszeit bietet die Herde einige an. Du wählst eines oder lässt das Angebot liegen – zur nächsten Jahreszeit kommt es neu. Merkmale bleiben über alle Stufen. Hat die Herde genug Merkmale (darunter ein bestimmtes), ist sie reif: Dann entscheidest du, wann sie den Sprung zur nächsten Stufe macht. Kein Zurück – und jede Stufe braucht andere Landschaft. Tippe unten rechts auf das Symbol der Herde für den Stand und die Vorschau.',
+  helpTraits: 'Merkmale',
+  helpStages: 'Stufen',
+  helpTraitFrom: (experience: string, at: number) => `ab ${at} × ${experience}`,
+  helpStageMature: (traits: number, oneOf: string[]) =>
+    `Reif mit ${traits} ${traits === 1 ? 'Merkmal' : 'Merkmalen'}${oneOf.length > 0 ? `, darunter ${orList(oneOf)}` : ''}.`,
   helpCards: 'Karten',
   helpCardsText: (r: RuleNumbers) =>
     `Zu Beginn jeder Jahreszeit ziehst du neue Karten, höchstens ${r.handMax} auf der Hand. Karte antippen, dann ein leuchtendes Feld – die Vorschau zeigt, was mit dem Feld geschieht und ob die Herde ihre Absicht ändert. Regen wirkt auf die ganze Insel.`,
@@ -209,6 +267,63 @@ export const de = {
   helpControls: 'Steuerung',
   helpControlsText:
     '„Jahreszeit spielen“ lässt die Monate bis zur nächsten Jahreszeit ablaufen, „1 Monat“ nur einen. Ziehen dreht die Insel ein wenig.',
+  // Herde und Entwicklung
+  evoOpen: 'Herde und Entwicklung',
+  evoTitle: 'Herde und Entwicklung',
+  evoNeeds: 'Bedürfnisse',
+  evoTraits: 'Merkmale',
+  evoNoTraits: 'Noch keine Merkmale. Sie entstehen aus dem, was die Herde erlebt.',
+  evoExperience: 'Erfahrung',
+  evoExperienceNext: (trait: string) => `→ ${trait}`,
+  evoExperienceDone: 'alles erreicht',
+  evoAvailable: 'zur Wahl',
+  evoForMaturity: 'für die Reife',
+  evoMaturity: 'Reife',
+  evoMissing: (traits: number, oneOf: string[] | null) => {
+    const parts: string[] = [];
+    if (traits > 0) parts.push(`noch ${traits} ${traits === 1 ? 'Merkmal' : 'Merkmale'}`);
+    if (oneOf && oneOf.length > 0)
+      parts.push(oneOf.length === 1 ? `darunter ${oneOf[0]}` : `darunter ${orList(oneOf)}`);
+    return parts.length > 0 ? `Zur Reife fehlen ${parts.join(', ')}.` : 'Reif für den Sprung.';
+  },
+  evoMature: (next: string) => `Reif! Die Herde kann zu ${next} werden.`,
+  evoLast: 'Höchste Stufe dieser Version. Weitere Stufen folgen.',
+  evoNext: (stage: string) => `Nächste Stufe: ${stage}`,
+  evoNextLabel: 'Nächste Stufe',
+  evoCurrentLabel: 'Aktuelle Stufe',
+  evoNextIntro: 'Was sie braucht – und was die Insel heute bietet:',
+  evoNextReady: 'Die Insel bietet schon alles Nötige.',
+  evoNextMissing: (what: string[]) => `Bereite die Insel vor: Es fehlt ${list(what)}.`,
+  needFood: 'Futter',
+  needWater: 'Wasser',
+  needShelter: 'Schutz',
+  needBlocked: 'Hindernis',
+  needMove: 'Wege',
+  needLost: 'Kein Futter mehr',
+  needSeason: (lands: string, s: SeasonSet) => `${lands} · ${when(s)}`,
+  needMoveText: (move: number, reach: number) =>
+    `${move === 1 ? '1 Feld' : `${move} Felder`} je Monat, Umkreis ${reach}`,
+  needNone: '–',
+  onIsland: (n: number) => (n > 0 ? `${fields(n)} auf der Insel` : 'fehlt auf der Insel'),
+  blockedOnIsland: (n: number) => (n > 0 ? `${fields(n)} unpassierbar` : 'keines auf der Insel'),
+  evolveButton: (stage: string) => `Weiterentwickeln zu ${stage}`,
+  evolveTitle: (stage: string) => `Zu ${stage} weiterentwickeln?`,
+  evolveIntro: 'Danach gelten neue Bedürfnisse:',
+  evolveWarning:
+    'Kein Zurück: Der Sprung ist endgültig. Die Merkmale bleiben, aber was der Herde bisher half, kann ihr jetzt schaden.',
+  evolveConfirm: 'Weiterentwickeln',
+  evolveCancel: 'Noch nicht',
+  evolvedTitle: 'Eine neue Stufe',
+  offerBanner: (n: number) => `✨ ${n === 1 ? 'Ein Merkmal' : `${n} Merkmale`} zur Wahl`,
+  matureBanner: (stage: string) => `⬆ Bereit für ${stage}`,
+  offerTitle: 'Ein Merkmal wählen',
+  offerIntro: 'Die Herde hat genug erlebt. Wähle ein Merkmal – es bleibt für immer.',
+  offerFrom: (experience: string, at: number) => `${experience}: ${at}`,
+  offerHelpsMaturity: 'hilft zur Reife',
+  offerPick: 'Merkmal annehmen',
+  offerLater: 'Später',
+  offerLeave:
+    'Du kannst das Angebot liegen lassen. Zur nächsten Jahreszeit wird es erneuert – höchstens ein Merkmal je Jahreszeit.',
 };
 
 export type Strings = typeof de;

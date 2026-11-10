@@ -5,7 +5,11 @@
 import type { HerdeData, HerdeEvent, Pos } from '@being-god/herde';
 import type { Strings } from '../i18n/de.ts';
 import type { Locale } from '../i18n/locale.ts';
-import { arrowOf, cardName, landName, seasonName, stageName, traitName } from './format.ts';
+import { arrowOf, cardName, landName, seasonName, stageName, textOf, traitName } from './format.ts';
+
+/** „🧥 Dichtes Fell“ */
+const traitLabel = (data: HerdeData, locale: Locale, id: string) =>
+  `${data.traits.get(id)?.icon ?? ''} ${traitName(data, locale, id)}`.trim();
 
 export type Tone = 'good' | 'bad' | 'info';
 
@@ -26,7 +30,9 @@ export type Fx =
   | { type: 'born'; x: number; y: number }
   | { type: 'loss'; x: number; y: number }
   /** `cells`: Felder mit mehr Futter (für das ruhige Einfärben bei reduzierter Bewegung) */
-  | { type: 'rain'; cells: Pos[] };
+  | { type: 'rain'; cells: Pos[] }
+  /** Sprung zur nächsten Stufe, an der Herde */
+  | { type: 'evolve'; x: number; y: number; stage: string };
 
 export interface Described {
   notices: Notice[];
@@ -153,18 +159,19 @@ export function describeEvents(
       case 'gameLost':
         say(t.evLost, 'bad');
         break;
-      // Entwicklung (H3a): nur Meldungen; Auswahl und Sprung bekommen eine eigene Oberfläche.
+      // Entwicklung: Angebot (Hinweis an der Herde, Auswahl im Spiel), Wahl mit Wirkung, Reife, Sprung mit Effekt.
       case 'traitOffered':
-        say(t.evTraitOffered(e.traits.map((id) => traitName(data, locale, id)).join(', ')), 'info', true, true);
+        say(t.evTraitOffered(e.traits.map((id) => traitLabel(data, locale, id)).join(', ')), 'info', true, true);
         break;
       case 'traitPicked':
-        say(t.evTraitPicked(traitName(data, locale, e.trait)), 'good');
+        say(t.evTraitPicked(traitName(data, locale, e.trait), textOf(data.traits.get(e.trait)?.text, locale)), 'good');
         break;
       case 'matured':
         say(t.evMatured(stageName(data, locale, e.next)), 'good');
         break;
       case 'herdEvolved':
-        say(t.evEvolved(stageName(data, locale, e.to)), 'good');
+        say(t.evEvolved(stageName(data, locale, e.from), stageName(data, locale, e.to)), 'good');
+        fx.push({ type: 'evolve', ...herdAt, stage: e.to });
         break;
     }
   }

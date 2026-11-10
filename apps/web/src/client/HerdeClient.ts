@@ -1,5 +1,6 @@
 import {
   newGame,
+  STATE_VERSION,
   step,
   validateState,
   view,
@@ -69,7 +70,9 @@ export class HerdeClient implements GameClient {
         return;
       }
       console.warn(`Spielstand verworfen: ${check.reason}`);
-      this.startup = 'incompatible';
+      // Ein Stand einer früheren Engine-Version (z. B. vor der Entwicklung der Herde) bekommt einen eigenen Hinweis.
+      const version = (loaded.game.state as { version?: unknown }).version;
+      this.startup = typeof version === 'number' && version < STATE_VERSION ? 'outdated' : 'incompatible';
     } else if (loaded.kind === 'legacy') this.startup = 'legacy';
     else if (loaded.kind === 'broken') this.startup = 'incompatible';
     this.seed = this.fixedSeed ?? this.randomSeed();
