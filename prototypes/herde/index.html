@@ -1,0 +1,622 @@
+<title>Die Herde</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap">
+<style>
+  /* Layout: eine Spalte fürs Handy – Statusleiste, Jahreskreis, Insel-Raster, Absicht der Herde, Hand, Steuerung, Details. */
+  :root {
+    --bg: #eef0e6;
+    --panel: #f8f9f3;
+    --fg: #23281f;
+    --muted: #646b5c;
+    --line: #d3d8c6;
+    --accent: #b8692a;
+    --danger: #b03a2e;
+    --ok: #3f7d3c;
+    --sel: #1f5fa8;
+    --f-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --f-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171a15; --panel: #20241d; --fg: #e6e9de; --muted: #9aa190; --line: #343a2f;
+      --accent: #e0914f; --danger: #e06a5c; --ok: #7cbf6e; --sel: #6fa8ec; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171a15; --panel: #20241d; --fg: #e6e9de; --muted: #9aa190; --line: #343a2f;
+    --accent: #e0914f; --danger: #e06a5c; --ok: #7cbf6e; --sel: #6fa8ec; color-scheme: dark;
+  }
+  /* Geländefarben sind Kartenfarben und bleiben in beiden Themen gleich. */
+  :root {
+    --t-sea: #86b3c6; --t-steppe: #d8cb98; --t-meadow: #9cc76b; --t-bush: #73a957; --t-forest: #3f7d4a;
+    --t-old: #2c5236; --t-burnt: #5e4b40; --t-river: #4f97c4; --t-rock: #9a958b;
+  }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px; line-height: 1.45;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 12px 32px;
+  }
+  .wrap { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  h1 { font-family: var(--f-display); font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 12px; margin: 0; }
+  .status { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+  .stat b { display: block; font-family: var(--f-display); font-size: 18px; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .wild-bar { height: 4px; background: var(--line); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+  .wild-bar i { display: block; height: 100%; background: var(--accent); }
+  .year { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; }
+  .year i { height: 8px; border-radius: 2px; opacity: 0.35; }
+  .year i.now { opacity: 1; outline: 2px solid var(--fg); outline-offset: 1px; }
+  .year i.past { opacity: 0.7; }
+  .s-spring { background: #a6cf6a; } .s-summer { background: #e3b53d; } .s-autumn { background: #c9773a; } .s-winter { background: #a9c4d6; } .s-ice { background: #d8eef8; }
+  .season-line { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; touch-action: manipulation; }
+  .cell {
+    position: relative; aspect-ratio: 1; border: 0; border-radius: 6px; padding: 0; cursor: pointer;
+    font-size: 15px; display: flex; align-items: center; justify-content: center; color: #1b2016;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+  }
+  .cell:focus-visible { outline: 3px solid var(--sel); outline-offset: 1px; }
+  .cell .food { position: absolute; left: 4px; right: 4px; bottom: 3px; height: 3px; background: rgba(0,0,0,0.18); border-radius: 2px; overflow: hidden; }
+  .cell .food i { display: block; height: 100%; background: #f4f0c8; }
+  .cell .herd { position: absolute; inset: 2px; border-radius: 5px; background: rgba(255,255,255,0.82); display: flex; align-items: center; justify-content: center; flex-direction: column; font-size: 13px; line-height: 1; font-weight: 600; }
+  .cell .herd small { font-size: 10px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .cell .wolf { position: absolute; top: 1px; right: 2px; font-size: 12px; }
+  .cell.target-move { box-shadow: inset 0 0 0 3px #ffffff, inset 0 0 0 5px var(--sel); }
+  .cell.valid { box-shadow: inset 0 0 0 3px var(--accent); }
+  .cell.invalid { opacity: 0.45; }
+  .cell.selected { outline: 3px solid var(--fg); outline-offset: 1px; }
+  .cell.burned { animation: burn 1.2s ease-out; }
+  @keyframes burn { from { box-shadow: inset 0 0 0 40px #e2572b; } to { box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08); } }
+  .t-sea { background: var(--t-sea); cursor: default; } .t-steppe { background: var(--t-steppe); } .t-meadow { background: var(--t-meadow); }
+  .t-bush { background: var(--t-bush); } .t-forest { background: var(--t-forest); color: #e8f0e0; } .t-old { background: var(--t-old); color: #e8f0e0; }
+  .t-burnt { background: var(--t-burnt); color: #f3e5d8; } .t-river { background: var(--t-river); } .t-rock { background: var(--t-rock); }
+  .intent { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+  .intent b { font-family: var(--f-display); }
+  .hand { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 6px; text-align: left;
+    font: inherit; color: var(--fg); cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  }
+  .card .ic { font-size: 18px; }
+  .card .nm { font-weight: 600; font-size: 12px; }
+  .card .tx { font-size: 11px; color: var(--muted); }
+  .card.sel { border-color: var(--sel); box-shadow: 0 0 0 2px var(--sel); }
+  .card:focus-visible { outline: 3px solid var(--sel); outline-offset: 2px; }
+  .empty-hand { color: var(--muted); font-size: 12px; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  button.btn {
+    font: inherit; font-weight: 600; border-radius: 8px; padding: 10px 14px; cursor: pointer; border: 1px solid var(--line);
+    background: var(--panel); color: var(--fg);
+  }
+  button.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); flex: 1; }
+  button.btn:disabled { opacity: 0.5; cursor: default; }
+  button.btn:focus-visible { outline: 3px solid var(--sel); outline-offset: 2px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 13px; }
+  .panel h2 { font-family: var(--f-display); font-size: 15px; margin: 0 0 4px; }
+  .panel p { margin: 2px 0; }
+  .log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+  .log li { color: var(--muted); }
+  .log li:first-child { color: var(--fg); }
+  .log .bad { color: var(--danger); } .log .good { color: var(--ok); }
+  details summary { cursor: pointer; font-weight: 600; }
+  details ul { padding-left: 18px; margin: 6px 0; }
+  .over { border: 2px solid var(--accent); }
+  .muted { color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .cell.burned { animation: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Die Herde</h1>
+    <p class="sub">Prototyp · Die Welt lebt weiter, die Herde wählt ihren Weg selbst.</p>
+  </header>
+
+  <section class="status" aria-label="Zustand">
+    <div class="stat"><span>Herde</span><b id="s-herd">–</b></div>
+    <div class="stat"><span>Vorrat</span><b id="s-fat">–</b></div>
+    <div class="stat"><span>Wölfe</span><b id="s-wolves">–</b></div>
+    <div class="stat"><span>Wildnis</span><b id="s-wild">–</b><div class="wild-bar"><i id="s-wild-bar"></i></div></div>
+  </section>
+
+  <section aria-label="Jahreskreis">
+    <div class="season-line"><span id="s-date">–</span><span id="s-season-hint">–</span></div>
+    <div class="year" id="year"></div>
+  </section>
+
+  <section class="grid" id="grid" aria-label="Insel"></section>
+
+  <div class="intent" id="intent" aria-live="polite">–</div>
+
+  <section aria-label="Hand">
+    <div class="hand" id="hand"></div>
+  </section>
+
+  <div class="controls">
+    <button class="btn primary" id="b-season" type="button">Jahreszeit spielen ▶▶</button>
+    <button class="btn" id="b-month" type="button">1 Monat</button>
+  </div>
+
+  <section class="panel" id="info" aria-live="polite"></section>
+
+  <section class="panel">
+    <h2>Geschehen</h2>
+    <ul class="log" id="log"></ul>
+  </section>
+
+  <details class="panel">
+    <summary>Regeln des Prototyps</summary>
+    <ul>
+      <li><b>Ziel:</b> Bring die Herde durch die Eiszeit (6 Monate Winter ohne Nachwuchs). Sie beginnt, wenn die Wildnis 100 erreicht. Jede gelegte Karte und jeder Monat lässt die Wildnis wachsen.</li>
+      <li><b>Die Herde zieht selbst</b> jeden Monat ein Feld weiter: zu Gras, im Sommer zu Wasser, im Winter in den Schutz von Gehölz, weg von Wölfen. Du lenkst nur, indem du die Landschaft formst. Fels kann sie nicht betreten.</li>
+      <li><b>Fressen:</b> Jedes Tier braucht 1 Futter pro Monat, gegrast wird auf dem eigenen und den 8 Nachbarfeldern. Überschuss wird Vorrat (höchstens doppelte Herdengröße), Mangel zehrt den Vorrat auf, danach sterben Tiere.</li>
+      <li><b>Sommer:</b> ohne Wasser in der Nähe Durst. <b>Winter:</b> ohne Gehölz (Busch, Wald, Altwald) in der Nähe Kälte. <b>Frühling:</b> Nachwuchs, je nach Vorrat.</li>
+      <li><b>Die Welt lebt:</b> Unbeweidete Wiese verbuscht nach 12 Monaten, Busch wird nach 18 Monaten Wald, Wald nach 36 Monaten Altwald. Altwald kann im Sommer brennen, Feuer springt auf Gehölz über. Brandfläche wird nach 4 Monaten zu besonders fruchtbarer Wiese.</li>
+      <li><b>Wölfe</b> leben im Gehölz, wandern hungrig durch Gehölz-Korridore auf die Herde zu und reißen Tiere in ihrer Nähe. Satte Rudel wachsen und gründen neue, hungrige verkümmern.</li>
+      <li><b>Karten:</b> Zu Beginn jeder Jahreszeit ziehst du 2 Karten (höchstens 5 auf der Hand). Karte antippen, dann ein hervorgehobenes Feld. Regen wirkt sofort auf die ganze Insel.</li>
+    </ul>
+    <p class="muted">Alle Zahlen sind grobe Platzhalter. Neue Partie mit anderem Zufall: Knopf unten.</p>
+  </details>
+
+  <div class="controls">
+    <button class="btn" id="b-new" type="button">Neue Partie</button>
+  </div>
+</div>
+
+<script id="logic">
+/* ---------- Regeln (rein, ohne DOM) ---------- */
+const COLS = 7, ROWS = 9;
+const MAP = [
+  '~..S..~',
+  '.WW.FF~',
+  '.W.RFA.',
+  '..WR.F.',
+  'S..R..S',
+  '.W.R.W.',
+  '..BR...',
+  '~.WRW.~',
+  '~~.R.~~',
+];
+const CHAR = { '~': 'sea', '.': 'steppe', W: 'meadow', B: 'bush', F: 'forest', A: 'old', X: 'burnt', R: 'river', S: 'rock' };
+const TER = {
+  sea:    { name: 'Meer', walk: false, max: 0, grow: [0, 0, 0, 0], icon: '' },
+  steppe: { name: 'Steppe', walk: true, max: 1, grow: [1, 0, 0, 0], icon: '' },
+  meadow: { name: 'Wiese', walk: true, max: 6, grow: [3, 2, 1, 0], icon: '🌾' },
+  bush:   { name: 'Busch', walk: true, max: 2, grow: [1, 1, 1, 0], icon: '🌿', shelter: true, wood: true },
+  forest: { name: 'Wald', walk: true, max: 1, grow: [1, 1, 0, 0], icon: '🌲', shelter: true, wood: true },
+  old:    { name: 'Altwald', walk: true, max: 0, grow: [0, 0, 0, 0], icon: '🌳', shelter: true, wood: true },
+  burnt:  { name: 'Brandfläche', walk: true, max: 0, grow: [0, 0, 0, 0], icon: '▪' },
+  river:  { name: 'Fluss', walk: true, max: 0, grow: [0, 0, 0, 0], icon: '💧', water: true },
+  rock:   { name: 'Fels', walk: false, max: 0, grow: [0, 0, 0, 0], icon: '🪨' },
+};
+const SEASONS = [
+  { id: 'spring', name: 'Frühling' }, { id: 'summer', name: 'Sommer' },
+  { id: 'autumn', name: 'Herbst' }, { id: 'winter', name: 'Winter' },
+];
+const MONTHS = ['März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember', 'Januar', 'Februar'];
+const P = {
+  meadowOvergrow: 12, bushToForest: 18, forestToOld: 36, burntToMeadow: 4, fertileMonths: 24, fertileBonus: 2,
+  oldFireChance: 0.05, fireSpread: 0.45, eatFactor: 1.5, fatCap: 2, birthRate: 0.3, thirstLoss: 0.1, coldLoss: 0.1,
+  wildPerMonth: 0.5, wildMax: 100, iceMonths: 6, packFedToGrow: 4, packStarve: 8, packMaxSize: 3, packSpawnChance: 0.04,
+  drawPerSeason: 2, handMax: 5,
+};
+const CARDS = {
+  seed:      { name: 'Wiese säen', icon: '🌱', text: 'Steppe oder Brand wird Wiese', on: ['steppe', 'burnt'], wild: 2, weight: 3 },
+  trees:     { name: 'Bäume pflanzen', icon: '🌳', text: 'Steppe oder Wiese wird Busch', on: ['steppe', 'meadow'], wild: 2, weight: 3 },
+  spring:    { name: 'Quelle', icon: '💧', text: 'Steppe oder Wiese wird Wasser', on: ['steppe', 'meadow'], wild: 2, weight: 2 },
+  rock:      { name: 'Fels', icon: '🪨', text: 'Sperrt ein Feld für die Herde', on: ['steppe', 'meadow', 'bush'], wild: 1, weight: 2 },
+  lightning: { name: 'Blitz', icon: '⚡', text: 'Gehölz brennt, Feuer springt über', on: ['bush', 'forest', 'old'], wild: 1, weight: 2 },
+  rain:      { name: 'Regen', icon: '🌧', text: 'Ganze Insel: Gras +2', global: true, wild: 2, weight: 2 },
+};
+
+function rngFrom(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+/* Zufall bleibt im Zustand (rs), damit ein Spielstand reproduzierbar ist. */
+function rand(s) { const r = rngFrom(s.rs)(); s.rs = (s.rs + 0x9e3779b9) >>> 0; return r; }
+
+const idx = (x, y) => y * COLS + x;
+const inside = (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
+function around(x, y, r = 1) {
+  const out = [];
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (inside(x + dx, y + dy)) out.push([x + dx, y + dy]);
+  return out;
+}
+const cheb = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+const seasonOf = (s) => (s.ice > 0 ? 3 : Math.floor((s.month % 12) / 3));
+const isWinter = (s) => seasonOf(s) === 3;
+const maxFood = (c) => TER[c.t].max + (c.t === 'meadow' && c.fert > 0 ? P.fertileBonus : 0);
+
+function newGame(seed) {
+  const s = { seed, rs: seed >>> 0, month: 0, ice: 0, iceDone: false, over: null, wild: 8, cells: [], log: [], hand: [], burned: [] };
+  for (let y = 0; y < ROWS; y++)
+    for (let x = 0; x < COLS; x++) {
+      const t = CHAR[MAP[y][x]];
+      const c = { t, food: 0, age: 0, fert: 0, grazed: 0 };
+      if (t === 'meadow') { c.food = 3 + Math.floor(rand(s) * 3); c.grazed = -Math.floor(rand(s) * 8); }
+      if (t === 'steppe') c.food = 1;
+      if (t === 'bush') c.age = Math.floor(rand(s) * 10);
+      if (t === 'forest') { c.age = Math.floor(rand(s) * 30); c.food = 1; }
+      s.cells.push(c);
+    }
+  s.herd = { x: 1, y: 5, n: 10, fat: 10, thirst: 0, trail: [] };
+  s.packs = [{ x: 5, y: 2, size: 1, fed: 0, hungry: 0 }];
+  for (let i = 0; i < 3; i++) s.hand.push(drawCard(s));
+  say(s, 'Frühling im Jahr 1. Die Herde erwacht auf der westlichen Wiese.');
+  return s;
+}
+function say(s, text, tone = '') { s.log.unshift({ text, tone, month: s.month }); s.log.length = Math.min(s.log.length, 40); }
+function drawCard(s) {
+  const ids = Object.keys(CARDS);
+  const total = ids.reduce((a, id) => a + CARDS[id].weight, 0);
+  let r = rand(s) * total;
+  for (const id of ids) { r -= CARDS[id].weight; if (r < 0) return id; }
+  return ids[0];
+}
+const cell = (s, x, y) => s.cells[idx(x, y)];
+const near = (s, x, y, pred) => around(x, y).some(([a, b]) => pred(cell(s, a, b)));
+const packsNear = (s, x, y) => s.packs.filter((p) => cheb(p, { x, y }) <= 1).reduce((a, p) => a + p.size, 0);
+
+/* Wohin will die Herde? Rein und ohne Zufall, damit die Anzeige stimmt. */
+function intention(s) {
+  const h = s.herd;
+  const season = seasonOf(s);
+  const want = Math.ceil(h.n * P.eatFactor);
+  let best = null;
+  for (const [x, y] of around(h.x, h.y)) {
+    const c = cell(s, x, y);
+    if (!TER[c.t].walk) continue;
+    const food = Math.min(want, around(x, y).reduce((a, [u, v]) => a + cell(s, u, v).food, 0));
+    const water = season === 1 && near(s, x, y, (k) => TER[k.t].water) ? h.n * 0.6 : 0;
+    const shelter = season === 3 && near(s, x, y, (k) => TER[k.t].shelter) ? h.n * 0.6 : 0;
+    const wolves = packsNear(s, x, y) * h.n * 0.8;
+    const recent = h.trail.some((p) => p.x === x && p.y === y) ? h.n * 0.3 : 0;
+    const stay = x === h.x && y === h.y ? 0.01 : 0;
+    const score = food + water + shelter - wolves - recent + stay;
+    if (!best || score > best.score) best = { x, y, score, food, water, shelter, wolves };
+  }
+  const here = best;
+  let why = 'grast hier weiter';
+  if (packsNear(s, h.x, h.y) > 0 && here.wolves < packsNear(s, h.x, h.y) * h.n * 0.8) why = 'weicht den Wölfen aus';
+  else if (here.water > 0 && !near(s, h.x, h.y, (k) => TER[k.t].water)) why = 'sucht Wasser';
+  else if (here.shelter > 0 && !near(s, h.x, h.y, (k) => TER[k.t].shelter)) why = 'sucht Schutz vor der Kälte';
+  else if (here.x !== h.x || here.y !== h.y) why = 'zieht zu frischem Gras';
+  return { x: here.x, y: here.y, why };
+}
+
+function ignite(s, x, y) {
+  const c = cell(s, x, y);
+  if (!TER[c.t].wood) return 0;
+  c.t = 'burnt'; c.food = 0; c.age = 0;
+  s.burned.push(idx(x, y));
+  s.packs = s.packs.filter((p) => !(p.x === x && p.y === y));
+  let n = 1;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const a = x + dx, b = y + dy;
+    if (inside(a, b) && TER[cell(s, a, b).t].wood && rand(s) < P.fireSpread) n += ignite(s, a, b);
+  }
+  return n;
+}
+
+function playCard(s, handIndex, x, y) {
+  const id = s.hand[handIndex];
+  const card = CARDS[id];
+  if (!card || s.over) return false;
+  if (card.global) {
+    for (const c of s.cells) if (['meadow', 'steppe', 'bush', 'forest'].includes(c.t)) c.food = Math.min(maxFood(c), c.food + 2);
+    say(s, 'Regen: Das Gras schießt auf der ganzen Insel.', 'good');
+  } else {
+    const c = cell(s, x, y);
+    if (!card.on.includes(c.t)) return false;
+    if (id === 'rock' && s.herd.x === x && s.herd.y === y) return false;
+    if (id === 'seed') { c.t = 'meadow'; c.food = 2; c.grazed = s.month; c.age = 0; }
+    if (id === 'trees') { c.t = 'bush'; c.food = 0; c.age = 0; }
+    if (id === 'spring') { c.t = 'river'; c.food = 0; }
+    if (id === 'rock') { c.t = 'rock'; c.food = 0; s.packs = s.packs.filter((p) => !(p.x === x && p.y === y)); }
+    if (id === 'lightning') { s.burned = []; const n = ignite(s, x, y); say(s, `Blitz: ${n} Feld${n > 1 ? 'er' : ''} brennen nieder.`, 'bad'); }
+    else say(s, `${card.name} gelegt.`);
+  }
+  s.hand.splice(handIndex, 1);
+  s.wild += card.wild;
+  return true;
+}
+
+function nextMonth(s) {
+  if (s.over) return;
+  s.burned = [];
+  const season = seasonOf(s);
+  const h = s.herd;
+  // 1. Wachstum
+  for (const c of s.cells) c.food = Math.min(maxFood(c), c.food + TER[c.t].grow[season]);
+  // 2. Die Welt verändert sich von selbst (Sukzession)
+  for (const c of s.cells) {
+    c.age++;
+    if (c.fert > 0) c.fert--;
+    if (c.t === 'meadow' && s.month - c.grazed >= P.meadowOvergrow) { c.t = 'bush'; c.age = 0; c.food = Math.min(c.food, 2); }
+    else if (c.t === 'bush' && c.age >= P.bushToForest) { c.t = 'forest'; c.age = 0; c.food = Math.min(c.food, 1); }
+    else if (c.t === 'forest' && c.age >= P.forestToOld) { c.t = 'old'; c.age = 0; c.food = 0; }
+    else if (c.t === 'burnt' && c.age >= P.burntToMeadow) { c.t = 'meadow'; c.age = 0; c.fert = P.fertileMonths; c.food = 3; c.grazed = s.month; }
+  }
+  // 3. Feuer im Sommer
+  if (season === 1) {
+    for (let y = 0; y < ROWS; y++)
+      for (let x = 0; x < COLS; x++)
+        if (cell(s, x, y).t === 'old' && rand(s) < P.oldFireChance) {
+          const n = ignite(s, x, y);
+          say(s, `Waldbrand! ${n} Feld${n > 1 ? 'er' : ''} brennen.`, 'bad');
+        }
+  }
+  let dead = 0;
+  if (s.burned.includes(idx(h.x, h.y))) { const d = Math.ceil(h.n * 0.2); dead += d; say(s, `Das Feuer erfasst die Herde: −${d}.`, 'bad'); }
+  // 4. Die Herde zieht
+  const go = intention(s);
+  h.trail.push({ x: h.x, y: h.y }); if (h.trail.length > 4) h.trail.shift();
+  h.x = go.x; h.y = go.y;
+  // 5. Fressen
+  const want = Math.ceil(h.n * P.eatFactor);
+  let eaten = 0;
+  const spots = around(h.x, h.y).map(([x, y]) => cell(s, x, y)).sort((a, b) => b.food - a.food);
+  for (const c of spots) {
+    if (eaten >= want) break;
+    const take = Math.min(c.food, want - eaten);
+    if (take > 0) { c.food -= take; eaten += take; c.grazed = s.month; }
+  }
+  if (eaten >= h.n) h.fat = Math.min(h.n * P.fatCap, h.fat + eaten - h.n);
+  else {
+    const def = h.n - eaten;
+    if (h.fat >= def) h.fat -= def;
+    else { const d = Math.ceil((def - h.fat) / 2); h.fat = 0; dead += d; say(s, `Hunger: −${d} Tiere.`, 'bad'); }
+  }
+  // 6. Durst und Kälte
+  if (season === 1) {
+    if (near(s, h.x, h.y, (k) => TER[k.t].water)) h.thirst = 0;
+    else if (++h.thirst >= 2) { const d = Math.ceil(h.n * P.thirstLoss); dead += d; say(s, `Durst: −${d} Tiere.`, 'bad'); }
+  } else h.thirst = 0;
+  if (season === 3 && !near(s, h.x, h.y, (k) => TER[k.t].shelter)) {
+    const d = Math.ceil(h.n * P.coldLoss); dead += d; say(s, `Kälte ohne Schutz: −${d} Tiere.`, 'bad');
+  }
+  // 7. Wölfe
+  for (const p of s.packs) {
+    if (cheb(p, h) <= 1 && h.n - dead > 0) {
+      const k = Math.min(p.size, h.n - dead); dead += k; p.fed += k; p.hungry = 0;
+      say(s, `Wölfe reißen ${k} Tier${k > 1 ? 'e' : ''}.`, 'bad');
+    } else p.hungry++;
+  }
+  // Hungrige Rudel ziehen durch Gehölz auf die Herde zu
+  for (const p of s.packs) {
+    if (p.hungry < 2) continue;
+    let best = null;
+    for (const [x, y] of around(p.x, p.y)) {
+      if (!TER[cell(s, x, y).t].wood || s.packs.some((q) => q !== p && q.x === x && q.y === y)) continue;
+      const d = cheb({ x, y }, h);
+      if (d < cheb(p, h) && (!best || d < best.d)) best = { x, y, d };
+    }
+    if (best) { p.x = best.x; p.y = best.y; }
+  }
+  const born = [];
+  for (const p of s.packs) {
+    if (p.fed >= P.packFedToGrow) {
+      p.fed -= P.packFedToGrow;
+      if (p.size < P.packMaxSize) p.size++;
+      else {
+        const spots2 = around(p.x, p.y, 3).filter(([x, y]) => TER[cell(s, x, y).t].wood && !s.packs.some((q) => q.x === x && q.y === y));
+        if (spots2.length) { const [x, y] = spots2[Math.floor(rand(s) * spots2.length)]; born.push({ x, y, size: 1, fed: 0, hungry: 0 }); say(s, 'Ein neues Wolfsrudel gründet sich.', 'bad'); }
+      }
+    }
+    if (p.hungry >= P.packStarve) { p.size--; p.hungry = Math.floor(P.packStarve / 2); if (p.size <= 0) say(s, 'Ein Wolfsrudel ist verhungert.', 'good'); }
+  }
+  s.packs = s.packs.filter((p) => p.size > 0 && TER[cell(s, p.x, p.y).t].wood).concat(born);
+  const woods = s.cells.filter((c) => TER[c.t].wood).length;
+  if (s.packs.length === 0 && woods >= 5 && rand(s) < P.packSpawnChance) {
+    const spots3 = []; s.cells.forEach((c, i) => { if (c.t === 'old' || c.t === 'forest') spots3.push(i); });
+    if (spots3.length) { const i = spots3[Math.floor(rand(s) * spots3.length)]; s.packs.push({ x: i % COLS, y: Math.floor(i / COLS), size: 1, fed: 0, hungry: 0 }); say(s, 'Wölfe wandern in die Wälder ein.', 'bad'); }
+  }
+  h.n = Math.max(0, h.n - dead);
+  h.fat = Math.min(h.fat, h.n * P.fatCap);
+  // 8. Nachwuchs (Frühling, 2. Monat)
+  if (s.ice === 0 && s.month % 12 === 1 && h.n > 0) {
+    const b = Math.floor(h.n * P.birthRate * Math.min(1, h.fat / h.n));
+    if (b > 0) { h.n += b; h.fat = Math.max(0, h.fat - b); say(s, `Frühling: ${b} Kälber geboren.`, 'good'); }
+  }
+  // 9. Wildnis und Eiszeit
+  s.wild += P.wildPerMonth;
+  if (s.ice > 0) {
+    s.ice--;
+    if (s.ice === 0 && h.n > 0) { s.over = 'won'; s.iceDone = true; say(s, `Die Eiszeit ist vorbei. ${h.n} Tiere haben überlebt.`, 'good'); }
+  } else if (!s.iceDone && s.wild >= P.wildMax) {
+    s.ice = P.iceMonths; say(s, 'Die Eiszeit beginnt: 6 Monate Winter.', 'bad');
+  }
+  if (h.n <= 0 && !s.over) { s.over = 'lost'; say(s, 'Die Herde ist ausgestorben.', 'bad'); }
+  s.month++;
+  // 10. Neue Jahreszeit: Karten ziehen
+  if (!s.over && s.month % 3 === 0) {
+    let drawn = 0;
+    for (let i = 0; i < P.drawPerSeason; i++) if (s.hand.length < P.handMax) { s.hand.push(drawCard(s)); drawn++; }
+    if (s.month % 12 === 0) say(s, `Jahr ${s.month / 12 + 1} beginnt.`);
+  }
+}
+
+/* Was passiert hier von selbst? Für die Feld-Info. */
+function cellFuture(s, c) {
+  if (c.t === 'meadow') { const m = P.meadowOvergrow - (s.month - c.grazed); return m <= 3 ? `Verbuscht in ${Math.max(1, m)} Monat${m > 1 ? 'en' : ''}, wenn nicht beweidet.` : 'Bleibt Wiese, solange sie beweidet wird.'; }
+  if (c.t === 'bush') return `Wird in ${P.bushToForest - c.age} Monaten Wald.`;
+  if (c.t === 'forest') return `Wird in ${P.forestToOld - c.age} Monaten Altwald.`;
+  if (c.t === 'old') return 'Trocken: kann im Sommer brennen.';
+  if (c.t === 'burnt') return `Wird in ${P.burntToMeadow - c.age} Monaten fruchtbare Wiese.`;
+  if (c.t === 'river') return 'Wasser für den Sommer.';
+  if (c.t === 'rock') return 'Die Herde kann hier nicht hin.';
+  if (c.t === 'steppe') return 'Karg: wächst nur im Frühling ein wenig.';
+  return '';
+}
+if (typeof window !== 'undefined') window.Herde = { newGame, nextMonth, playCard, intention, cellFuture, seasonOf, maxFood, cell, CARDS, TER, SEASONS, MONTHS, COLS, ROWS, P };
+if (typeof module !== 'undefined') module.exports = { newGame, nextMonth, playCard, intention, CARDS, P };
+</script>
+
+<script>
+/* ---------- Oberfläche ---------- */
+(() => {
+  const H = window.Herde;
+  const $ = (id) => document.getElementById(id);
+  let s;
+  let selCard = null;
+  let selCell = null;
+  let busy = false;
+
+  function start(data) {
+    s = data && data.state ? data.state : H.newGame((Date.now() % 1e9) | 0);
+    selCard = null; selCell = null;
+    render();
+  }
+  window.claude?.hot?.snapshot?.(() => ({ state: s }));
+
+  function validFor(cardId, x, y) {
+    const card = H.CARDS[cardId];
+    if (!card || card.global) return false;
+    const c = H.cell(s, x, y);
+    if (!card.on.includes(c.t)) return false;
+    if (cardId === 'rock' && s.herd.x === x && s.herd.y === y) return false;
+    return true;
+  }
+
+  function render() {
+    const h = s.herd;
+    $('s-herd').textContent = h.n;
+    $('s-fat').textContent = `${h.fat}/${h.n * H.P.fatCap}`;
+    $('s-wolves').textContent = s.packs.reduce((a, p) => a + p.size, 0);
+    $('s-wild').textContent = s.ice > 0 ? 'Eiszeit' : `${Math.min(100, Math.floor(s.wild))}`;
+    $('s-wild-bar').style.width = `${Math.min(100, s.wild)}%`;
+    const season = H.seasonOf(s);
+    const moy = s.month % 12;
+    $('s-date').textContent = `Jahr ${Math.floor(s.month / 12) + 1} · ${H.MONTHS[moy]}`;
+    $('s-season-hint').textContent = s.ice > 0 ? `Eiszeit: noch ${s.ice} Monate` : ['Frühling: Gras wächst, Nachwuchs', 'Sommer: Herde braucht Wasser', 'Herbst: Vorrat anfressen', 'Winter: kein Gras, Herde braucht Schutz'][season];
+    $('year').innerHTML = Array.from({ length: 12 }, (_, i) => {
+      const cls = s.ice > 0 ? 's-ice' : `s-${H.SEASONS[Math.floor(i / 3)].id}`;
+      return `<i class="${cls} ${i === moy ? 'now' : i < moy ? 'past' : ''}" title="${H.MONTHS[i]}"></i>`;
+    }).join('');
+
+    const go = s.over ? null : H.intention(s);
+    const grid = $('grid');
+    grid.innerHTML = '';
+    for (let y = 0; y < H.ROWS; y++)
+      for (let x = 0; x < H.COLS; x++) {
+        const c = H.cell(s, x, y);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `cell t-${c.t}`;
+        const max = H.maxFood(c);
+        const isHerd = h.x === x && h.y === y;
+        const pack = s.packs.find((p) => p.x === x && p.y === y);
+        let html = isHerd ? '' : H.TER[c.t].icon;
+        if (max > 0) html += `<span class="food"><i style="width:${(c.food / max) * 100}%"></i></span>`;
+        if (pack) html += `<span class="wolf">🐺${pack.size > 1 ? pack.size : ''}</span>`;
+        if (isHerd) html += `<span class="herd">🐑<small>${h.n}</small></span>`;
+        b.innerHTML = html;
+        b.setAttribute('aria-label', `${H.TER[c.t].name}${isHerd ? ', Herde' : ''}${pack ? ', Wölfe' : ''}, Futter ${c.food}`);
+        if (c.t === 'sea') b.tabIndex = -1;
+        if (go && go.x === x && go.y === y && !isHerd) b.classList.add('target-move');
+        if (selCard !== null) b.classList.add(validFor(s.hand[selCard], x, y) ? 'valid' : 'invalid');
+        if (selCell && selCell.x === x && selCell.y === y) b.classList.add('selected');
+        if (s.burned.includes(y * H.COLS + x)) b.classList.add('burned');
+        b.addEventListener('click', () => onCell(x, y));
+        grid.appendChild(b);
+      }
+
+    const dir = go ? arrow(go.x - h.x, go.y - h.y) : '';
+    $('intent').innerHTML = s.over
+      ? (s.over === 'won' ? `<b>Geschafft.</b> ${h.n} Tiere haben die Eiszeit überlebt.` : '<b>Die Herde ist ausgestorben.</b>')
+      : `<b>Die Herde ${go.why}</b> ${dir}`;
+    $('intent').classList.toggle('over', !!s.over);
+
+    const hand = $('hand');
+    hand.innerHTML = '';
+    if (s.hand.length === 0) hand.innerHTML = '<p class="empty-hand">Keine Karten. Neue gibt es zu Beginn der nächsten Jahreszeit.</p>';
+    s.hand.forEach((id, i) => {
+      const card = H.CARDS[id];
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `card${selCard === i ? ' sel' : ''}`;
+      b.innerHTML = `<span class="ic">${card.icon}</span><span class="nm">${card.name}</span><span class="tx">${card.text}</span>`;
+      b.addEventListener('click', () => onCard(i));
+      hand.appendChild(b);
+    });
+
+    $('b-season').disabled = busy || !!s.over;
+    $('b-month').disabled = busy || !!s.over;
+    renderInfo();
+    $('log').innerHTML = s.log.slice(0, 8).map((l) => `<li class="${l.tone}">${l.text}</li>`).join('');
+  }
+
+  function arrow(dx, dy) {
+    if (dx === 0 && dy === 0) return '(bleibt)';
+    return { '-1,-1': '↖', '0,-1': '↑', '1,-1': '↗', '-1,0': '←', '1,0': '→', '-1,1': '↙', '0,1': '↓', '1,1': '↘' }[`${dx},${dy}`];
+  }
+
+  function renderInfo() {
+    const info = $('info');
+    if (selCard !== null) {
+      const card = H.CARDS[s.hand[selCard]];
+      if (card.global) {
+        info.innerHTML = `<h2>${card.icon} ${card.name}</h2><p>${card.text}. Wildnis +${card.wild}.</p><div class="controls"><button class="btn primary" type="button" id="b-play">Ausspielen</button><button class="btn" type="button" id="b-cancel">Abbrechen</button></div>`;
+        $('b-play').addEventListener('click', () => { H.playCard(s, selCard, 0, 0); selCard = null; render(); });
+      } else {
+        info.innerHTML = `<h2>${card.icon} ${card.name}</h2><p>${card.text}. Tippe ein hervorgehobenes Feld. Wildnis +${card.wild}.</p><div class="controls"><button class="btn" type="button" id="b-cancel">Abbrechen</button></div>`;
+      }
+      $('b-cancel').addEventListener('click', () => { selCard = null; render(); });
+      return;
+    }
+    if (selCell) {
+      const c = H.cell(s, selCell.x, selCell.y);
+      const max = H.maxFood(c);
+      const pack = s.packs.find((p) => p.x === selCell.x && p.y === selCell.y);
+      info.innerHTML = `<h2>${H.TER[c.t].icon} ${H.TER[c.t].name}${c.fert > 0 ? ' (fruchtbar)' : ''}</h2>
+        ${max > 0 ? `<p>Futter ${c.food} von ${max}</p>` : ''}
+        <p>${H.cellFuture(s, c)}</p>
+        ${pack ? `<p>Wolfsrudel der Stärke ${pack.size}${pack.hungry >= 2 ? ', hungrig: zieht durchs Gehölz zur Herde' : ''}.</p>` : ''}`;
+      return;
+    }
+    info.innerHTML = '<h2>Feld antippen</h2><p class="muted">Zeigt Futter und was dort von selbst passieren wird. Karte antippen, um sie zu legen.</p>';
+  }
+
+  function onCard(i) { selCard = selCard === i ? null : i; selCell = null; render(); }
+  function onCell(x, y) {
+    if (selCard !== null) {
+      const id = s.hand[selCard];
+      if (!H.CARDS[id].global && validFor(id, x, y)) { H.playCard(s, selCard, x, y); selCard = null; }
+      render();
+      return;
+    }
+    selCell = selCell && selCell.x === x && selCell.y === y ? null : { x, y };
+    render();
+  }
+
+  function stepMonths(n) {
+    if (busy || s.over) return;
+    selCard = null;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    busy = true;
+    let left = n;
+    const tick = () => {
+      H.nextMonth(s);
+      left--;
+      if (left > 0 && !s.over) { render(); setTimeout(tick, reduce ? 60 : 450); }
+      else { busy = false; render(); }
+    };
+    tick();
+  }
+  $('b-month').addEventListener('click', () => stepMonths(1));
+  $('b-season').addEventListener('click', () => stepMonths(3 - (s.month % 3)));
+  $('b-new').addEventListener('click', () => start(null));
+
+  const hot = window.claude?.hot;
+  if (hot?.ready) hot.ready(start); else start(hot?.data ?? {});
+})();
+</script>
