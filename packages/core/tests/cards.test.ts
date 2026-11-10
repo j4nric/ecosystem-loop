@@ -139,21 +139,21 @@ describe('Dürre, Sturm, Frost (Weltkarten)', () => {
     expect(zone(b.state, 'plains').stats).toMatchObject({ moisture: 0, vegetation: 2 });
   });
 
-  it('Sturm: Wald Vegetation −1 und Totholz +1, Küste Salz +1, Berge Schnee −1; Baumsturz bei Vegetation ≥ 4', () => {
+  it('Sturm: Wald Vegetation −1 und Totholz +1, Küste Salz +1, Berge Schnee −1; Baumsturz bei Vegetation ≥ 5', () => {
     const s = game({ hand: ['storm', 'storm'] });
     s.round = 2;
-    setStats(s, 'forest', { vegetation: 4, light: 2, deadwood: 2 });
+    setStats(s, 'forest', { vegetation: 5, light: 2, deadwood: 2 });
     setStats(s, 'plains', { vegetation: 5 }); // Buschland: kein Baumsturz
     const { state, events } = play(s, 'storm');
     expect(firedAt(events)).toEqual(['windthrow@forest']);
-    expect(zone(state, 'forest').stats).toMatchObject({ vegetation: 3, light: 4, deadwood: 4 });
+    expect(zone(state, 'forest').stats).toMatchObject({ vegetation: 4, light: 4, deadwood: 4 });
     expect(zone(state, 'forest').lastDisturbance).toBe(2);
     expect(zone(state, 'plains').stats.vegetation).toBe(5);
     expect(zone(state, 'coast').stats.salt).toBe(rest('coast').salt! + 1);
     expect(zone(state, 'mountains').stats.snow).toBe(rest('mountains').snow! - 1);
 
-    // Vegetation 3 (Grenze): kein Baumsturz; Bergwald mit Vegetation 4 dagegen schon.
-    setStats(state, 'mountains', { vegetation: 4 });
+    // Wald mit Vegetation 4 (Grenze): kein Baumsturz; Bergwald mit Vegetation 5 dagegen schon.
+    setStats(state, 'mountains', { vegetation: 5 });
     expect(firedAt(play(state, 'storm').events)).toEqual(['windthrow@mountains']);
   });
 

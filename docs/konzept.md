@@ -288,7 +288,7 @@ Schwellen der Wetterkarten (je Zone, nur in den genannten Geografien):
 | Gewitter | 🔥 Feuer     | Wald, Flachland        | vorher Feuchte ≤ 1 und Vegetation ≥ 1 | Vegetation auf 0, Totholz +3, Störung           |
 | Gewitter | 🌊 Flut      | Berge, Flachland       | vorher Feuchte ≥ 4                    | Vegetation −1, Nachbarzonen Feuchte +1, Störung |
 | Dürre    | 🥀 Welke     | überall                | nachher Feuchte = 0                   | Vegetation −1                                   |
-| Sturm    | 🌲 Baumsturz | Wald, Berge (Bergwald) | vorher Vegetation ≥ 4                 | Licht +2, Totholz +1, Störung                   |
+| Sturm    | 🌲 Baumsturz | Wald, Berge (Bergwald) | vorher Vegetation ≥ 5                 | Licht +2, Totholz +1, Störung                   |
 | Frost    | 🧊 Eisbruch  | Wald                   | vorher Feuchte ≥ 4                    | Vegetation −1, Totholz +1                       |
 
 Die Idee je Karte:

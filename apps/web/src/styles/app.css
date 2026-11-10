@@ -404,9 +404,6 @@ textarea {
     opacity 0.15s;
 }
 
-.card--force {
-  --card-color: #6f86b5;
-}
 .card--gift {
   --card-color: #6aa64f;
 }

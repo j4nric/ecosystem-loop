@@ -108,7 +108,7 @@ cards:
         icon: '🌲'
         when:
           - { any: [{ geography: forest }, { geography: mountains }] }
-          - { stat: vegetation, gte: 4 }
+          - { stat: vegetation, gte: 5 }
         disturbance: true
         effects:
           - { adjust: light, by: 2 }

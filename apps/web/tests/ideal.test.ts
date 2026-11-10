@@ -112,7 +112,7 @@ describe('Einfärbung der Zielwahl', () => {
       uid: 1,
       card: 'storm',
       name: 'Sturm',
-      category: 'force',
+      category: 'weather',
       cost: 0,
       text: '',
       playable: true,

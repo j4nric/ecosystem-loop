@@ -446,7 +446,10 @@ export function playValue(data: GameData, state: GameState, p: Play, w: Profile,
   const after = step(data, state, { type: 'play', uid: p.uid, targets: p.targets }).state;
   const card = data.cards.get(p.card)!;
   return (
-    evaluate(data, after, w) - (base ?? evaluate(data, state, w)) + (card.category === 'force' ? w.force : 0) + w.cycle
+    evaluate(data, after, w) -
+    (base ?? evaluate(data, state, w)) +
+    (card.category === 'weather' && card.cost === 0 ? w.force : 0) +
+    w.cycle
   );
 }
 

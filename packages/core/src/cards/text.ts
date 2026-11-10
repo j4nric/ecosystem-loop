@@ -388,13 +388,16 @@ function worldShort(data: GameData, card: Card, locale: Locale): string {
   const effects = [...card.effects, ...worldGeographies(data, card).flatMap((g) => card.byGeography[g]!)];
   const tokens = [...new Set(effects.map((e) => worldToken(data, card, e, locale)))];
   const wrap = (text: string) => tpl(data, 'short.world', locale, { text });
+  // Gefahren-Symbole sind wichtiger als die letzte Wirkung: Platz für sie reservieren.
+  const icons = card.triggers.map((t) => t.icon).join(' ');
+  const max = icons ? SHORT_MAX - charCount(icons) - 1 : SHORT_MAX;
   let text = wrap(tokens.join(tpl(data, 'join.world', locale)));
   const join = tpl(data, 'join.effects', locale);
-  if (charCount(text) > SHORT_MAX) text = wrap(tokens.join(join));
-  if (charCount(text) > SHORT_MAX) {
+  if (charCount(text) > max) text = wrap(tokens.join(join));
+  if (charCount(text) > max) {
     let fit = tokens[0] ?? '';
     for (const t of tokens.slice(1)) {
-      if (charCount(wrap(`${fit}${join}${t} …`)) > SHORT_MAX) break;
+      if (charCount(wrap(`${fit}${join}${t} …`)) > max) break;
       fit = `${fit}${join}${t}`;
     }
     text = wrap(`${fit} …`);
@@ -408,7 +411,6 @@ function worldShort(data: GameData, card: Card, locale: Locale): string {
           })
         : card.name[locale],
     );
-  const icons = card.triggers.map((t) => t.icon).join(' ');
   if (icons && charCount(`${text} ${icons}`) <= SHORT_MAX) text = `${text} ${icons}`;
   return text;
 }
