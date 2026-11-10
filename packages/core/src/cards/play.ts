@@ -6,6 +6,7 @@ import type { GameEvent, GameState } from '../state.ts';
 import { populationOf } from '../population.ts';
 import { getZone, markDisturbance, RuleError } from '../world.ts';
 import { applyEffect, type EffectContext } from './effects.ts';
+import { isWorldCard, resolveWorldCard } from './worldcard.ts';
 
 export function getCard(data: GameData, id: string): Card {
   const c = data.cards.get(id);
@@ -38,7 +39,7 @@ export function slotOptions(data: GameData, state: GameState, slot: Slot, bound:
   return candidates.filter((zone) => holdsAll(slot.when, { data, state, zone })).map((z) => z.id);
 }
 
-/** Alle vollständigen Zielbelegungen einer Karte (leer = keine gültigen Ziele). */
+/** Alle vollständigen Zielbelegungen einer Karte (leer = keine gültigen Ziele; Weltkarte ohne Wahl: genau `{}`). */
 export function bindingsFor(data: GameData, state: GameState, card: Card): Targets[] {
   const out: Targets[] = [];
   const walk = (i: number, acc: Targets) => {
@@ -69,7 +70,7 @@ export function validateTargets(data: GameData, state: GameState, card: Card, ta
   return bound;
 }
 
-/** Schwellen der Karte, die mit diesen Zielen zum Zeitpunkt `check` auslösen. */
+/** Schwellen einer Zonenkarte, die mit diesen Zielen zum Zeitpunkt `check` auslösen (Weltkarten: worldcard.ts). */
 export function firingTriggers(
   data: GameData,
   state: GameState,
@@ -84,7 +85,7 @@ export function firingTriggers(
   });
 }
 
-/** Wendet Grundeffekte und Schwellen einer Karte an (ohne Kosten, Hand und Ablage). */
+/** Wendet Grundeffekte und Schwellen einer Karte an (ohne Kosten, Hand und Ablage). Weltkarten: alle Zonen. */
 export function resolveCard(
   data: GameData,
   state: GameState,
@@ -93,6 +94,7 @@ export function resolveCard(
   emit: (e: GameEvent) => void,
   cause = `card:${card.id}`,
 ): void {
+  if (isWorldCard(card)) return resolveWorldCard(data, state, card, bound, emit, cause);
   const ctx: EffectContext = { data, state, emit, bind: bound, cause };
   const before = firingTriggers(data, state, card, bound, 'before');
   for (const e of card.effects) applyEffect(ctx, e);

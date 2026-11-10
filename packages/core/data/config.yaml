@@ -139,6 +139,11 @@ texts:
   short.scope.neighbors: { de: '{text} nebenan', en: '{text} next door' }
   short.scope.area: { de: '{text} ringsum', en: '{text} all around' }
   short.scope.all: { de: '{text} überall', en: '{text} everywhere' }
+  # Weltkarten (reach: world): „Alle Zonen: Berge Schnee +1 · Wald Feuchte +1“, Kurztext „🌍 Schnee↑ · Feuchte↑“
+  world: { de: 'Alle Zonen: {effects}', en: 'All zones: {effects}' }
+  world.geo: { de: '{geo} {effects}', en: '{geo} {effects}' }
+  join.world: { de: ' · ', en: ' · ' }
+  short.world: { de: '🌍 {text}', en: '🌍 {text}' }
   slot.zone: { de: 'Zone', en: 'Zone' }
   slot.neighbor: { de: 'Nachbarzone', en: 'Neighbouring zone' }
   slot.species: { de: 'Art', en: 'Species' }

@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { applyEffect } from '../cards/effects.ts';
 import { getCard, resolveCard } from '../cards/play.ts';
+import { isWorldCard, resolveWorldCard } from '../cards/worldcard.ts';
 import { holdsAll } from '../conditions.ts';
 import type { Effect, EventDef, GameData } from '../schema/index.ts';
 import type { ForecastState, GameEvent, GameState } from '../state.ts';
@@ -65,9 +66,12 @@ export function occur(data: GameData, state: GameState, f: ForecastState, emit: 
       for (const e of rule.effects) applyEffect({ data, state, emit, bind: { ...bind, self: z.id }, cause }, scaled(e));
   }
   for (const e of def.effects) applyEffect({ data, state, emit, bind, cause }, scaled(e));
-  if (def.card && zone !== null) {
+  if (def.card) {
     const card = getCard(data, def.card);
-    resolveCard(data, state, card, { [card.slots[0]!.id]: zone }, emit, cause);
+    // AUSLEGUNG: Eine Weltkarte als Ereignis wirkt nur auf die Zielzone, wenn das Ereignis eine hat
+    // (Blitzschlag trifft eine Zone), sonst auf alle Zonen – je Geografie wie beim Ausspielen.
+    if (isWorldCard(card)) resolveWorldCard(data, state, card, {}, emit, cause, zone === null ? undefined : [zone]);
+    else if (zone !== null) resolveCard(data, state, card, { [card.slots[0]!.id]: zone }, emit, cause);
   }
 }
 

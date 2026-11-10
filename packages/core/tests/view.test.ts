@@ -276,7 +276,7 @@ describe('Bedingungen und Texte', () => {
 
   it('Ereignis-Ursachen sind im Log nachvollziehbar', () => {
     const g = game({ hand: ['rain'], breath: 1 });
-    const { events } = play(g, 'rain', { zone: 'forest' });
+    const { events } = play(g, 'rain', {});
     expect(events).toContainEqual({
       type: 'statChanged',
       zone: 'forest',

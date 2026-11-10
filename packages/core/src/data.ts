@@ -4,6 +4,7 @@
  */
 import type { z } from 'zod';
 import { LOG_KEYS, TEXT_KEYS } from './cards/text.ts';
+import { isWorldCard, isZonal } from './cards/worldcard.ts';
 import { lifeParams } from './population.ts';
 import { breathParams } from './rules/breath.ts';
 import { evolutionParams } from './rules/evolution.ts';
@@ -27,6 +28,8 @@ import {
   type Effect,
   type FormRef,
   type GameData,
+  type Scope,
+  WORLD_ZONE,
 } from './schema/index.ts';
 
 /** Rohdaten je Datei (geparstes YAML). */
@@ -278,6 +281,12 @@ function checkReferences(d: GameData, p: string[]): void {
   for (const card of d.cards.values()) {
     const where = `Karte ${card.id}`;
     if (!d.categories.has(card.category)) p.push(`${where}: unbekannte Kategorie ${card.category}`);
+    if (isWorldCard(card)) {
+      checkWorldCard(d, card, where, p, checkCond, checkEffects);
+      continue;
+    }
+    if (Object.keys(card.byGeography).length > 0)
+      p.push(`${where}: byGeography gibt es nur für Weltkarten (reach: world)`);
     const { zones: slots, species: speciesSlots } = checkSlots(d, card, where, p);
     for (const s of card.slots) {
       if ('when' in s) checkCond(where, s.when);
@@ -310,9 +319,16 @@ function checkReferences(d: GameData, p: string[]): void {
     if (e.card !== undefined) {
       const card = d.cards.get(e.card);
       if (!card) p.push(`${where}: unbekannte Karte ${e.card}`);
-      else if (card.slots.length !== 1 || card.slots[0]!.kind !== 'zone')
-        p.push(`${where}: Karte ${e.card} braucht genau einen Zonen-Slot`);
-      if (e.target?.pick !== 'random') p.push(`${where}: Karte braucht target.pick: random`);
+      else if (isWorldCard(card)) {
+        // Weltkarte: ohne Zielzone auf allen Zonen, mit Zielzone nur dort. Niemand trifft eine Wahl.
+        if (card.slots.length > 0) p.push(`${where}: Weltkarte ${e.card} darf keine Wahl haben`);
+        if (e.target !== undefined && e.target.pick !== 'random')
+          p.push(`${where}: Weltkarte braucht target.pick: random oder kein target`);
+      } else {
+        if (card.slots.length !== 1 || card.slots[0]!.kind !== 'zone')
+          p.push(`${where}: Karte ${e.card} braucht genau einen Zonen-Slot`);
+        if (e.target?.pick !== 'random') p.push(`${where}: Karte braucht target.pick: random`);
+      }
     }
   }
 
@@ -379,6 +395,114 @@ function checkReferences(d: GameData, p: string[]): void {
   }
 }
 
+type CheckCond = (where: string, cs: readonly Condition[]) => void;
+type CheckEffects = (
+  where: string,
+  es: readonly Effect[],
+  names: ReadonlySet<string>,
+  speciesSlots?: ReadonlySet<string>,
+) => void;
+
+/** Werte, die ein Effekt benutzt (adjust, set, restore eines Werts, transfer und into). */
+function statsUsed(e: Effect): string[] {
+  if ('adjust' in e) return [e.adjust];
+  if ('set' in e) return [e.set];
+  if ('restore' in e) return e.restore === 'all' ? [] : [e.restore];
+  if ('transfer' in e) return [e.transfer, e.into];
+  return [];
+}
+
+/** Effektarten, die als Ausstrahlung (scope ≠ self) gleichzeitig und damit reihenfolgefest wirken. */
+const SIMULTANEOUS = ['adjust', 'population', 'disturb'] as const;
+
+/**
+ * Weltkarten (reach: world): keine Zonen-/Art-Slots, Zone als "self", Geografien in byGeography bekannt,
+ * Werte passend zur Geografie, Ausstrahlungen nur reihenfolgefest.
+ */
+function checkWorldCard(
+  d: GameData,
+  card: Card,
+  where: string,
+  p: string[],
+  checkCond: CheckCond,
+  checkEffects: CheckEffects,
+): void {
+  for (const s of card.slots) {
+    if (s.kind !== 'choice') p.push(`${where}: Weltkarte darf keinen ${s.kind}-Slot haben (${s.id})`);
+    if (s.id === WORLD_ZONE) p.push(`${where}: Slot-Id ${WORLD_ZONE} ist für die Zone reserviert`);
+  }
+  checkSlots(d, card, where, p);
+  const names = new Set([WORLD_ZONE]);
+  const own = (g: string) => new Set([...d.commonStats, d.geographies.get(g)?.special ?? '']);
+  const mapGeos = [...new Set(d.zones.map((z) => z.geography))];
+  /** Geografien, die ein Effekt von Zonen der Geografien `from` aus mit `scope` erreicht. */
+  const reached = (from: readonly string[], scope: Scope): string[] => {
+    if (scope === 'self') return [...from];
+    if (scope === 'all') return mapGeos;
+    const out = new Set<string>(scope === 'area' ? from : []);
+    for (const z of d.zones)
+      if (from.includes(z.geography))
+        for (const n of z.neighbors) out.add(d.zones.find((x) => x.id === n)?.geography ?? '');
+    return [...out];
+  };
+  /**
+   * Prüft Werte und Reihenfolgefestigkeit. `from` = Geografien der Zonen, in denen die Effekte wirken.
+   * Auf die Zone selbst muss jede dieser Geografien den Wert haben, eine Ausstrahlung mindestens eine erreichte.
+   */
+  const checkWorldEffects = (at: string, es: readonly Effect[], from: readonly string[], perZone: boolean) => {
+    for (const e of es) {
+      if (!isZonal(e)) {
+        if (perZone) p.push(`${at}: zonenloser Effekt (${Object.keys(e)[0]}) gehört in effects, nicht byGeography`);
+        continue;
+      }
+      const scope: Scope = 'scope' in e ? e.scope : 'self';
+      const kind = Object.keys(e)[0]!;
+      if (scope !== 'self' && !SIMULTANEOUS.some((k) => k in e))
+        p.push(
+          `${at}: ${kind} mit scope ${scope} ist auf Weltkarten nicht reihenfolgefest (nur ${SIMULTANEOUS.join(', ')})`,
+        );
+      const geos = reached(from, scope);
+      for (const st of statsUsed(e)) {
+        if (!d.stats.has(st)) continue;
+        if (scope === 'self') {
+          const missing = geos.filter((g) => !own(g).has(st));
+          if (missing.length > 0) p.push(`${at}: Wert ${st} gibt es nicht in ${missing.join(', ')}`);
+        } else if (!geos.some((g) => own(g).has(st))) p.push(`${at}: Wert ${st} erreicht keine Zone, die ihn hat`);
+      }
+    }
+  };
+
+  checkEffects(where, card.effects, names);
+  checkWorldEffects(where, card.effects, mapGeos, false);
+  for (const s of card.slots)
+    if (s.kind === 'choice')
+      for (const o of s.options) {
+        checkEffects(`${where} Option ${o.id}`, o.effects, names);
+        checkWorldEffects(`${where} Option ${o.id}`, o.effects, mapGeos, false);
+      }
+  for (const [g, es] of Object.entries(card.byGeography)) {
+    const at = `${where} byGeography.${g}`;
+    if (!d.geographies.has(g)) {
+      p.push(`${at}: unbekannte Geografie ${g}`);
+      continue;
+    }
+    checkEffects(at, es, names);
+    checkWorldEffects(at, es, [g], true);
+  }
+  for (const t of card.triggers) {
+    const at = `${where} Schwelle ${t.id}`;
+    if (t.at !== WORLD_ZONE) p.push(`${at}: at=${t.at} – Schwellen von Weltkarten gelten je Zone (at weglassen)`);
+    checkCond(at, t.when);
+    checkEffects(at, t.effects, names);
+    // Schwellen können auf Geografien beschränkt sein (when); ihre Werte werden daher nur als bekannt geprüft.
+    for (const e of t.effects) {
+      const scope: Scope = 'scope' in e ? e.scope : 'self';
+      if (isZonal(e) && scope !== 'self' && !SIMULTANEOUS.some((k) => k in e))
+        p.push(`${at}: ${Object.keys(e)[0]} mit scope ${scope} ist auf Weltkarten nicht reihenfolgefest`);
+    }
+  }
+}
+
 /** Slots einer Karte: Reihenfolge, Verweise, Art-Filter. Liefert die Zonen- und Art-Slots. */
 function checkSlots(d: GameData, card: Card, where: string, p: string[]) {
   const zones = new Set<string>();
@@ -406,7 +530,7 @@ function checkSlots(d: GameData, card: Card, where: string, p: string[]) {
 }
 
 /** Stammbaum: Vorfahren, Lebensräume, Nahrung, Gaben, Jagd. */
-function checkSpecies(d: GameData, p: string[], checkCond: (where: string, cs: readonly Condition[]) => void): void {
+function checkSpecies(d: GameData, p: string[], checkCond: CheckCond): void {
   for (const sp of d.species.values()) {
     const where = `Art ${sp.id}`;
     if (d.stats.has(sp.id)) p.push(`${where}: Id ist schon ein Wert`);

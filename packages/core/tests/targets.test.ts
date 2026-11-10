@@ -144,12 +144,12 @@ describe('Ansicht: Zielbereiche und Ideal', () => {
 
 describe('Vorschau: Richtung zum Ideal', () => {
   it('toward better/worse/neutral und idealDistance vorher/nachher', () => {
-    const s = game({ hand: ['rain', 'dry_wind', 'sun'] });
+    const s = game({ hand: ['rain_call', 'dry_wind', 'sun'] });
     setStats(s, 'coast', { moisture: 3 });
     setStats(s, 'forest', { moisture: 5 });
     const before = structuredClone(s);
 
-    const better = preview(data, s, { uid: uidOf(s, 'rain'), targets: { zone: 'coast' } });
+    const better = preview(data, s, { uid: uidOf(s, 'rain_call'), targets: { zone: 'coast' } });
     expect(better.changes).toEqual([expect.objectContaining({ zone: 'coast', stat: 'moisture', toward: 'better' })]);
     const coastDist = idealDistance(data.ideals.get('coast')!, s.zones.find((z) => z.id === 'coast')!.stats);
     expect(better.idealDistance).toEqual([{ zone: 'coast', before: coastDist, after: coastDist - 1 }]);

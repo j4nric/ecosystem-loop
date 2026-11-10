@@ -76,7 +76,7 @@ describe('Partie-Aufbau', () => {
 describe('Rundenablauf (Konzept 3)', () => {
   it('Natur-Phase läuft in der Reihenfolge aus config.yaml, dann Bilanz und neue Runde', () => {
     const s = game({ hand: ['rain'], draw: ['sun', 'sun', 'sun', 'sun'] });
-    const a = play(s, 'rain', { zone: 'plains' });
+    const a = play(s, 'rain', {});
     const { state, events } = endTurn(a.state);
     const order = events
       .map((e) => e.type)
@@ -132,7 +132,7 @@ describe('Kartenzwang und Hand (Konzept 3, 6.2)', () => {
     const s = game({ hand: ['rain', 'healing'], breath: 1 });
     expect(canEndTurn(data, s)).toBe(false);
     expect(() => endTurn(s)).toThrow(/Kartenzwang/);
-    const a = play(s, 'rain', { zone: 'forest' });
+    const a = play(s, 'rain', {});
     expect(canEndTurn(data, a.state)).toBe(true);
   });
 
@@ -158,14 +158,14 @@ describe('Kartenzwang und Hand (Konzept 3, 6.2)', () => {
       r.config.turn.maxPlays = 1;
     });
     const s = game({ d, hand: ['rain', 'sun'], breath: 5 });
-    const a = play(s, 'rain', { zone: 'forest' }, d);
+    const a = play(s, 'rain', {}, d);
     expect(legalPlays(d, a.state)).toEqual([]);
     expect(() => play(a.state, 'sun', { zone: 'forest' }, d)).toThrow(/keine Karte mehr/);
   });
 
   it('nach der Runde wird auf 4 nachgezogen; ungespielte Karten bleiben auf der Hand', () => {
     const s = game({ hand: ['rain', 'healing'], draw: ['sun', 'seeds', 'frost', 'storm'], breath: 3 });
-    const a = play(s, 'rain', { zone: 'forest' });
+    const a = play(s, 'rain', {});
     const { state } = endTurn(a.state);
     expect(state.hand.map((c) => c.card)).toEqual(['healing', 'sun', 'seeds', 'frost']);
     expect(state.drawPile.map((c) => c.card)).toEqual(['storm']);
@@ -175,12 +175,12 @@ describe('Kartenzwang und Hand (Konzept 3, 6.2)', () => {
   it('ist der Stapel leer, wird die Ablage gemischt', () => {
     const s = game({ hand: ['rain', 'sun', 'seeds', 'frost'], draw: [], breath: 5 });
     let cur = s;
-    for (const [card, zone] of [
-      ['rain', 'forest'],
-      ['sun', 'forest'],
-      ['seeds', 'forest'],
+    for (const [card, targets] of [
+      ['rain', {}],
+      ['sun', { zone: 'forest' }],
+      ['seeds', { zone: 'forest' }],
     ] as const)
-      cur = play(cur, card, { zone }).state;
+      cur = play(cur, card, targets).state;
     expect(cur.discardPile).toHaveLength(3);
     const { state, events } = endTurn(cur);
     expect(events).toContainEqual({ type: 'deckReshuffled', cards: 3 });
