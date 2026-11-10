@@ -62,6 +62,91 @@ export const de = {
   newGame: 'Neue Partie',
   newGameConfirm: 'Neue Partie beginnen? Der aktuelle Spielstand geht verloren.',
   mockBadge: 'Vorschau-Daten',
+  popDelta: (species: string, delta: number) => `${species} ${delta > 0 ? '+' : '−'}${Math.abs(delta)}`,
+  toastOvergrazed: (zone: string, foods: string) => `Übernutzung in ${zone}: ${foods} leergefressen`,
+  toastHunted: (zone: string, losses: string) => `Menschen jagen in ${zone}: ${losses}`,
+  toastPopulationShift: (card: string, zone: string, changes: string) => `${card} in ${zone}: ${changes}`,
+  toastRejected: 'Zug nicht möglich',
+  incompatibleTitle: 'Spielstand passt nicht',
+  incompatibleText:
+    'Dieser Spielstand passt nicht zur aktuellen Version des Spiels. Eine neue Partie behebt das; der alte Stand geht verloren.',
+  later: 'Später',
+  // Zielwahl
+  chooseSpecies: (label: string) => `Art wählen: ${label}`,
+  speciesOptions: 'Mögliche Arten',
+  // Ziehen
+  dragHint: 'Auf eine leuchtende Zone ziehen',
+  dragInvalid: (zone: string) => `${zone}: hier nicht möglich`,
+  dragMoreTargets: 'Nach dem Loslassen folgen weitere Ziele.',
+  dragCardLabel: (name: string) => `${name} – antippen oder auf die Insel ziehen`,
+  // Hilfe
+  help: 'Hilfe',
+  helpTitle: 'Kurz erklärt',
+  helpForms: 'Formen einer Zone',
+  helpFormText: {
+    ideal: 'Die beste Lebensgrundlage. Bringt jede Runde Harmonie und lässt die Zone bis Stufe 5 wachsen.',
+    normal: 'Eine gewöhnliche Form mit eigenem Lebensraum für bestimmte Arten.',
+    degraded: 'Verödet: kaum Leben, kostet jede Runde Harmonie. Mit Gaben zurück ins Gleichgewicht bringen.',
+    disturbance: 'Störung: ein Ausnahmezustand (z. B. Gletscher, Hochwasser). Erzeugt Druck – Chance und Risiko.',
+  },
+  helpSymbols: 'Symbole',
+  helpSymbolList: [
+    ['✦', 'Odem – bezahlt Karten. Fließt jede Runde zu, mehr bei hoher Harmonie.'],
+    ['★', 'Zonenstufe 1–5. Steigt, wenn eine Zone stabil bleibt; Stufe 4–5 nur in Idealform.'],
+    ['▲ ▼', 'Trend der Harmonie seit der letzten Runde.'],
+    ['🔥', 'Gefahr auf einer Zone: eine Handkarte würde dort eine Schwelle auslösen.'],
+    ['◯', 'Leuchtender Ring: gültiges Ziel der gewählten Karte.'],
+  ] as [string, string][],
+  helpCreatures: 'Figuren auf der Insel',
+  helpCreaturesText: 'Jede Figur steht für einen Teil des Bestands einer Art.',
+  groups: {
+    water: 'Wasserleben',
+    insect: 'Insekten',
+    reptile: 'Amphibien und Reptilien',
+    bird: 'Vögel',
+    mammal: 'Säugetiere',
+    human: 'Menschen',
+  },
+  helpFog: 'Sinkt die Harmonie, wird die Insel blasser und Nebel zieht auf.',
+  showTutorial: 'Einführung zeigen',
+  // Einführung
+  tutorialSkip: 'Überspringen',
+  tutorialNext: 'Weiter',
+  tutorialBack: 'Zurück',
+  tutorialDone: 'Los geht’s',
+  tutorialStep: (n: number, total: number) => `Schritt ${n} von ${total}`,
+  tutorial: [
+    {
+      icon: '🏝',
+      title: 'Du bist der Gott dieser Insel',
+      text: 'Du setzt keine Tiere und Pflanzen – du formst Licht, Wasser und Boden. Das Leben folgt von selbst. Halte die Welt so lange wie möglich im Gleichgewicht.',
+    },
+    {
+      icon: '✦',
+      title: 'Odem',
+      text: 'Karten kosten Odem (oben links). Jede Runde fließt neuer Odem zu – mehr, je gesünder die Welt ist. Naturgewalten kosten nichts, sind aber grob.',
+    },
+    {
+      icon: '🂠',
+      title: 'Karten spielen',
+      text: 'Tippe eine Karte und dann eine leuchtende Zone – oder zieh die Karte direkt auf die Insel. Vor dem Bestätigen siehst du die Wirkung.',
+    },
+    {
+      icon: '⛰',
+      title: 'Formen',
+      text: 'Aus den Werten einer Zone ergibt sich ihre Form: Idealformen bringen Harmonie und Lebensraum, verödete Formen kosten Harmonie. Tippe eine Zone für Details.',
+    },
+    {
+      icon: '⏭',
+      title: 'Runde beenden',
+      text: 'Spiel mindestens eine Karte, dann „Runde beenden“. Jetzt wirkt die Natur: Jahreszeit, Heilung, Fressen, Wachsen, Evolution.',
+    },
+    {
+      icon: '♥',
+      title: 'Harmonie',
+      text: 'Der Balken oben ist das Lebenszeichen der Welt. Fällt er auf 0, kollabiert sie. Bei niedriger Harmonie wird die Insel blass und neblig. Hilfe findest du jederzeit unter „?“.',
+    },
+  ],
 };
 
 export type Strings = typeof de;

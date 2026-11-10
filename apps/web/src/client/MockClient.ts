@@ -276,6 +276,14 @@ export class MockClient implements GameClient {
     return this.state.zones.map((z) => z.geo.id);
   }
 
+  speciesName(speciesId: string): string {
+    for (const zone of this.view.zones) {
+      const pop = zone.populations.find((p) => p.species === speciesId);
+      if (pop) return pop.name;
+    }
+    return speciesId;
+  }
+
   preview(uid: number, targets: Targets): PreviewView | null {
     const entry = this.state.hand.find((h) => h.uid === uid);
     const zone = this.state.zones.find((z) => z.geo.id === targets['zone']);

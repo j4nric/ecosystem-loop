@@ -20,5 +20,5 @@
       "@core/api": ["../../packages/core/src/api.ts"]
     }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "tests", "vite.config.ts"]
 }

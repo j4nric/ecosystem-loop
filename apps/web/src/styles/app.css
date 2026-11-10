@@ -779,12 +779,6 @@ textarea {
 }
 
 /* ---------- Kartenzug: Vorschau vor dem Bestätigen ---------- */
-.hud__menu {
-  flex: none;
-  background: var(--panel);
-  box-shadow: 0 2px 10px rgba(60, 50, 90, 0.12);
-  font-size: 20px;
-}
 .play-preview {
   display: flex;
   flex-direction: column;
@@ -858,4 +852,303 @@ textarea {
 }
 .sheet--compact {
   max-height: 40dvh;
+}
+
+/* ---------- Phase 5: Szene-Beschriftungen als DOM-Schicht ---------- */
+.scene__canvas {
+  position: absolute !important;
+  inset: 0;
+}
+.scene__mist {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, rgba(236, 233, 242, 0.75), rgba(220, 216, 230, 0.95) 70%);
+  transition: opacity 1.6s ease;
+}
+.zone-labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.zone-label-pos {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  will-change: transform;
+}
+.zone-label-pos > .zone-label {
+  transform: translate(-50%, -50%);
+}
+
+/* ---------- HUD-Knöpfe ---------- */
+.hud__buttons {
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+.hud__buttons .icon-btn {
+  flex: none;
+  background: var(--panel);
+  box-shadow: 0 2px 10px rgba(60, 50, 90, 0.12);
+  font-size: 19px;
+  font-weight: 700;
+}
+.harmony--low {
+  animation: harmony-low 2.4s ease-in-out infinite;
+}
+@keyframes harmony-low {
+  50% {
+    background: rgba(255, 220, 214, 0.75);
+  }
+}
+
+/* ---------- Art-Auswahl ---------- */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 2px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap);
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--panel-strong);
+  box-shadow:
+    0 2px 8px rgba(60, 50, 90, 0.12),
+    inset 0 0 0 1px var(--line);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chip small {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.chip.is-selected {
+  background: var(--gold);
+  box-shadow: 0 2px 10px rgba(180, 130, 30, 0.35);
+}
+
+/* ---------- Karte ziehen ---------- */
+.card {
+  touch-action: none; /* Ziehen statt Scrollen; die Hand scrollt nicht */
+}
+.card.is-dragging {
+  opacity: 0.35;
+  transform: scale(0.94);
+}
+.drag-ghost {
+  position: fixed;
+  z-index: 30;
+  top: 0;
+  left: 0;
+  width: 92px;
+  min-height: 0;
+  padding: 18px 8px 8px;
+  pointer-events: none;
+  opacity: 0.94;
+  box-shadow:
+    0 12px 28px rgba(40, 30, 70, 0.32),
+    inset 0 3px 0 var(--card-color, #999);
+  animation: ghost-in 0.12s ease-out;
+}
+.drag-ghost.is-valid {
+  box-shadow:
+    0 0 0 3px var(--gold),
+    0 12px 28px rgba(40, 30, 70, 0.32),
+    inset 0 3px 0 var(--card-color, #999);
+}
+@keyframes ghost-in {
+  from {
+    opacity: 0;
+  }
+}
+.dock.is-dragging .dock__bar,
+.dock.is-dragging .hand {
+  opacity: 0.4;
+}
+.drag-panel {
+  position: fixed;
+  z-index: 25;
+  left: calc(var(--safe-left) + 10px);
+  right: calc(var(--safe-right) + 10px);
+  bottom: calc(var(--safe-bottom) + 10px);
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--panel-strong);
+  box-shadow: 0 -4px 24px rgba(40, 30, 70, 0.2);
+  pointer-events: none;
+}
+.drag-panel__hint {
+  margin: 0;
+  font-weight: 600;
+  text-align: center;
+}
+.drag-panel__hint.is-bad {
+  color: var(--low);
+}
+.drag-panel__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 16px;
+}
+.drag-panel p {
+  margin: 0;
+}
+
+/* ---------- Hilfe ---------- */
+.overlay__panel.help {
+  display: flex;
+  flex-direction: column;
+  max-width: 420px;
+  max-height: 100%;
+  padding: 16px 16px 14px;
+  text-align: left;
+}
+.help__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.help__head h2 {
+  margin: 0;
+}
+.help__body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.help__body h3 {
+  margin: 14px 0 6px;
+  font-size: 15px;
+}
+.help__list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.help__list div {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+.help__list dt {
+  font-weight: 700;
+}
+.help__list dd {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.help__list--symbols div {
+  grid-template-columns: 44px 1fr;
+}
+.help__list--symbols dt {
+  font-size: 18px;
+  text-align: center;
+}
+.overlay__panel.help p {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+.help__actions,
+.overlay__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* ---------- Einführung ---------- */
+.overlay--tutorial {
+  align-items: flex-end;
+  padding-bottom: calc(var(--safe-bottom) + 24px);
+}
+.overlay__panel.tutorial {
+  animation: tutorial-in 0.25s ease-out;
+}
+@keyframes tutorial-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.tutorial__icon {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.tutorial__step {
+  margin: 0 0 4px !important;
+  font-size: 12px !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tutorial__dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.tutorial__dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(60, 50, 90, 0.18);
+}
+.tutorial__dots i.on {
+  background: var(--accent);
+}
+.tutorial__actions {
+  display: flex;
+  gap: 8px;
+}
+.overlay .tutorial__actions .btn {
+  width: auto;
+  flex: 1;
+}
+.overlay .tutorial__actions .btn--primary {
+  flex: 1.4;
+}
+.overlay .tutorial__actions .btn--ghost {
+  flex: none;
+  padding: 0 8px;
+}
+.btn--ghost {
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-soft);
 }

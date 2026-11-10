@@ -1,4 +1,4 @@
-import { ConeGeometry, CylinderGeometry, IcosahedronGeometry, RingGeometry, SphereGeometry } from 'three';
+import { BoxGeometry, ConeGeometry, CylinderGeometry, IcosahedronGeometry, RingGeometry, SphereGeometry } from 'three';
 import { HEX_RADIUS } from './layout.ts';
 
 /** Geteilte Geometrien – einmal angelegt, von allen Kacheln benutzt. */
@@ -17,11 +17,24 @@ export const GEO = {
   crown: new ConeGeometry(0.2, 0.62, 6, 1),
   trunk: new CylinderGeometry(0.035, 0.05, 0.24, 5),
   rock: new IcosahedronGeometry(1, 0),
-  body: new ConeGeometry(0.06, 0.18, 6, 1),
-  head: new SphereGeometry(0.05, 6, 4),
+  // Figuren der Arten (je Gruppe eine Geometrie ⇒ ein Draw Call je Gruppe)
+  fish: new ConeGeometry(0.045, 0.17, 4, 1),
+  insect: new IcosahedronGeometry(0.06, 0),
+  reptile: new BoxGeometry(0.19, 0.05, 0.075),
+  bird: new ConeGeometry(0.11, 0.05, 3, 1),
+  mammal: new BoxGeometry(0.17, 0.09, 0.08),
+  human: new CylinderGeometry(0.03, 0.048, 0.19, 6),
+  head: new SphereGeometry(0.045, 6, 4),
+  // Hervorhebung „neues Leben“
+  beam: new CylinderGeometry(0.55, 0.75, 2.4, 6, 1, true),
 };
 
 // Ring liegt flach und hat Spitzen in Richtung ±z wie die Kacheln
 GEO.ring.rotateX(-Math.PI / 2);
 GEO.ring.rotateY(Math.PI / 2);
 GEO.bottom.rotateX(Math.PI);
+// Fisch liegt waagrecht mit der Spitze nach +x, Vogel als flaches Dreieck mit Spitze nach +x
+GEO.fish.rotateZ(-Math.PI / 2);
+GEO.bird.rotateZ(-Math.PI / 2);
+GEO.bird.rotateX(Math.PI / 2);
+GEO.beam.translate(0, 1.2, 0);
