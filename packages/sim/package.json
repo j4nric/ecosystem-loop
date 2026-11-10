@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Bots, Balancing-Simulation und Konsolen-Prototyp",
+  "scripts": {
+    "balance": "tsx src/cli/balance.ts"
+  },
   "dependencies": {
     "@being-god/core": "*"
   }

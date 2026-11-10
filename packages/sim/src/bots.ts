@@ -1,9 +1,10 @@
 /**
- * Bots für den Absturz-Test (bis Phase 6 kein Messinstrument fürs Balancing).
+ * Bots für Absturz-Test und Balancing (Phase 6).
  *
  * - random: spielt zufällige legale Karten und beendet die Runde zufällig, sobald erlaubt.
  * - greedy: bewertet jeden legalen Zug per Vorschau (Formwechsel nach Harmonie-Gewicht, Störungen,
  *   Nähe zum Ruhewert, Kosten) und spielt den besten, solange er sich lohnt oder Kartenzwang herrscht.
+ * - gardener, evolver, disruptor: Strategie-Bots mit Vorausschau der sichtbaren Natur-Phase (strategy.ts).
  */
 import {
   canEndTurn,
@@ -16,9 +17,10 @@ import {
   type GameState,
   type Play,
 } from '@being-god/core';
+import { chooseByProfile, PROFILES, type StrategyName } from './strategy.ts';
 
-export type BotName = 'random' | 'greedy';
-export const BOT_NAMES: readonly BotName[] = ['random', 'greedy'];
+export type BotName = 'random' | 'greedy' | StrategyName;
+export const BOT_NAMES: readonly BotName[] = ['random', 'greedy', 'gardener', 'evolver', 'disruptor'];
 
 export interface Bot {
   name: BotName;
@@ -27,7 +29,10 @@ export interface Bot {
 }
 
 export function createBot(name: BotName, seed: string | number = 1): Bot {
-  return name === 'random' ? randomBot(seed) : greedyBot();
+  if (name === 'random') return randomBot(seed);
+  if (name === 'greedy') return greedyBot();
+  const profile = PROFILES[name];
+  return { name, choose: (data, state) => chooseByProfile(data, state, profile) };
 }
 
 const play = (p: Play): Action => ({ type: 'play', uid: p.uid, targets: p.targets });

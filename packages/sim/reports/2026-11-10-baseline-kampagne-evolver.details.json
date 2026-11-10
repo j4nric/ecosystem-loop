@@ -1,0 +1,115 @@
+{
+  "games": [
+    {
+      "rounds": 81,
+      "score": 301.5,
+      "tier": 3,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 51.7
+    },
+    {
+      "rounds": 71,
+      "score": 331.5,
+      "tier": 4,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 47
+    },
+    {
+      "rounds": 72,
+      "score": 364,
+      "tier": 4,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 41.7
+    },
+    {
+      "rounds": 69,
+      "score": 306.5,
+      "tier": 4,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 42.9
+    },
+    {
+      "rounds": 70.5,
+      "score": 336.5,
+      "tier": 4,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 48.8
+    }
+  ],
+  "control": [
+    {
+      "rounds": 81,
+      "score": 301.5,
+      "tier": 3,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 51.7
+    },
+    {
+      "rounds": 76,
+      "score": 316,
+      "tier": 4,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 46.6
+    },
+    {
+      "rounds": 89.5,
+      "score": 325.5,
+      "tier": 3,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 54.8
+    },
+    {
+      "rounds": 79,
+      "score": 246.5,
+      "tier": 3,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 45.9
+    },
+    {
+      "rounds": 73,
+      "score": 263.5,
+      "tier": 4,
+      "tier5": 0,
+      "tier6": 0,
+      "human": 0,
+      "roundsP10": 48.8
+    }
+  ],
+  "poolSize": [16.0, 24.45, 25.825, 26.0, 26.0],
+  "milestones": {
+    "first_extinction": [1.0, 1.0, 1.0, 1.0, 1.0],
+    "weathered": [1.0, 1.0, 1.0, 1.0, 1.0],
+    "first_year": [1.0, 1.0, 1.0, 1.0, 1.0],
+    "higher_life": [0.45, 0.975, 1.0, 1.0, 1.0]
+  },
+  "lastDeck": {
+    "storm": 40,
+    "thunderstorm": 40,
+    "ark": 40,
+    "balance": 40,
+    "rain": 40,
+    "seeds": 40,
+    "fertilizer": 40,
+    "sun": 40,
+    "silence": 40,
+    "pollination": 40
+  }
+}
