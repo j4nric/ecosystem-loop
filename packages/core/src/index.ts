@@ -8,6 +8,7 @@ export * from './data.ts';
 export * from './game.ts';
 export { RuleError } from './world.ts';
 export { cardShort, cardText, describeCondition, describeEffect } from './cards/text.ts';
+export { isWorldCard, worldZoneEffects } from './cards/worldcard.ts';
 export { formFor } from './rules/forms.ts';
 export { RULES, type RuleContext, type RuleModule } from './rules/index.ts';
 export * from './meta.ts';

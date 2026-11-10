@@ -29,7 +29,10 @@ export const EventDef = z.strictObject({
   rules: z.array(SeasonRule).default([]),
   /** Effekte auf die Zielzone ("target") oder alle Zonen (scope: all). */
   effects: z.array(Effect).default([]),
-  /** Karte, die auf die Zielzone wirkt – mit ihren Schwellen (z. B. Blitzschlag = Gewitter). */
+  /**
+   * Karte, die auf die Zielzone wirkt – mit ihren Schwellen (z. B. Blitzschlag = Gewitter). Zonenkarte: braucht
+   * target.pick random. Weltkarte: wirkt mit Zielzone nur dort, ohne Zielzone auf allen Zonen.
+   */
   card: Id.optional(),
   /** Stärke-Skalierung über die Jahre (rules.forecast.strength) gilt für adjust- und population-Effekte. */
   scales: z.boolean().default(true),

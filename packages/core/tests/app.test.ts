@@ -131,12 +131,14 @@ describe('Kartentexte (de/en): Wirkung zuerst, Bedingung als kurzer Zusatz', () 
     ]);
   });
 
-  it('Gewitter: Schwellen nach der Wirkung', () => {
+  it('Gewitter (Weltkarte): Wirkung je Geografie, Schwellen danach mit ihren Geografien', () => {
     expect(text('thunderstorm')).toEqual([
-      'Feuchte +2. 🔥 Feuer bei Feuchte ≤ 1 und Vegetation ≥ 1: Vegetation auf 0, Totholz +3 (Störung). ' +
-        '🌊 Flut bei Feuchte ≥ 4: Vegetation −1, Feuchte +1 auf allen Nachbarzonen (Störung).',
-      'Moisture +2. 🔥 Fire if Moisture ≤ 1 and Vegetation ≥ 1: Vegetation to 0, Deadwood +3 (disturbance). ' +
-        '🌊 Deluge if Moisture ≥ 4: Vegetation −1, Moisture +1 on all neighbouring zones (disturbance).',
+      'Alle Zonen: Feuchte +2 · Fluss Wasserstand +1. ' +
+        '🔥 Feuer bei (Wald oder Flachland) und Feuchte ≤ 1 und Vegetation ≥ 1: Vegetation auf 0, Totholz +3 (Störung). ' +
+        '🌊 Flut bei (Berge oder Flachland) und Feuchte ≥ 4: Vegetation −1, Feuchte +1 auf allen Nachbarzonen (Störung).',
+      'All zones: Moisture +2 · River Water level +1. ' +
+        '🔥 Fire if (Forest or Plains) and Moisture ≤ 1 and Vegetation ≥ 1: Vegetation to 0, Deadwood +3 (disturbance). ' +
+        '🌊 Deluge if (Mountains or Plains) and Moisture ≥ 4: Vegetation −1, Moisture +1 on all neighbouring zones (disturbance).',
     ]);
   });
 
@@ -183,7 +185,7 @@ describe('CardView.short', () => {
 
   it('Hauptwirkung, Schwellen-Symbole, Wahl, nur Schwelle', () => {
     const short = (id: string, locale: 'de' | 'en' = 'de') => cardShort(data, data.cards.get(id)!, locale);
-    expect(short('thunderstorm')).toBe('Feuchte +2 🔥 🌊');
+    expect(short('thunderstorm')).toBe('🌍 Feuchte↑↑ · Wasserstand↑ 🔥 🌊');
     expect(short('balance')).toBe('Alle Werte 1 Schritt zur Ruhe ringsum');
     expect(short('blessing', 'en')).toBe('Vegetation +1 everywhere');
     expect(short('scout_eye')).toBe('Wähle: Abwenden oder Verschieben');
@@ -193,14 +195,14 @@ describe('CardView.short', () => {
   it('zu lange Wirkungen werden gekürzt; Karte ohne Wirkung zeigt den Namen', () => {
     const d = dataWith((r) => {
       r.config.texts['effect.draw'] = { de: 'ziehe {n} Karten und noch sehr viel mehr Text dazu', en: 'draw {n}' };
-      const sun = r.cards.cards.find((c: { id: string }) => c.id === 'sun');
-      sun.effects = [];
-      sun.triggers = [];
+      const shade = r.cards.cards.find((c: { id: string }) => c.id === 'shade');
+      shade.effects = [];
+      shade.triggers = [];
     });
     const s = cardShort(d, d.cards.get('inspiration')!, 'de');
     expect([...s].length).toBe(SHORT_MAX);
     expect(s.endsWith('…')).toBe(true);
-    expect(cardShort(d, d.cards.get('sun')!, 'en')).toBe('Sun');
+    expect(cardShort(d, d.cards.get('shade')!, 'en')).toBe('Shade');
   });
 
   it('view() liefert short neben dem vollen Text', () => {

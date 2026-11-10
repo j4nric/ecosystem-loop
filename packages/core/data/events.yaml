@@ -7,7 +7,8 @@
 #             beim Eintreten; Zone = "target", Art = "species"); when filtert die Zonen
 # rules     – Effekte je Zone wie bei Jahreszeiten (geographies, when; "self" = die Zone)
 # effects   – Effekte auf "target" oder scope: all
-# card      – Karte, die auf die Zielzone wirkt, mit ihren Schwellen
+# card      – Karte, die auf die Zielzone wirkt, mit ihren Schwellen. Eine Weltkarte (Wetter) wirkt mit Zielzone
+#             nur dort (mit der Wirkung dieser Geografie), ohne Zielzone auf allen Zonen.
 # scales    – Stärke-Skalierung über die Jahre für adjust/population (Standard: an)
 # { disturb: true } macht eine Zone zur gestörten Zone (Zonenstufe, Harmonie, Selektionsdruck).
 
@@ -30,12 +31,13 @@ events:
         effects: [{ adjust: snow, by: 2 }]
       - effects: [{ adjust: vegetation, by: -1 }]
 
+  # Blitzschlag: das Wetter Gewitter (Weltkarte) trifft nur die ausgeloste Zone, Feuer also nur in Wald oder Flachland.
   - id: lightning
     name: { de: Blitzschlag, en: Lightning strike }
     description:
       {
-        de: 'Gewitter auf einer zufälligen Zone (kann Feuer auslösen)',
-        en: 'Thunderstorm on a random zone (may start a fire)',
+        de: 'Gewitter nur auf einer zufälligen Zone (kann Feuer auslösen)',
+        en: 'Thunderstorm on one random zone only (may start a fire)',
       }
     icon: '⚡'
     weight: 3

@@ -1,5 +1,6 @@
 import type { CardView } from '@core/api';
 import { t } from '../i18n/index.ts';
+import { isWorldCard } from '../logic/ideal.ts';
 import { useEscape } from './useEscape.ts';
 
 interface Props {
@@ -12,18 +13,27 @@ interface Props {
 /** Kartendetails im Dock (langer Druck bzw. Antippen einer nicht spielbaren Karte): voller Kartentext. */
 export function CardDetail({ card, onClose, onPlay }: Props) {
   useEscape(onClose);
+  const world = isWorldCard(card);
   return (
-    <section className={`sheet card-detail card--${card.category}`} role="dialog" aria-label={t.cardDetails}>
+    <section
+      className={`sheet card-detail card--${card.category}${world ? ' card--world' : ''}`}
+      role="dialog"
+      aria-label={t.cardDetails}
+    >
       <div className="sheet__body">
         <header className="sheet__head">
           <div>
-            <h2>{card.name}</h2>
+            <h2>
+              {world && <span aria-hidden>🌍 </span>}
+              {card.name}
+            </h2>
             <p className="card-detail__cost">{card.cost === 0 ? t.free : `✦ ${t.cost} ${card.cost}`}</p>
           </div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label={t.close} autoFocus>
             ✕
           </button>
         </header>
+        {world && <p className="play-preview__world">{t.worldHint}</p>}
         <p className="card-detail__text">{card.text}</p>
         {!card.playable && <p className="muted">{t.notPlayable}</p>}
       </div>

@@ -49,14 +49,15 @@ describe('view', () => {
     });
     expect(forest.neighbors).toEqual(['mountains', 'river', 'plains']);
     expect(v.hand.map((c) => [c.card, c.category, c.cost, c.playable])).toEqual([
-      ['thunderstorm', 'force', 0, true],
+      ['thunderstorm', 'weather', 0, true],
       ['healing', 'miracle', 4, false],
     ]);
-    expect(v.hand[0]!.slots).toEqual([{ id: 'zone', kind: 'zone', label: 'Zone' }]);
+    expect(v.hand[0]!.slots).toEqual([]);
+    expect(v.hand[1]!.slots).toEqual([{ id: 'zone', kind: 'zone', label: 'Zone' }]);
   });
 
   it('Texte sind lokalisiert (de/en)', () => {
-    const s = game({ hand: ['storm'] });
+    const s = game({ hand: ['storm', 'decomposition'] });
     const de = view(data, s, 'de');
     const en = view(data, s, 'en');
     expect(en.locale).toBe('en');
@@ -65,7 +66,8 @@ describe('view', () => {
     expect(en.zones[0]!.form.name).toBe('Rock');
     expect(de.hand[0]!.text).toContain('Baumsturz');
     expect(en.hand[0]!.text).toContain('Windthrow');
-    expect(en.hand[0]!.slots[1]!.label).toBe('Direction of fall');
+    expect(de.hand[1]!.slots[1]!.label).toBe('Nachbarzone');
+    expect(en.hand[1]!.text).toContain('next door');
     expect(view(data, s).locale).toBe('de');
   });
 
@@ -88,18 +90,24 @@ describe('view', () => {
     expect(v.zones.find((z) => z.id === 'forest')!.warnings).toEqual([
       { card: 'thunderstorm', trigger: 'fire', name: 'Feuer', icon: '🔥' },
     ]);
-    expect(v.zones.find((z) => z.id === 'river')!.warnings.map((w) => w.trigger)).toEqual(['deluge']);
+    // Flut nur in Bergen und Flachland: der Fluss (Feuchte 5) warnt nicht, nasses Flachland schon.
+    expect(v.zones.find((z) => z.id === 'river')!.warnings).toEqual([]);
     expect(v.zones.find((z) => z.id === 'plains')!.warnings).toEqual([]);
-    // Welke prüft erst nach dem Effekt – kein Feld mit Feuchte ≤ 2 ⇒ keine Warnung
+    setStats(s, 'plains', { moisture: 4 });
+    expect(
+      view(data, s)
+        .zones.find((z) => z.id === 'plains')!
+        .warnings.map((w) => w.trigger),
+    ).toEqual(['deluge']);
+    // Welke prüft erst nach dem Effekt – kein Feld mit Feuchte ≤ 1 ⇒ keine Warnung
     const t = game({ hand: ['drought', 'inspiration'] });
-    setStats(t, 'mountains', { moisture: 3 });
     expect(view(data, t).zones.every((z) => z.warnings.length === 0)).toBe(true);
   });
 
-  it('Schwellen mit check "after" warnen anhand der Grundeffekte: Dürre auf Feuchte 2 ⇒ Welke', () => {
+  it('Schwellen mit check "after" warnen anhand der Grundeffekte: Dürre auf Feuchte 1 ⇒ Welke', () => {
     const s = game({ hand: ['drought'] });
-    setStats(s, 'plains', { moisture: 2 });
-    setStats(s, 'forest', { moisture: 3 });
+    setStats(s, 'plains', { moisture: 1 });
+    setStats(s, 'forest', { moisture: 2 });
     const before = structuredClone(s);
     const v = view(data, s, 'de');
     expect(s).toEqual(before);
@@ -107,9 +115,6 @@ describe('view', () => {
       { card: 'drought', trigger: 'wilting', name: 'Welke', icon: '🥀' },
     ]);
     expect(v.zones.find((z) => z.id === 'forest')!.warnings).toEqual([]);
-    // Sturm: Grundeffekte auf den zweiten Slot (Fallrichtung) bleiben bei der Warnung außen vor
-    const t = game({ hand: ['storm'] });
-    expect(() => view(data, t)).not.toThrow();
   });
 
   it('Formen ohne Daten werden mit ihrer Id angezeigt', () => {
@@ -161,16 +166,19 @@ describe('view: nächster Odem-Zufluss', () => {
 
 describe('preview', () => {
   it('zeigt Wertänderungen, Schwellen und Formwechsel, ohne den Zustand zu verändern', () => {
-    const s = game({ hand: ['thunderstorm'] });
+    // Gezielte Karte mit Schwelle: Feuer (Brandrodung) auf den Wald.
+    const s = game({ hand: ['fire'] });
     setStats(s, 'forest', { moisture: 1, vegetation: 4, deadwood: 1 });
     const before = structuredClone(s);
-    const p = preview(data, s, { uid: uidOf(s, 'thunderstorm'), targets: { zone: 'forest' } }, 'en');
+    const p = preview(data, s, { uid: uidOf(s, 'fire'), targets: { zone: 'forest' } }, 'en');
     expect(s).toEqual(before);
     expect(p.cost).toBe(0);
     expect(p.affordable).toBe(true);
-    expect(p.triggers).toEqual([{ zone: 'forest', trigger: 'fire', name: 'Fire', icon: '🔥', zoneName: 'Forest' }]);
+    expect(p.triggers).toEqual([
+      { zone: 'forest', trigger: 'slash_and_burn', name: 'Slash and burn', icon: '🔥', zoneName: 'Forest' },
+    ]);
+    // Boden +1 verpufft: der Wald hat keinen Boden.
     expect(p.changes).toEqual([
-      { zone: 'forest', stat: 'moisture', from: 1, to: 3, zoneName: 'Forest', statName: 'Moisture', toward: 'better' },
       {
         zone: 'forest',
         stat: 'vegetation',
@@ -183,8 +191,8 @@ describe('preview', () => {
       // Totholz springt über den Zielbereich 2–3 hinweg: vorher 1 zu wenig, nachher 1 zu viel.
       { zone: 'forest', stat: 'deadwood', from: 1, to: 4, zoneName: 'Forest', statName: 'Deadwood', toward: 'neutral' },
     ]);
-    // Urwald: Vegetation ≥4, Feuchte ≥4, Totholz 2–3 → vorher 0+3+1, nachher 4+1+1.
-    expect(p.idealDistance).toEqual([{ zone: 'forest', before: 4, after: 6 }]);
+    // Urwald: Vegetation ≥4, Feuchte ≥4, Totholz 2–3 → vorher 0+3+1, nachher 4+3+1.
+    expect(p.idealDistance).toEqual([{ zone: 'forest', before: 4, after: 8 }]);
     expect(p.populationChanges).toEqual([]);
     expect(p.eventChanges).toEqual([]);
     expect(p.formChanges).toEqual([
@@ -276,7 +284,7 @@ describe('Bedingungen und Texte', () => {
 
   it('Ereignis-Ursachen sind im Log nachvollziehbar', () => {
     const g = game({ hand: ['rain'], breath: 1 });
-    const { events } = play(g, 'rain', { zone: 'forest' });
+    const { events } = play(g, 'rain', {});
     expect(events).toContainEqual({
       type: 'statChanged',
       zone: 'forest',

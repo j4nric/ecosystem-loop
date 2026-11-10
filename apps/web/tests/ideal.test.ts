@@ -7,11 +7,15 @@ import {
   barCells,
   classifyPreview,
   completesCard,
+  isWorldCard,
   rangeLabel,
   targetDistance,
   targetStatus,
   towardFromDistance,
   towardOf,
+  worldBalance,
+  worldTints,
+  zoneEffects,
   zoneTints,
 } from '../src/logic/ideal.ts';
 import { fxLines, NATURE_LINES } from '../src/logic/fx.ts';
@@ -108,7 +112,7 @@ describe('Einfärbung der Zielwahl', () => {
       uid: 1,
       card: 'storm',
       name: 'Sturm',
-      category: 'force',
+      category: 'weather',
       cost: 0,
       text: '',
       playable: true,
@@ -119,6 +123,103 @@ describe('Einfärbung der Zielwahl', () => {
     };
     expect(completesCard(card, 'zone')).toBe(false);
     expect(completesCard(card, 'fall')).toBe(true);
+  });
+});
+
+describe('Weltkarten: Färbung und Bilanz über mehrere Zonen', () => {
+  const zones = [
+    { id: 'mountains', geographyName: 'Berge' },
+    { id: 'forest', geographyName: 'Wald' },
+    { id: 'river', geographyName: 'Fluss' },
+    { id: 'coast', geographyName: 'Küste' },
+  ];
+  const c = (zone: string, stat: string, from: number, to: number, toward?: 'better' | 'worse' | 'neutral') => ({
+    zone,
+    zoneName: zone,
+    stat,
+    statName: stat,
+    from,
+    to,
+    ...(toward ? { toward } : {}),
+  });
+
+  it('färbt jede Zone nach ihrem eigenen Abstand – grün, rot, gelb zugleich', () => {
+    const p = preview({
+      changes: [
+        c('coast', 'salt', 3, 2, 'neutral'),
+        c('forest', 'moisture', 3, 4, 'better'),
+        c('mountains', 'snow', 2, 3, 'worse'),
+      ],
+      idealDistance: [
+        { zone: 'coast', before: 3, after: 3 },
+        { zone: 'forest', before: 1, after: 0 },
+        { zone: 'mountains', before: 0, after: 1 },
+      ],
+    });
+    const effects = zoneEffects(p, zones);
+    // Reihenfolge der Insel, nicht der Vorschau
+    expect(effects.map((e) => e.zone)).toEqual(['mountains', 'forest', 'coast']);
+    expect(effects.map((e) => e.zoneName)).toEqual(['mountains', 'forest', 'coast']);
+    expect(Object.fromEntries(worldTints(effects))).toEqual({ mountains: 'worse', forest: 'better', coast: 'neutral' });
+    expect(effects[1]!.distance).toEqual({ before: 1, after: 0 });
+    expect(worldBalance(effects)).toEqual({ better: 1, worse: 1, neutral: 1 });
+    // Gesamtwirkung über alle Zonen wäre „gleich“ – die Bilanz zeigt trotzdem jede Richtung einzeln.
+    expect(classifyPreview(p)).toBe('neutral');
+  });
+
+  it('Zonen ohne Wirkung bleiben ungefärbt, auch wenn die Engine ihren Abstand mitliefert', () => {
+    const p = preview({
+      changes: [c('forest', 'moisture', 3, 4, 'better'), c('river', 'water', 5, 5)],
+      idealDistance: [
+        { zone: 'forest', before: 1, after: 0 },
+        { zone: 'river', before: 2, after: 2 },
+        { zone: 'coast', before: 3, after: 3 },
+      ],
+    });
+    const effects = zoneEffects(p, zones);
+    expect(effects.map((e) => e.zone)).toEqual(['forest']);
+    expect(worldBalance(effects)).toEqual({ better: 1, worse: 0, neutral: 0 });
+  });
+
+  it('Schwellen und Formwechsel machen eine Zone betroffen; Namen aus der Vorschau oder den Zonen', () => {
+    const p = preview({
+      triggers: [{ zone: 'river', zoneName: 'Fluss (Vorschau)', name: 'Flut', icon: '🌊' }],
+      formChanges: [{ zone: 'coast', zoneName: 'Küste', from: 'Strand', to: 'Salzwüste', kind: 'degraded' }],
+      idealDistance: [{ zone: 'coast', before: 1, after: 2 }],
+    });
+    const effects = zoneEffects(p, zones);
+    expect(effects.map((e) => [e.zone, e.zoneName, e.toward])).toEqual([
+      ['river', 'Fluss (Vorschau)', 'neutral'],
+      ['coast', 'Küste', 'worse'],
+    ]);
+    expect(effects[0]!.triggers).toHaveLength(1);
+    expect(effects[1]!.formChanges).toHaveLength(1);
+  });
+
+  it('ohne idealDistance entscheidet je Zone die Mehrheit der Richtungen', () => {
+    const p = preview({
+      changes: [
+        c('forest', 'moisture', 3, 4, 'better'),
+        c('forest', 'vegetation', 3, 4, 'better'),
+        c('forest', 'deadwood', 2, 4, 'worse'),
+        c('coast', 'salt', 2, 3, 'worse'),
+        c('mountains', 'light', 2, 3),
+      ],
+    });
+    const tints = worldTints(zoneEffects(p, zones));
+    expect(Object.fromEntries(tints)).toEqual({ forest: 'better', coast: 'worse', mountains: 'neutral' });
+    expect(zoneEffects(p, zones).every((e) => e.distance === null)).toBe(true);
+  });
+
+  it('keine Vorschau ⇒ keine Zonen, leere Bilanz', () => {
+    expect(zoneEffects(null)).toEqual([]);
+    expect(worldBalance([])).toEqual({ better: 0, worse: 0, neutral: 0 });
+  });
+
+  it('erkennt Weltkarten nur an reach "world"', () => {
+    expect(isWorldCard({ reach: 'world' })).toBe(true);
+    expect(isWorldCard({ reach: 'zone' })).toBe(false);
+    expect(isWorldCard({})).toBe(false);
   });
 });
 
@@ -169,23 +270,87 @@ describe('MockClient liefert die Idealform-Felder', () => {
     const water = river.stats.find((s) => s.id === 'water')!;
     expect(water.target).toEqual({ min: 3, max: 3, status: 'high' });
 
-    const rain = view.hand.find((c) => c.card === 'rain')!;
-    const forest = client.preview(rain.uid, { zone: 'forest' })!;
-    expect(forest.changes[0]).toMatchObject({ stat: 'moisture', toward: 'better' });
-    expect(classifyPreview(forest)).toBe('better');
-
-    const storm = view.hand.find((c) => c.card === 'storm')!;
-    const worse = client.preview(storm.uid, { zone: 'forest', fall: 'river' })!;
-    expect(classifyPreview(worse)).toBe('worse');
+    const seeds = view.hand.find((c) => c.card === 'seeds')!;
+    const plains = client.preview(seeds.uid, { zone: 'plains' })!;
+    expect(plains.changes[0]).toMatchObject({ stat: 'vegetation', from: 0, to: 1, toward: 'better' });
+    expect(classifyPreview(plains)).toBe('better');
+    const mountains = client.preview(seeds.uid, { zone: 'mountains' })!;
+    expect(classifyPreview(mountains)).toBe('neutral');
   });
 
-  it('meldet Wertänderungen eines Zugs für die Effekte', () => {
+  it('meldet Wertänderungen eines gezielten Zugs für die Effekte', () => {
+    const client = new MockClient('de');
+    const notices: Notice[][] = [];
+    client.subscribeNotices((n) => notices.push(n));
+    const seeds = client.getView().hand.find((c) => c.card === 'seeds')!;
+    client.dispatch({ type: 'play', uid: seeds.uid, targets: { zone: 'forest' } });
+    const shifts = notices.flat().filter((n) => n.type === 'statShift');
+    expect(shifts).toEqual([expect.objectContaining({ zone: 'forest', cause: 'card' })]);
+  });
+});
+
+describe('MockClient: Wetter wirkt überall', () => {
+  it('Wetterkarten sind Weltkarten ohne Zonen-Slots, Gaben und Wunder bleiben gezielt', () => {
+    const hand = new MockClient('de').getView().hand;
+    const rain = hand.find((c) => c.card === 'rain')!;
+    expect(rain).toMatchObject({ category: 'weather', reach: 'world', slots: [] });
+    expect(isWorldCard(rain)).toBe(true);
+    expect(rain.text).toContain('Küste: Salz −1');
+    for (const id of ['seeds', 'healing']) {
+      const card = hand.find((c) => c.card === id)!;
+      expect(isWorldCard(card)).toBe(false);
+      expect(card.slots[0]?.kind).toBe('zone');
+    }
+  });
+
+  it('Vorschau ohne Ziele für alle betroffenen Zonen, je Geografie verschieden', () => {
+    const client = new MockClient('de');
+    const view = client.getView();
+    const rain = view.hand.find((c) => c.card === 'rain')!;
+    expect(client.legalTargets(rain.uid, {})).toEqual([]);
+    const p = client.preview(rain.uid, {})!;
+    expect(p).not.toBeNull();
+    const effects = zoneEffects(p, view.zones);
+    // Fluss steht schon auf Wasserstand 5: Regen ändert dort nichts, die Zone bleibt ungefärbt.
+    expect(effects.map((e) => e.zone)).toEqual(['mountains', 'forest', 'plains', 'coast']);
+    expect(Object.fromEntries(worldTints(effects))).toEqual({
+      forest: 'better',
+      mountains: 'worse',
+      plains: 'neutral',
+      coast: 'neutral',
+    });
+    expect(effects.find((e) => e.zone === 'coast')!.changes).toEqual([
+      expect.objectContaining({ stat: 'salt', from: 3, to: 2 }),
+    ]);
+    expect(worldBalance(effects)).toEqual({ better: 1, worse: 1, neutral: 2 });
+  });
+
+  it('bildet alle sechs Wetterkarten nach, je Geografie verschieden (Frost lässt die Küste unberührt)', () => {
+    const pool = new MockClient('de').deckSetup().pool;
+    const weather = pool.filter((c) => c.category === 'weather').map((c) => c.id);
+    expect(weather.sort()).toEqual(['drought', 'dry_wind', 'frost', 'rain', 'storm', 'thunderstorm']);
+    const frost = pool.find((c) => c.id === 'frost')!;
+    expect(frost.text).toContain('Berge: Schnee +1');
+    expect(frost.text).not.toContain('Küste');
+  });
+
+  it('Ausspielen ohne Ziele ändert alle betroffenen Zonen und meldet je Zone die Werte', () => {
     const client = new MockClient('de');
     const notices: Notice[][] = [];
     client.subscribeNotices((n) => notices.push(n));
     const rain = client.getView().hand.find((c) => c.card === 'rain')!;
-    client.dispatch({ type: 'play', uid: rain.uid, targets: { zone: 'forest' } });
-    const shift = notices.flat().find((n) => n.type === 'statShift');
-    expect(shift).toMatchObject({ zone: 'forest', cause: 'card' });
+    client.dispatch({ type: 'play', uid: rain.uid, targets: {} });
+    const shifts = notices.flat().filter((n) => n.type === 'statShift');
+    expect(shifts.map((n) => n.type === 'statShift' && n.zone)).toEqual(['mountains', 'forest', 'plains', 'coast']);
+    expect(shifts.every((n) => n.type === 'statShift' && n.cause === 'card')).toBe(true);
+    const coast = client.getView().zones.find((z) => z.id === 'coast')!;
+    expect(coast.stats.find((s) => s.id === 'salt')!.value).toBe(2);
+  });
+
+  it('Gewitter zeigt die Feuer-Schwelle nur dort, wo es trocken ist', () => {
+    const client = new MockClient('de');
+    const storm = client.getView().hand.find((c) => c.card === 'thunderstorm')!;
+    // Start: keine trockene Zone mit Vegetation ⇒ keine Schwelle
+    expect(client.preview(storm.uid, {})!.triggers).toEqual([]);
   });
 });

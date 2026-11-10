@@ -3,9 +3,12 @@ import type { GameClient, Notice } from '../client/index.ts';
 import { t } from '../i18n/index.ts';
 import { fxLines, type FxLine } from '../logic/fx.ts';
 
-/** Von außen ansteuerbar: Karte von der Hand zur Zielzone fliegen lassen (vor dem dispatch aufrufen). */
+/** Von außen ansteuerbar (vor dem dispatch aufrufen). */
 export interface EffectsApi {
+  /** Gezielte Karte: von der Hand zur Zielzone fliegen lassen. */
   flyCard(uid: number, zoneId: string | null): void;
+  /** Weltkarte (Wetter): Karte steigt über die Insel, eine Welle läuft über alle Zonen. */
+  worldWave(uid: number): void;
 }
 
 interface Props {
@@ -17,12 +20,17 @@ interface Props {
 const FLIGHT_MS = 460;
 const RISE_MS = 1900;
 const NATURE_STAGGER_MS = 140;
+/** Weltkarte: so lange läuft die Welle, danach steigen die Werte je Zone nacheinander auf. */
+const WAVE_MS = 720;
+const WORLD_STAGGER_MS = 120;
 
 /**
  * Sichtbares Feedback als eigene DOM-Schicht über der Szene: fliegende Karte, Puls über der Zielzone,
  * aufsteigende Wertänderungen („+2 Feuchte“, grün/rot nach Richtung zum Zielbereich) und Formwechsel.
  * Alles imperativ mit Web Animations – kein React-Rendern pro Frame, Elemente entfernen sich selbst.
- * Bei „Bewegung reduzieren“ entfallen Flug und Puls; Zahlen erscheinen ohne Bewegung und blenden aus.
+ * Weltkarten (Wetter) fliegen nicht zu einer Zone: Eine Welle läuft über die ganze Insel, danach steigen die
+ * Werte aller betroffenen Zonen nacheinander auf.
+ * Bei „Bewegung reduzieren“ entfallen Flug, Welle und Puls; Zahlen erscheinen ohne Bewegung und blenden aus.
  */
 export function Effects({ client, reducedMotion, apiRef }: Props) {
   const layer = useRef<HTMLDivElement>(null);
@@ -66,6 +74,65 @@ export function Effects({ client, reducedMotion, apiRef }: Props) {
         anim.onfinish = () => ghost.remove();
         anim.oncancel = () => ghost.remove();
       },
+      worldWave(uid) {
+        const root = layer.current;
+        const center = islandCenter();
+        if (!root || !center || !motion.current) return;
+        const source = document.querySelector<HTMLElement>(`.hand [data-uid="${uid}"]`);
+        if (source) {
+          // Karte steigt aus der Hand über die Inselmitte und löst sich auf.
+          const rect = source.getBoundingClientRect();
+          const ghost = document.createElement('div');
+          ghost.className = `${source.className} fx-card`;
+          ghost.innerHTML = source.innerHTML;
+          ghost.setAttribute('aria-hidden', 'true');
+          Object.assign(ghost.style, {
+            left: `${rect.left}px`,
+            top: `${rect.top}px`,
+            width: `${rect.width}px`,
+            height: `${rect.height}px`,
+          });
+          root.appendChild(ghost);
+          const dx = center.x - (rect.left + rect.width / 2);
+          const dy = center.y - 60 - (rect.top + rect.height / 2);
+          const anim = ghost.animate(
+            [
+              { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+              { transform: `translate(${dx}px, ${dy}px) scale(1.1)`, opacity: 1, offset: 0.55 },
+              { transform: `translate(${dx}px, ${dy - 30}px) scale(1.6)`, opacity: 0 },
+            ],
+            { duration: FLIGHT_MS + 200, easing: 'cubic-bezier(.3,0,.4,1)' },
+          );
+          anim.onfinish = () => ghost.remove();
+          anim.oncancel = () => ghost.remove();
+        }
+        // Welle: ein flacher Ring breitet sich von der Inselmitte über alle Zonen aus, dahinter ein Schimmer.
+        const delay = FLIGHT_MS * 0.5;
+        for (const [i, cls] of ['fx-wave', 'fx-wave fx-wave--echo', 'fx-sheen'].entries()) {
+          const el = document.createElement('div');
+          el.className = cls;
+          el.style.left = `${center.x}px`;
+          el.style.top = `${center.y}px`;
+          el.style.setProperty('--wave-w', `${center.w}px`);
+          root.appendChild(el);
+          const anim = el.animate(
+            cls === 'fx-sheen'
+              ? [
+                  { transform: 'translate(-50%, -50%) scale(0.4)', opacity: 0 },
+                  { transform: 'translate(-50%, -50%) scale(1)', opacity: 0.8, offset: 0.4 },
+                  { transform: 'translate(-50%, -50%) scale(1.15)', opacity: 0 },
+                ]
+              : [
+                  { transform: 'translate(-50%, -50%) scale(0.1)', opacity: 0.95 },
+                  { transform: 'translate(-50%, -50%) scale(1.25)', opacity: 0 },
+                ],
+            { duration: WAVE_MS, delay: delay + i * 140, easing: 'ease-out', fill: 'backwards' },
+          );
+          anim.onfinish = () => el.remove();
+          anim.oncancel = () => el.remove();
+        }
+        flightUntil.current = performance.now() + delay + WAVE_MS * 0.6;
+      },
     };
     apiRef.current = api;
     return () => {
@@ -81,8 +148,11 @@ export function Effects({ client, reducedMotion, apiRef }: Props) {
         const delayBase = Math.max(0, flightUntil.current - performance.now());
         const lines = fxLines(notices, client.getView().zones);
         const zoneOrder = [...new Set(lines.map((l) => l.zone))];
+        // Mehrere Zonen in einem Kartenzug (Weltkarte): nacheinander, wie die Welle über die Insel läuft.
+        const step = (cause: FxLine['cause']) =>
+          cause === 'nature' ? NATURE_STAGGER_MS : zoneOrder.length > 1 ? WORLD_STAGGER_MS : 0;
         for (const line of lines) {
-          const stagger = line.cause === 'nature' ? zoneOrder.indexOf(line.zone) * NATURE_STAGGER_MS : 0;
+          const stagger = zoneOrder.indexOf(line.zone) * step(line.cause);
           const delay = delayBase + stagger + line.index * 110;
           if (line.index === 0 && line.cause === 'card') pulse(root, line.zone, delay, motion.current);
           floatLine(root, line, delay, motion.current);
@@ -100,6 +170,18 @@ function zonePoint(zoneId: string): { x: number; y: number } | null {
   if (!el || el.style.visibility === 'hidden') return null;
   const r = el.getBoundingClientRect();
   return { x: r.left, y: r.top };
+}
+
+/** Mitte und Breite der Insel auf dem Bildschirm: aus den sichtbaren Zonenankern. */
+function islandCenter(): { x: number; y: number; w: number } | null {
+  const points = [...document.querySelectorAll<HTMLElement>('.zone-label-pos')]
+    .filter((el) => el.style.visibility !== 'hidden')
+    .map((el) => el.getBoundingClientRect());
+  if (points.length === 0) return null;
+  const xs = points.map((r) => r.left);
+  const ys = points.map((r) => r.top);
+  const w = Math.max(160, Math.max(...xs) - Math.min(...xs) + 120);
+  return { x: xs.reduce((a, b) => a + b, 0) / xs.length, y: ys.reduce((a, b) => a + b, 0) / ys.length + 30, w };
 }
 
 function pulse(root: HTMLElement, zoneId: string, delay: number, motion: boolean): void {

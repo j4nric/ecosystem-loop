@@ -97,8 +97,18 @@ export interface CardView {
   uid: number;
   card: string;
   name: string;
-  /** Kategorie aus den Daten, z. B. "force", "gift", "miracle", "species", "human". */
+  /** Kategorie aus den Daten, z. B. "weather", "gift", "miracle", "species", "human". */
   category: string;
+  /**
+   * Reichweite (Konzept 6.2, Variante C): "zone" = wirkt auf gewählte Ziele (Slots),
+   * "world" = wirkt ohne Zielwahl auf alle Zonen, je Geografie unterschiedlich. Fehlt = "zone".
+   * Weltkarten haben keine Zonen- oder Art-Slots (`slots` ist leer oder enthält nur einen choice-Slot);
+   * gespielt wird mit `targets: {}` bzw. `{ <choice-Slot>: <Option> }`. `preview` liefert dann Änderungen,
+   * Schwellen, Formwechsel und `idealDistance` für alle betroffenen Zonen zugleich; `step` meldet je Zone und
+   * Wert ein `statChanged` (cause "card:<id>"), Schwellen als `triggered` je Zone. `ZoneView.warnings` zeigt
+   * Schwellen von Weltkarten bei jeder Zone, in der sie beim Ausspielen auslösen würden.
+   */
+  reach?: 'zone' | 'world';
   cost: number;
   /** Lesbarer Kartentext in der gewählten Sprache: Wirkungen, Schwellen, dann Bedingung als kurzer Zusatz. */
   text: string;

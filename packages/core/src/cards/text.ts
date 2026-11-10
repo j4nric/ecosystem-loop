@@ -4,6 +4,7 @@
  */
 import type { Locale } from '../api.ts';
 import type { Card, Condition, Effect, GameData, Text } from '../schema/index.ts';
+import { isWorldCard, isZonal } from './worldcard.ts';
 
 /** Alle Textbausteine, die die Engine braucht (die Datenprüfung verlangt sie). */
 export const TEXT_KEYS = [
@@ -63,6 +64,10 @@ export const TEXT_KEYS = [
   'short.scope.neighbors',
   'short.scope.area',
   'short.scope.all',
+  'world',
+  'world.geo',
+  'join.world',
+  'short.world',
   'slot.zone',
   'slot.neighbor',
   'slot.species',
@@ -317,7 +322,8 @@ function triggerText(data: GameData, card: Card, t: Card['triggers'][number], lo
 export function cardText(data: GameData, card: Card, locale: Locale): string {
   const sentences: string[] = [];
   const joinEffects = tpl(data, 'join.effects', locale);
-  if (card.effects.length > 0)
+  if (isWorldCard(card)) sentences.push(...worldSentences(data, card, locale));
+  else if (card.effects.length > 0)
     sentences.push(card.effects.map((e) => describeEffect(data, card, e, locale)).join(joinEffects));
   for (const slot of card.slots)
     if (slot.kind === 'choice') {
@@ -337,6 +343,78 @@ export function cardText(data: GameData, card: Card, locale: Locale): string {
     .join(tpl(data, 'join.list', locale));
 }
 
+/** Geografien mit eigener Wirkung einer Weltkarte, in Datenreihenfolge (geographies.yaml). */
+function worldGeographies(data: GameData, card: Card): string[] {
+  return [...data.geographies.keys()].filter((g) => (card.byGeography[g]?.length ?? 0) > 0);
+}
+
+/**
+ * Wirkung einer Weltkarte: „Alle Zonen: Licht +1 · Berge Schnee +1 · Wald Feuchte +1“ (gemeinsame Effekte zuerst,
+ * dann je Geografie), zonenlose Effekte (Ziehen, Odem, Ereignis) als eigener Satz.
+ */
+function worldSentences(data: GameData, card: Card, locale: Locale): string[] {
+  const joinEffects = tpl(data, 'join.effects', locale);
+  const describe = (es: readonly Effect[]) => es.map((e) => describeEffect(data, card, e, locale)).join(joinEffects);
+  const parts: string[] = [];
+  const common = card.effects.filter(isZonal);
+  if (common.length > 0) parts.push(describe(common));
+  for (const g of worldGeographies(data, card))
+    parts.push(
+      tpl(data, 'world.geo', locale, {
+        geo: data.geographies.get(g)!.name[locale],
+        effects: describe(card.byGeography[g]!),
+      }),
+    );
+  const out: string[] = [];
+  if (parts.length > 0) out.push(tpl(data, 'world', locale, { effects: parts.join(tpl(data, 'join.world', locale)) }));
+  const global = card.effects.filter((e) => !isZonal(e));
+  if (global.length > 0) out.push(describe(global));
+  return out;
+}
+
+/** Kurzform eines Effekts einer Weltkarte: Änderungen als Pfeil („Feuchte↑“, „Salz↓↓“), sonst der Kurztext. */
+function worldToken(data: GameData, card: Card, e: Effect, locale: Locale): string {
+  if (!('adjust' in e) || e.by === 0) return describeEffect(data, card, e, locale, true);
+  const arrow = (e.by > 0 ? '↑' : '↓').repeat(Math.min(Math.abs(e.by), 3));
+  const text = `${statName(data, e.adjust, locale)}${arrow}`;
+  return e.scope === 'self' ? text : tpl(data, `short.scope.${e.scope}`, locale, { text });
+}
+
+/**
+ * Kurztext einer Weltkarte: „🌍 Feuchte↑ · Schnee↑ · Salz↓“ – jede Wirkung einmal (gemeinsame zuerst, dann je
+ * Geografie). Passt das nicht, mit „, “ (join.effects) statt „ · “, sonst so viele Wirkungen wie passen und „…“.
+ */
+function worldShort(data: GameData, card: Card, locale: Locale): string {
+  const effects = [...card.effects, ...worldGeographies(data, card).flatMap((g) => card.byGeography[g]!)];
+  const tokens = [...new Set(effects.map((e) => worldToken(data, card, e, locale)))];
+  const wrap = (text: string) => tpl(data, 'short.world', locale, { text });
+  // Gefahren-Symbole sind wichtiger als die letzte Wirkung: Platz für sie reservieren.
+  const icons = card.triggers.map((t) => t.icon).join(' ');
+  const max = icons ? SHORT_MAX - charCount(icons) - 1 : SHORT_MAX;
+  let text = wrap(tokens.join(tpl(data, 'join.world', locale)));
+  const join = tpl(data, 'join.effects', locale);
+  if (charCount(text) > max) text = wrap(tokens.join(join));
+  if (charCount(text) > max) {
+    let fit = tokens[0] ?? '';
+    for (const t of tokens.slice(1)) {
+      if (charCount(wrap(`${fit}${join}${t} …`)) > max) break;
+      fit = `${fit}${join}${t}`;
+    }
+    text = wrap(`${fit} …`);
+  }
+  const choice = card.slots.find((s) => s.kind === 'choice');
+  if (tokens.length === 0)
+    text = wrap(
+      choice?.kind === 'choice'
+        ? tpl(data, 'choice', locale, {
+            options: choice.options.map((o) => o.label[locale]).join(tpl(data, 'join.or', locale)),
+          })
+        : card.name[locale],
+    );
+  if (icons && charCount(`${text} ${icons}`) <= SHORT_MAX) text = `${text} ${icons}`;
+  return text;
+}
+
 /** Höchstlänge des Kurztexts (CardView.short) in Zeichen. */
 export const SHORT_MAX = 40;
 
@@ -345,6 +423,10 @@ export const SHORT_MAX = 40;
  * Symbole der Schwellen; ohne Grundeffekt die Wahl bzw. die erste Schwelle. Zu Langes wird mit „…“ gekürzt.
  */
 export function cardShort(data: GameData, card: Card, locale: Locale): string {
+  if (isWorldCard(card)) {
+    const text = worldShort(data, card, locale);
+    return charCount(text) > SHORT_MAX ? `${[...text].slice(0, SHORT_MAX - 1).join('')}…` : text;
+  }
   const joinEffects = tpl(data, 'join.effects', locale);
   const effects = card.effects.map((e) => describeEffect(data, card, e, locale, true));
   const choice = card.slots.find((s) => s.kind === 'choice');

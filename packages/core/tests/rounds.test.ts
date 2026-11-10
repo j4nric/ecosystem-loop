@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { canEndTurn, legalPlays, newGame, step } from '../src/game.ts';
 import type { GameEvent } from '../src/state.ts';
 import { RuleError } from '../src/world.ts';
-import { data, dataWith, endTurn, game, play, setStats } from './helpers.ts';
+import { data, dataWith, endTurn, game, play, setStats, uidOf } from './helpers.ts';
 
 describe('Partie-Aufbau', () => {
   it('startet in Runde 1 (Frühling, Jahr 1) mit Harmonie 60, Startodem und 4 Handkarten', () => {
@@ -76,7 +76,7 @@ describe('Partie-Aufbau', () => {
 describe('Rundenablauf (Konzept 3)', () => {
   it('Natur-Phase läuft in der Reihenfolge aus config.yaml, dann Bilanz und neue Runde', () => {
     const s = game({ hand: ['rain'], draw: ['sun', 'sun', 'sun', 'sun'] });
-    const a = play(s, 'rain', { zone: 'plains' });
+    const a = play(s, 'rain', {});
     const { state, events } = endTurn(a.state);
     const order = events
       .map((e) => e.type)
@@ -132,13 +132,14 @@ describe('Kartenzwang und Hand (Konzept 3, 6.2)', () => {
     const s = game({ hand: ['rain', 'healing'], breath: 1 });
     expect(canEndTurn(data, s)).toBe(false);
     expect(() => endTurn(s)).toThrow(/Kartenzwang/);
-    const a = play(s, 'rain', { zone: 'forest' });
+    const a = play(s, 'rain', {});
     expect(canEndTurn(data, a.state)).toBe(true);
   });
 
   it('Naturgewalten kosten 0 Odem: man ist nie blockiert', () => {
     const s = game({ hand: ['thunderstorm', 'healing'], breath: 0 });
-    expect(legalPlays(data, s).map((p) => p.card)).toEqual(Array(5).fill('thunderstorm'));
+    // Gewitter ist eine Weltkarte: genau ein Zug ohne Ziel.
+    expect(legalPlays(data, s)).toEqual([{ uid: uidOf(s, 'thunderstorm'), card: 'thunderstorm', targets: {} }]);
     expect(canEndTurn(data, s)).toBe(false);
   });
 
@@ -158,14 +159,14 @@ describe('Kartenzwang und Hand (Konzept 3, 6.2)', () => {
       r.config.turn.maxPlays = 1;
     });
     const s = game({ d, hand: ['rain', 'sun'], breath: 5 });
-    const a = play(s, 'rain', { zone: 'forest' }, d);
+    const a = play(s, 'rain', {}, d);
     expect(legalPlays(d, a.state)).toEqual([]);
     expect(() => play(a.state, 'sun', { zone: 'forest' }, d)).toThrow(/keine Karte mehr/);
   });
 
   it('nach der Runde wird auf 4 nachgezogen; ungespielte Karten bleiben auf der Hand', () => {
     const s = game({ hand: ['rain', 'healing'], draw: ['sun', 'seeds', 'frost', 'storm'], breath: 3 });
-    const a = play(s, 'rain', { zone: 'forest' });
+    const a = play(s, 'rain', {});
     const { state } = endTurn(a.state);
     expect(state.hand.map((c) => c.card)).toEqual(['healing', 'sun', 'seeds', 'frost']);
     expect(state.drawPile.map((c) => c.card)).toEqual(['storm']);
@@ -175,12 +176,12 @@ describe('Kartenzwang und Hand (Konzept 3, 6.2)', () => {
   it('ist der Stapel leer, wird die Ablage gemischt', () => {
     const s = game({ hand: ['rain', 'sun', 'seeds', 'frost'], draw: [], breath: 5 });
     let cur = s;
-    for (const [card, zone] of [
-      ['rain', 'forest'],
-      ['sun', 'forest'],
-      ['seeds', 'forest'],
+    for (const [card, targets] of [
+      ['rain', {}],
+      ['sun', { zone: 'forest' }],
+      ['seeds', { zone: 'forest' }],
     ] as const)
-      cur = play(cur, card, { zone }).state;
+      cur = play(cur, card, targets).state;
     expect(cur.discardPile).toHaveLength(3);
     const { state, events } = endTurn(cur);
     expect(events).toContainEqual({ type: 'deckReshuffled', cards: 3 });
@@ -221,7 +222,7 @@ describe('Reinheit und Determinismus', () => {
     const s = game({ hand: ['thunderstorm', 'rain', 'storm'], draw: [], breath: 3 });
     setStats(s, 'forest', { moisture: 1 });
     const before = structuredClone(s);
-    const a = play(s, 'thunderstorm', { zone: 'forest' });
+    const a = play(s, 'thunderstorm');
     expect(s).toEqual(before);
     const frozen = structuredClone(a.state);
     endTurn(a.state);
@@ -229,10 +230,10 @@ describe('Reinheit und Determinismus', () => {
   });
 
   it('ungültige Aktionen werfen RuleError', () => {
-    const s = game({ hand: ['storm', 'healing'], breath: 1 });
+    const s = game({ hand: ['decomposition', 'healing'], breath: 1 });
     expect(() => step(data, s, { type: 'play', uid: 999, targets: {} })).toThrow(/nicht auf der Hand/);
-    expect(() => play(s, 'storm', {})).toThrow(/Ziel fehlt/);
-    expect(() => play(s, 'storm', { zone: 'nowhere', fall: 'river' })).toThrow(/Ungültiges Ziel/);
+    expect(() => play(s, 'decomposition', {})).toThrow(/Ziel fehlt/);
+    expect(() => play(s, 'decomposition', { zone: 'nowhere', target: 'plains' })).toThrow(/Ungültiges Ziel/);
     expect(() => play(s, 'healing', { zone: 'forest' })).toThrow(/Zu wenig Odem/);
   });
 });

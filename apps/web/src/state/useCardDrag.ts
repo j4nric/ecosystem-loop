@@ -18,6 +18,10 @@ export interface DragState {
   valid: Set<string>;
   /** Zone unter dem Finger (gültig oder nicht) oder null. */
   zone: string | null;
+  /** Weltkarte (Wetter): keine Zielzone, Loslassen über der Spielfläche spielt die Karte. */
+  world: boolean;
+  /** Nur Weltkarten: Finger liegt über der Spielfläche (nicht über Dock/Hand) – Loslassen spielt. */
+  armed: boolean;
 }
 
 interface Pending {
@@ -35,6 +39,8 @@ interface Options {
   onStart: () => void;
   /** Loslassen auf gültiger Zone. */
   onDrop: (card: CardView, zoneId: string) => void;
+  /** Weltkarte über der Spielfläche losgelassen. */
+  onDropWorld: (card: CardView) => void;
   /** Langer Druck ohne Ziehen: vollen Kartentext zeigen. */
   onLongPress: (card: CardView) => void;
 }
@@ -45,12 +51,13 @@ interface Options {
  * App die Kartendetails. Die Geisterkarte folgt dem Finger direkt über ihr DOM-Element (kein React-Rendern pro
  * Bewegung); nur ein Zonenwechsel unter dem Finger rendert neu.
  */
-export function useCardDrag({ client, pickerRef, onStart, onDrop, onLongPress }: Options) {
+export function useCardDrag({ client, pickerRef, onStart, onDrop, onDropWorld, onLongPress }: Options) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const pending = useRef<Pending | null>(null);
   const ghost = useRef<HTMLDivElement | null>(null);
   const pos = useRef({ x: 0, y: 0 });
   const hover = useRef<string | null>(null);
+  const armedRef = useRef(false);
   const suppressClick = useRef(false);
   const frame = useRef(0);
   const pressTimer = useRef(0);
@@ -97,6 +104,7 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop, onLongPress }:
     clearPress();
     pending.current = null;
     hover.current = null;
+    armedRef.current = false;
     setDrag(null);
   }, [clearPress]);
 
@@ -134,16 +142,20 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop, onLongPress }:
         p.dragging = true;
         onStart();
         haptic(8);
-        setDrag({ card: p.card, valid: new Set(client.legalTargets(p.card.uid, {})), zone: null });
+        const world = p.card.reach === 'world';
+        const valid = world ? new Set<string>() : new Set(client.legalTargets(p.card.uid, {}));
+        setDrag({ card: p.card, valid, zone: null, world, armed: false });
       }
       placeGhost();
       // Raycast höchstens einmal pro Frame
       cancelAnimationFrame(frame.current);
       frame.current = requestAnimationFrame(() => {
         const zone = zoneAt(pos.current.x, pos.current.y);
-        if (zone === hover.current) return;
+        const armed = p.card.reach === 'world' && overPlayArea(pos.current.x, pos.current.y);
+        if (zone === hover.current && armed === armedRef.current) return;
         hover.current = zone;
-        setDrag((d) => (d ? { ...d, zone } : d));
+        armedRef.current = armed;
+        setDrag((d) => (d ? { ...d, zone, armed } : d));
       });
     },
     [client, clearPress, onStart, placeGhost, zoneAt],
@@ -159,6 +171,16 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop, onLongPress }:
         return; // war ein Antippen – das folgende click übernimmt
       }
       suppressClick.current = true;
+      if (p.card.reach === 'world') {
+        const card = p.card;
+        const armed = overPlayArea(e.clientX, e.clientY);
+        end();
+        if (armed) {
+          haptic(15);
+          onDropWorld(card);
+        }
+        return;
+      }
       const zone = dropZone(zoneAt(e.clientX, e.clientY), client.legalTargets(p.card.uid, {}));
       const card = p.card;
       end();
@@ -167,7 +189,7 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop, onLongPress }:
         onDrop(card, zone);
       }
     },
-    [client, clearPress, end, onDrop, zoneAt],
+    [client, clearPress, end, onDrop, onDropWorld, zoneAt],
   );
 
   const onPointerCancel = useCallback(
@@ -187,4 +209,19 @@ export function useCardDrag({ client, pickerRef, onStart, onDrop, onLongPress }:
   }, []);
 
   return { drag, ghostRef, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, consumeClick };
+}
+
+/**
+ * Liegt der Punkt über der Spielfläche? Alles außer Dock (Hand, Leiste) zählt – Weltkarten brauchen keine Zone.
+ * Die Vorschau-Leiste beim Ziehen ignoriert Zeiger (pointer-events: none), darunter liegt das Dock.
+ */
+function overPlayArea(x: number, y: number): boolean {
+  const el = document.elementFromPoint(x, y);
+  if (el === null || el.closest('.dock') !== null) return false;
+  // Die Zieh-Vorschau lässt Zeiger durch, deckt die Fläche aber sichtbar ab: dort loslassen spielt nicht.
+  for (const panel of document.querySelectorAll('.drag-panel')) {
+    const r = panel.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return false;
+  }
+  return true;
 }

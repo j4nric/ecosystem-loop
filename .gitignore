@@ -5,3 +5,4 @@ save/
 *.log
 .DS_Store
 .claude/worktrees/
+*.tsbuildinfo
