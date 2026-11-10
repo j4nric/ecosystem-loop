@@ -1,4 +1,4 @@
-# Being God (ain't easy) – Konzept 1.2 „Die Herde“
+# Being God (ain't easy) – Konzept 1.3 „Die Herde“
 
 Stand: 10.11.2026 · Status: **Richtung bestätigt** (Prototyp gespielt), Details als Entwurf.
 Vorgänger: [Konzept 0.4](archiv/konzept-0.4.md) (Werte-Optimierung mit fünf Geografien, verworfen).
@@ -88,8 +88,28 @@ Zu Beginn jeder Jahreszeit 2 Karten, höchstens 5 auf der Hand. Kein Ablegen. Je
 
 ## 9. Entscheidungen und offene Punkte
 
-1. ✅ **Entwicklung der Herde** (Phase H3): Merkmale aus dem Erlebten (viele Winter im Wald → dichtes Fell; viele
-   Wölfe → Wachsamkeit; viel Wasser → Schwimmer). Wahl aus 2–3 Angeboten, wenn die Herde eine Größe erreicht.
+1. ✅ **Merkmale aus dem Erlebten** (Phase H3a). Kurzspezifikation (Zahlen sind Platzhalter in
+   `packages/herde/data/traits.yaml`):
+   - Die Herde zählt **Erfahrungen** (Zähler je Monat): Schutz in einer Kälte-Jahreszeit, Wolfsangriffe überlebt,
+     Wasser in einer Durst-Jahreszeit, Brand in der Nähe überlebt, Monate im Gehölz gefressen, Monate auf offener
+     Fläche, gegangene Felder. Was zählt, steht in den Daten (Bedingungstypen der Engine).
+   - Jedes **Merkmal** gehört zu einer Erfahrung und wird verfügbar, sobald deren Zähler seine Schwelle erreicht.
+   - Zu Beginn jeder Jahreszeit **bietet** die Engine bis zu 3 verfügbare Merkmale an (Reihenfolge der Daten, ohne
+     Zufall). Der Spieler wählt eines (`pickTrait`) oder lässt das Angebot stehen; zur nächsten Jahreszeit wird es
+     erneuert. Also höchstens ein Merkmal je Jahreszeit.
+   - Ein Merkmal ändert Stufenwerte (`mul`/`add` auf Zahlen der Stufe, z. B. Kälteverlust × 0,5, Wolfsverluste
+     −1 je Rudel, Durst einen Monat später). Merkmale bleiben über den Stufensprung erhalten.
+
+   | Merkmal      | Erfahrung                   | Schwelle | Wirkung                 |
+   | ------------ | --------------------------- | -------- | ----------------------- |
+   | Dichtes Fell | Kälte-Monate mit Schutz     | 3        | Kälteverlust × 0,5      |
+   | Wachsamkeit  | Wolfsangriffe überlebt      | 2        | je Rudel 1 Tier weniger |
+   | Genügsam     | Durst-Monate am Wasser      | 4        | Durst 1 Monat später    |
+   | Feuerscheu   | Brände in der Nähe überlebt | 1        | Brandverlust × 0,5      |
+   | Waldkundig   | Monate im Gehölz gefressen  | 4        | Vorratsdeckel + 1       |
+   | Weitblick    | Monate auf offener Fläche   | 6        | Durstverlust × 0,5      |
+   | Ausdauer     | gegangene Felder            | 12       | Hungertote × 0,5        |
+
 2. ✅ **Entwicklung bis zum Menschen innerhalb einer Partie, fester Weg** (Phase H3, ersetzt „Herde bleibt
    Herde“). Jede Stufe bringt neue Bedürfnisse; was der einen Stufe half, kann der nächsten schaden, und Landschaft
    braucht Jahre – der Spieler muss die Welt für die nächste Stufe vorbereiten. Entwurf der fünf Stufen:
@@ -104,7 +124,26 @@ Zu Beginn jeder Jahreszeit 2 Karten, höchstens 5 auf der Hand. Kein Ablegen. Je
 
    Auslöser: Merkmale aus dem Erlebten (9.1) machen die Herde reif für die nächste Stufe; der Spieler entscheidet,
    wann sie den Sprung macht, ohne Rückweg. Die Eiszeit wird eine Prüfung unterwegs statt des Partie-Endes; Sieg =
-   Menschen erreicht und letzte Prüfung überstanden. Bedürfnisse je Stufe stehen in den Daten (`herd.stage`).
+   Menschen erreicht und letzte Prüfung überstanden (kommt mit H3b; bis dahin endet die Partie wie bisher mit der
+   Eiszeit). Bedürfnisse je Stufe stehen in den Daten (`stages.yaml`, `herd.stage`).
+
+   Kurzspezifikation H3a (Stufen 1–3, Zahlen sind Platzhalter):
+   - **Reife:** Jede Stufe nennt ihre Folgestufe (`next`) und was sie zur Reife braucht: eine Zahl an Merkmalen
+     (insgesamt, auch aus früheren Stufen) und optional eines aus einer Liste. Reif ist die Herde, sobald beides
+     erfüllt ist. Dann darf der Spieler zwischen den Monaten **springen** (`evolve`); der Sprung ist unumkehrbar.
+   - **Bedürfnisse je Stufe:** was als Futter, Wasser und Schutz zählt; in welchen Jahreszeiten Wasser bzw. Schutz
+     nötig ist; Futter-Maximum und Wachstum je Landschaft für diese Stufe (sonst die Werte der Landschaft); welche
+     Landschaften die Stufe nicht betritt; Schrittweite (Felder je Monat) und Umkreis (Fressen, Wasser, Schutz).
+
+   | Stufe       | Futter                              | Wasser     | Schutz | Hindernis | Schritte | Reif für die nächste Stufe              |
+   | ----------- | ----------------------------------- | ---------- | ------ | --------- | -------- | --------------------------------------- |
+   | 1. Herde    | Wiese, Steppe, Busch, Wald          | Sommer     | Winter | –         | 1        | 2 Merkmale, darunter Waldkundig         |
+   | 2. Sammler  | Früchte: Busch 3, Wald 4, Altwald 3 | ganzjährig | Winter | –         | 1        | 3 Merkmale, darunter Weitblick/Ausdauer |
+   | 3. Wanderer | Wiese, Steppe                       | ganzjährig | Winter | Altwald   | 2        | (H3b: Jäger)                            |
+
+   Futter je Feld ist ein einziger Vorrat; die Stufe bestimmt, wie viel er höchstens fasst und wie schnell er
+   wächst. Nach dem Sprung wächst ein Waldfeld also auf das Maximum der Sammler; eine Wiese wächst weiter wie
+   bisher, zählt für den Sammler aber nicht als Futter.
 
 3. ✅ **Jahreskreis mit Wetterfeldern** (Phase H4): je Jahreszeit ein Feld; eine Wetterkarte dort wirkt jedes Jahr
    wieder in dieser Jahreszeit, bis sie ersetzt wird; höchstens ein Wechsel pro Jahr. Beispiele: nasser Frühling
@@ -121,6 +160,8 @@ von Konzept 0.4 (Geografien, Werte, Formen, Weltkarten) werden ersetzt; der Code
 
 ## Änderungsverlauf
 
+- **1.3 (10.11.2026):** Kurzspezifikation H3a: Erfahrungen, Merkmale mit Angebot je Jahreszeit, Reife und
+  Sprung, Bedürfnisse der Stufen 1–3 (9.1, 9.2).
 - **1.2 (10.11.2026):** Entwicklung in fünf Stufen bis zum Menschen innerhalb einer Partie, fester Weg.
 - **1.1 (10.11.2026):** Entscheidungen: Merkmale aus dem Erlebten (H3), Herde bleibt Herde, Wetterfelder im
   Jahreskreis (H4).

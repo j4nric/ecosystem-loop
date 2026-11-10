@@ -11,7 +11,11 @@ export type Action =
   /** Karte an Handposition `hand` ausspielen; globale Karten ohne x/y */
   | { type: 'play'; hand: number; x?: number; y?: number }
   /** einen Monat weiter */
-  | { type: 'advance' };
+  | { type: 'advance' }
+  /** ein angebotenes Merkmal wählen (Id aus traits.yaml) */
+  | { type: 'pickTrait'; trait: string }
+  /** zur nächsten Stufe springen (nur wenn reif, unumkehrbar) */
+  | { type: 'evolve' };
 
 export interface NewGameOptions {
   seed: number | string;
@@ -47,6 +51,11 @@ export interface CellView extends Pos {
   /** kann in einer Feuer-Jahreszeit von selbst brennen */
   wildfire: boolean;
   herd: boolean;
+  /**
+   * die Stufe der Herde betritt dieses Feld nicht (Hindernis, z. B. Altwald für Wanderer), obwohl es begehbar ist.
+   * `view` setzt es immer; optional nur, damit vorhandene Oberflächen-Tests mit Feld-Literalen weiter kompilieren.
+   */
+  blocked?: boolean;
   /** Id des Rudels auf dem Feld oder null */
   pack: number | null;
 }
@@ -58,6 +67,54 @@ export interface HerdView extends Pos {
   fatMax: number;
   /** Monate ohne Wasser in der Wasser-Jahreszeit */
   thirst: number;
+}
+
+/** Bedürfnisse einer Stufe (nur Ids; Namen stehen in den Daten). */
+export interface StageNeedsView {
+  /** Stufen-Id (stages.yaml) */
+  id: string;
+  /** Landschaften, die als Futter zählen */
+  eats: string[];
+  /** Futter-Maximum je Landschaft für diese Stufe (nur Landschaften aus `eats`) */
+  food: Record<string, number>;
+  water: string[];
+  /** Jahreszeiten mit Durst (alle Jahreszeiten bei „ganzjährig“) */
+  waterSeasons: string[];
+  shelter: string[];
+  /** Jahreszeiten mit Kälte */
+  shelterSeasons: string[];
+  /** Landschaften, die die Stufe nicht betritt */
+  blocked: string[];
+  /** Felder je Monat */
+  move: number;
+  /** Umkreis für Fressen, Wasser, Schutz */
+  reach: number;
+}
+
+export interface ExperienceView {
+  /** Erfahrungs-Id (traits.yaml → experiences) */
+  id: string;
+  value: number;
+  /** nächstes noch nicht erreichtes Merkmal dieser Erfahrung und seine Schwelle */
+  next: { trait: string; at: number } | null;
+}
+
+/** Entwicklung der Herde: Stufe, Merkmale, Angebot, Erfahrung, Reife, Vorschau der nächsten Stufe. */
+export interface EvolutionView {
+  stage: StageNeedsView;
+  /** gewählte Merkmale (Reihenfolge der Wahl) */
+  traits: string[];
+  /** angebotene Merkmale; `pickTrait` mit einer dieser Ids */
+  offer: string[];
+  /** Merkmale, deren Schwelle erreicht ist (werden zur nächsten Jahreszeit angeboten, falls nicht schon jetzt) */
+  available: string[];
+  experience: ExperienceView[];
+  /** reif: `evolve` ist möglich */
+  mature: boolean;
+  /** was zur Reife noch fehlt; null auf der letzten Stufe */
+  missing: { traits: number; oneOf: string[] | null } | null;
+  /** Bedürfnisse der nächsten Stufe (zum Vorplanen); null auf der letzten Stufe */
+  next: StageNeedsView | null;
 }
 
 export interface PackView extends Pos {
@@ -106,5 +163,6 @@ export interface HerdeView {
   intent: IntentView | null;
   hand: HandCardView[];
   handMax: number;
+  evolution: EvolutionView;
   over: Outcome | null;
 }

@@ -4,7 +4,7 @@
  */
 import type { HerdeData } from './schema.ts';
 import type { Emit, HerdeState, Pos, ReasonId } from './state.ts';
-import { around, cellAt, islandOf, landOf, near, packsNear, samePos, seasonOf, stageOf } from './world.ts';
+import { around, cellAt, islandOf, near, needsNow, packsNear, reachable, samePos, stageOf } from './world.ts';
 
 export interface Intent extends Pos {
   reason: ReasonId;
@@ -18,46 +18,48 @@ export function appetite(data: HerdeData, s: HerdeState): number {
 }
 
 /**
- * Wohin will die Herde? Bewertet das eigene und die 8 Nachbarfelder (nur begehbare): Futter in Reichweite
- * (gedeckelt auf den Fressbedarf), in Wasser-Jahreszeiten Wasser, in Schutz-Jahreszeiten Schutz in der Nähe,
+ * Wohin will die Herde? Bewertet alle Felder, die sie in diesem Monat erreichen kann (Stufe: `move` Schritte über
+ * begehbare, nicht gesperrte Felder; Stufe 1: das eigene und die 8 Nachbarfelder): Futter im Umkreis `reach`
+ * (gedeckelt auf den Fressbedarf), Wasser bzw. Schutz in der Nähe, wenn die Stufe sie in dieser Jahreszeit braucht,
  * abzüglich Wölfen in der Nähe und kürzlich besuchter Felder; das eigene Feld bekommt einen kleinen Bonus.
  * Ohne Zufall: Bei Gleichstand gewinnt das erste Feld (Zeile für Zeile von oben links).
  */
 export function chooseMove(data: HerdeData, s: HerdeState): Intent {
   const h = s.herd;
   const stage = stageOf(data, s);
-  const season = seasonOf(data, s);
   const island = islandOf(data, s);
   const w = stage.choice;
   const want = appetite(data, s);
+  const needWater = needsNow(data, s, 'water');
+  const needShelter = needsNow(data, s, 'shelter');
   let best: (Intent & { water: number; shelter: number; wolves: number }) | null = null;
-  for (const p of around(island, h.x, h.y)) {
-    if (!landOf(data, cellAt(data, s, p.x, p.y)).walk) continue;
-    const reach = around(island, p.x, p.y).reduce((a, q) => {
+  for (const p of reachable(data, s, h, stage.move)) {
+    const reach = around(island, p.x, p.y, stage.reach).reduce((a, q) => {
       const c = cellAt(data, s, q.x, q.y);
       return stage.eats.includes(c.land) ? a + c.food : a;
     }, 0);
     const food = Math.min(want, reach) * w.food;
-    const water = season.water && near(data, s, p.x, p.y, stage.water) ? h.size * w.water : 0;
-    const shelter = season.shelter && near(data, s, p.x, p.y, stage.shelter) ? h.size * w.shelter : 0;
+    const water = needWater && near(data, s, p.x, p.y, stage.water, stage.reach) ? h.size * w.water : 0;
+    const shelter = needShelter && near(data, s, p.x, p.y, stage.shelter, stage.reach) ? h.size * w.shelter : 0;
     const wolves = packsNear(s, p.x, p.y) * h.size * w.wolves;
     const recent = h.trail.some((t) => samePos(t, p)) ? h.size * w.recent : 0;
     const stay = samePos(p, h) ? w.stay : 0;
     const score = food + water + shelter - wolves - recent + stay;
     if (!best || score > best.score) best = { x: p.x, y: p.y, score, water, shelter, wolves, reason: 'stay' };
   }
-  // Das eigene Feld ist immer begehbar (Fels nie auf die Herde); fehlt es doch, bleibt sie stehen.
+  // AUSLEGUNG: Das eigene Feld ist immer eine Wahl – auch wenn die Stufe es nicht betreten würde (z. B. Altwald
+  // nach dem Sprung zum Wanderer); die Herde kann also immer bleiben oder es verlassen.
   if (!best) return { x: h.x, y: h.y, score: 0, reason: 'stay' };
   const wolvesHere = packsNear(s, h.x, h.y);
   let reason: ReasonId = 'stay';
   if (wolvesHere > 0 && best.wolves < wolvesHere * h.size * w.wolves) reason = 'avoidWolves';
-  else if (best.water > 0 && !near(data, s, h.x, h.y, stage.water)) reason = 'seekWater';
-  else if (best.shelter > 0 && !near(data, s, h.x, h.y, stage.shelter)) reason = 'seekShelter';
+  else if (best.water > 0 && !near(data, s, h.x, h.y, stage.water, stage.reach)) reason = 'seekWater';
+  else if (best.shelter > 0 && !near(data, s, h.x, h.y, stage.shelter, stage.reach)) reason = 'seekShelter';
   else if (!samePos(best, h)) reason = 'freshGrass';
   return { x: best.x, y: best.y, score: best.score, reason };
 }
 
-/** 4. Die Herde zieht (höchstens ein Feld) und merkt sich das verlassene Feld. */
+/** 4. Die Herde zieht (höchstens `move` Felder) und merkt sich das verlassene Feld. */
 export function moveHerd(data: HerdeData, s: HerdeState, emit: Emit): void {
   const h = s.herd;
   const go = chooseMove(data, s);
@@ -70,7 +72,7 @@ export function moveHerd(data: HerdeData, s: HerdeState, emit: Emit): void {
 }
 
 /**
- * 5. Fressen aus dem eigenen und den 8 Nachbarfeldern, die vollsten zuerst, bis zum Appetit. Überschuss über den
+ * 5. Fressen im Umkreis `reach` (Stufe 1: das eigene und die 8 Nachbarfelder), die vollsten zuerst, bis zum Appetit. Überschuss über den
  * Bedarf wird Vorrat (gedeckelt), Mangel zehrt ihn auf, danach sterben Tiere. Liefert die Toten.
  */
 export function eat(data: HerdeData, s: HerdeState, emit: Emit): number {
@@ -78,7 +80,7 @@ export function eat(data: HerdeData, s: HerdeState, emit: Emit): number {
   const stage = stageOf(data, s);
   const need = h.size * stage.foodPerAnimal;
   const want = appetite(data, s);
-  const spots = around(islandOf(data, s), h.x, h.y)
+  const spots = around(islandOf(data, s), h.x, h.y, stage.reach)
     .map((p) => cellAt(data, s, p.x, p.y))
     .filter((c) => stage.eats.includes(c.land))
     .sort((a, b) => b.food - a.food);
@@ -107,21 +109,23 @@ export function eat(data: HerdeData, s: HerdeState, emit: Emit): number {
   return dead;
 }
 
-/** 6. Durst (Wasser-Jahreszeit, ab thirstAfter Monaten ohne Wasser) und Kälte (Schutz-Jahreszeit). Liefert die Toten. */
+/**
+ * 6. Durst (ab thirstAfter Monaten ohne Wasser) und Kälte, jeweils nur in den Jahreszeiten, in denen die Stufe
+ * Wasser bzw. Schutz braucht (stages.yaml → needs). Liefert die Toten.
+ */
 export function needs(data: HerdeData, s: HerdeState, emit: Emit): number {
   const h = s.herd;
   const stage = stageOf(data, s);
-  const season = seasonOf(data, s);
   let dead = 0;
-  if (season.water) {
-    if (near(data, s, h.x, h.y, stage.water)) h.thirst = 0;
+  if (needsNow(data, s, 'water')) {
+    if (near(data, s, h.x, h.y, stage.water, stage.reach)) h.thirst = 0;
     else if (++h.thirst >= stage.thirstAfter) {
       const d = Math.ceil(h.size * stage.thirstLoss);
       dead += d;
       emit({ type: 'herdThirsted', dead: d });
     }
   } else h.thirst = 0;
-  if (season.shelter && !near(data, s, h.x, h.y, stage.shelter)) {
+  if (needsNow(data, s, 'shelter') && !near(data, s, h.x, h.y, stage.shelter, stage.reach)) {
     const d = Math.ceil(h.size * stage.coldLoss);
     dead += d;
     emit({ type: 'herdFroze', dead: d });

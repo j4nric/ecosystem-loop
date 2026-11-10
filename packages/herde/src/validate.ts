@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { StateCheck } from './api.ts';
 import type { HerdeData } from './schema.ts';
 import { STATE_VERSION, type HerdeState } from './state.ts';
+import { stageOf } from './world.ts';
 
 const Int = z.number().int();
 const Count = Int.nonnegative();
@@ -30,6 +31,9 @@ const StateSchema = z.strictObject({
     fat: Num.nonnegative(),
     thirst: Count,
     trail: z.array(Pos),
+    traits: z.array(z.string()),
+    experience: z.record(z.string(), Count),
+    offer: z.array(z.string()),
   }),
   packs: z.array(z.strictObject({ id: Count, x: Count, y: Count, size: Int.positive(), fed: Count, hungry: Count })),
   nextPackId: Count,
@@ -46,14 +50,27 @@ function problem(data: HerdeData, s: HerdeState): string | null {
   const inside = (p: { x: number; y: number }) => p.x < island.width && p.y < island.height;
   const landAt = (p: { x: number; y: number }) => data.landscapes.get(s.cells[p.y * island.width + p.x]!.land)!;
 
-  const stage = data.stages.get(s.herd.stage);
-  if (!stage) return `unbekannte Stufe ${s.herd.stage}`;
+  if (!data.stages.has(s.herd.stage)) return `unbekannte Stufe ${s.herd.stage}`;
+  for (const id of s.herd.traits) if (!data.traits.has(id)) return `unbekanntes Merkmal ${id}`;
+  if (new Set(s.herd.traits).size !== s.herd.traits.length) return 'Merkmal doppelt';
+  for (const id of Object.keys(s.herd.experience)) if (!data.experiences.has(id)) return `unbekannte Erfahrung ${id}`;
+  for (const id of data.experiences.keys()) if (!(id in s.herd.experience)) return `Erfahrung ${id} fehlt`;
+  if (s.herd.offer.length > data.offerSize)
+    return `${s.herd.offer.length} Merkmale im Angebot (max. ${data.offerSize})`;
+  for (const id of s.herd.offer) {
+    const trait = data.traits.get(id);
+    if (!trait) return `unbekanntes Merkmal ${id} im Angebot`;
+    if (s.herd.traits.includes(id)) return `Merkmal ${id} angeboten, aber schon gewählt`;
+    if (s.herd.experience[trait.from]! < trait.at) return `Merkmal ${id} angeboten, Schwelle nicht erreicht`;
+  }
+
+  // Deckel und Spurlänge mit der Wirkung der Merkmale
+  const stage = stageOf(data, s);
   if (!inside(s.herd)) return `Herde (${s.herd.x},${s.herd.y}) außerhalb der Insel`;
   if (!landAt(s.herd).walk) return `Herde (${s.herd.x},${s.herd.y}) auf unbegehbarem Feld`;
   if (s.herd.fat > s.herd.size * stage.fatCap) return `Vorrat ${s.herd.fat} über dem Deckel`;
   if (s.herd.trail.length > stage.trail) return `Spur länger als ${stage.trail}`;
   if (s.herd.trail.some((p) => !inside(p))) return 'Spur außerhalb der Insel';
-
   const ids = new Set<number>();
   const spots = new Set<string>();
   for (const p of s.packs) {

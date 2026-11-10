@@ -7,31 +7,39 @@
  *  5.   Fressen und Vorrat
  *  6.   Durst und Kälte
  *  7.   Wölfe: reißen, ziehen, wachsen/gründen/verhungern, einwandern (wolves.ts)
- *       Tote abziehen
+ *       Tote abziehen, Erfahrungen des Monats zählen (traits.ts)
  *  8.   Nachwuchs
  *  9.   Wildnis und Eiszeit, Sieg oder Niederlage
- *  10.  Monat weiter; zu Beginn einer Jahreszeit Karten ziehen
+ *  10.  Monat weiter; zu Beginn einer Jahreszeit Karten ziehen und Merkmale anbieten
  */
 import { drawSeason } from './cards.ts';
 import { applyDeaths, births, eat, herdInFire, moveHerd, needs } from './herd.ts';
 import { runNature } from './nature.ts';
 import type { HerdeData } from './schema.ts';
-import type { Emit, HerdeState } from './state.ts';
+import type { Emit, HerdeEvent, HerdeState } from './state.ts';
+import { gainExperience, refreshOffer } from './traits.ts';
 import { hunt, immigrate, packLife, roam } from './wolves.ts';
 import { RuleError, seasonOf, yearLength } from './world.ts';
 
-export function advance(data: HerdeData, s: HerdeState, emit: Emit): void {
+export function advance(data: HerdeData, s: HerdeState, out: Emit): void {
   if (s.over) throw new RuleError('Die Partie ist vorbei.');
+  // Die Ereignisse des Monats werden mitgeschrieben: aus ihnen entstehen die Erfahrungen.
+  const month: HerdeEvent[] = [];
+  const emit: Emit = (e) => {
+    month.push(e);
+    out(e);
+  };
   const burned = runNature(data, s, emit);
   let dead = herdInFire(data, s, burned, emit);
   moveHerd(data, s, emit);
   dead += eat(data, s, emit);
   dead += needs(data, s, emit);
-  dead += hunt(s, dead, emit);
+  dead += hunt(data, s, dead, emit);
   roam(data, s, emit);
   packLife(data, s, emit);
   immigrate(data, s, emit);
   applyDeaths(data, s, dead);
+  gainExperience(data, s, month);
   births(data, s, emit);
   wildAndIce(data, s, emit);
   s.month++;
@@ -43,6 +51,7 @@ export function advance(data: HerdeData, s: HerdeState, emit: Emit): void {
       year: Math.floor(s.month / yearLength(data)) + 1,
     });
     drawSeason(data, s, emit);
+    refreshOffer(data, s, emit);
   }
 }
 

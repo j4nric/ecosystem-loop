@@ -4,7 +4,7 @@
  *   npm run herde -- [--seed N] [--island start]
  *
  * Befehle: p <hand> <x> <y> (Karte legen, globale Karten ohne x y) · w (weiter, ein Monat) · s (bis zur nächsten
- * Jahreszeit) · q (beenden)
+ * Jahreszeit) · m <nr> (Merkmal aus dem Angebot wählen) · e (zur nächsten Stufe springen) · q (beenden)
  */
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
@@ -69,6 +69,19 @@ function render(v: HerdeView): void {
   console.log(
     'Legende: ~ Meer . Steppe W Wiese b Busch F Wald A Altwald x Brand R Wasser # Fels · Ziffer = Futter · @ Herde · w Wölfe · * Ziel',
   );
+  const evo = v.evolution;
+  const name = (id: string) => data.traits.get(id)?.name.de ?? id;
+  console.log(
+    `Stufe: ${data.stages.get(evo.stage.id)?.name.de ?? evo.stage.id}` +
+      (evo.traits.length ? ` · Merkmale: ${evo.traits.map(name).join(', ')}` : '') +
+      (evo.mature
+        ? ' · REIF (e = springen)'
+        : evo.missing
+          ? ` · zur Reife fehlen ${evo.missing.traits} Merkmal(e)` +
+            (evo.missing.oneOf ? `, eines aus ${evo.missing.oneOf.map(name).join('/')}` : '')
+          : ''),
+  );
+  if (evo.offer.length) console.log(`Angebot: ${evo.offer.map((id, i) => `[${i}] ${name(id)}`).join(' · ')} (m <nr>)`);
   if (v.intent) console.log(`Die Herde ${REASON[v.intent.reason]} ${ARROW[`${v.intent.dx},${v.intent.dy}`]}`);
   v.hand.forEach((h) => {
     const card = data.cards.get(h.card)!;
@@ -86,7 +99,9 @@ function run(action: Action): void {
   }
 }
 
-console.log(`Being God – Die Herde · Seed ${state.seed}. Befehle: p <hand> <x> <y> · w (Monat) · s (Jahreszeit) · q`);
+console.log(
+  `Being God – Die Herde · Seed ${state.seed}. Befehle: p <hand> <x> <y> · w (Monat) · s (Jahreszeit) · m <nr> · e · q`,
+);
 while (!state.over) {
   render(view(data, state));
   const [cmd, ...rest] = (await ask('> ')).split(/\s+/);
@@ -96,7 +111,11 @@ while (!state.over) {
     else if (cmd === 's') {
       do run({ type: 'advance' });
       while (!state.over && state.month % data.monthsPerSeason !== 0);
-    } else if (cmd === 'p') {
+    } else if (cmd === 'm') {
+      const trait = state.herd.offer[Number(rest[0])];
+      run({ type: 'pickTrait', trait: trait ?? '' });
+    } else if (cmd === 'e') run({ type: 'evolve' });
+    else if (cmd === 'p') {
       const [hand, x, y] = rest.map(Number);
       run({ type: 'play', hand: hand ?? -1, ...(x !== undefined && y !== undefined ? { x, y } : {}) });
     } else console.log('Unbekannter Befehl.');

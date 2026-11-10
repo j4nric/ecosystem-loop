@@ -5,7 +5,7 @@
 import { nextFloat } from './rng.ts';
 import type { HerdeData } from './schema.ts';
 import type { Emit, HerdeState, Pos } from './state.ts';
-import { cellAt, inside, islandOf, landOf, maxFood, seasonOf, transform } from './world.ts';
+import { cellAt, growOf, inside, islandOf, landOf, maxFood, seasonOf, transform } from './world.ts';
 
 const SPREAD: readonly Pos[] = [
   { x: 1, y: 0 },
@@ -51,10 +51,13 @@ export function startFire(
   return burned;
 }
 
-/** 1. Wachstum: jedes Feld wächst um den Wert seiner Landschaft in dieser Jahreszeit, bis zum Maximum. */
+/**
+ * 1. Wachstum: jedes Feld wächst um den Wert seiner Landschaft in dieser Jahreszeit, bis zum Maximum. Hat die Stufe
+ * der Herde für die Landschaft eigene Werte (`forage`), gelten diese (Früchte für Waldsammler).
+ */
 export function grow(data: HerdeData, s: HerdeState): void {
   const season = seasonOf(data, s).id;
-  for (const c of s.cells) c.food = Math.min(maxFood(data, c), c.food + (landOf(data, c).grow[season] ?? 0));
+  for (const c of s.cells) c.food = Math.min(maxFood(data, s, c), c.food + growOf(data, s, c, season));
 }
 
 /** 2. Sukzession: Alter und Fruchtbarkeit laufen, Felder wandeln sich nach ihrer Uhr (höchstens einmal je Monat). */

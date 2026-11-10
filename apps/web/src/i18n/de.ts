@@ -131,6 +131,10 @@ export const de = {
   evIceBegan: (n: number) => `Die Eiszeit beginnt: ${n} Monate Winter.`,
   evIceEnded: (n: number) => `Die Eiszeit ist vorbei. ${n} Tiere haben überlebt.`,
   evLost: 'Die Herde ist ausgestorben.',
+  evTraitOffered: (traits: string) => `Die Herde kann ein Merkmal entwickeln: ${traits}.`,
+  evTraitPicked: (trait: string) => `Neues Merkmal: ${trait}.`,
+  evMatured: (next: string) => `Die Herde ist reif für die nächste Stufe: ${next}.`,
+  evEvolved: (stage: string) => `Die Herde wird zu: ${stage}.`,
   evRejected: 'Das geht hier nicht.',
   // Ende
   wonTitle: 'Geschafft',
