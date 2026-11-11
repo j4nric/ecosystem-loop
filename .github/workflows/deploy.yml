@@ -88,7 +88,7 @@ jobs:
           # Neue Dateien landen unter vorläufigen Namen und werden am Ende gemeinsam
           # umbenannt, alte erst danach gelöscht: niemand sieht einen halben Build.
           rsync -az --delete-after --delay-updates site/ "$USER@$HOST:$DEST/site/"
-          rsync -az deploy/docker-compose.yml deploy/Caddyfile deploy/up.sh "$USER@$HOST:$DEST/"
+          rsync -az deploy/docker-compose.yml deploy/Caddyfile deploy/site.caddy deploy/up.sh "$USER@$HOST:$DEST/"
       - name: Container starten oder aktualisieren
         if: steps.secrets.outputs.ready == 'true'
         env:

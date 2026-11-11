@@ -8,51 +8,39 @@ Adresse (nach der Einrichtung): **https://beinggod-62-83-23-90.sslip.io**
 ## Wie das auf dem Server zusammenspielt
 
 Auf dem vServer (`62.83.23.90`) laufen schon mehrere Apps. Die Ports 80 und 443 gehören dem Caddy der
-**Haushalt-App** (Repo `j4nric/haushalt-app`, Ordner `infra/production`). Er holt die HTTPS-Zertifikate für alle
-Domains und leitet je Domain über ein eigenes Docker-Netzwerk an die App weiter. Being God macht es genauso wie
-Stammtisch (`j4nric/skat-roguelite`) und Uhrturm (`j4nric/auto-battle`):
+**Haushalt-App** (Repo `j4nric/haushalt-app`, Ordner `infra/production`), dem _vorderen Caddy_. Er holt die
+HTTPS-Zertifikate für alle Domains und leitet an die Apps weiter. Jede App bringt ihren Eintrag für ihn selbst mit
+(Muster aus Stammtisch, `j4nric/skat-roguelite`, ADR 0024 dort): Unser Eintrag ist
+[`deploy/site.caddy`](site.caddy). `up.sh` legt ihn als `beinggod.caddy` in das gemeinsame Docker-Volume `caddy-sites`;
+der vordere Caddy (Label `edge.caddy=true`) importiert jede `*.caddy`-Datei darin und erreicht unseren Container über
+das gemeinsame Netzwerk `edge`:
 
 ```
-Browser ──HTTPS──▶ haushalt-prod-caddy-1 ──Netzwerk beinggod-proxy──▶ beinggod-web (unser Caddy, statische Dateien)
+Browser ──HTTPS──▶ haushalt-prod-caddy-1 ──Netzwerk edge──▶ beinggod-web (unser Caddy, statische Dateien)
 ```
 
-| Was                                                           | Wo                                                                                |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Netzwerk `beinggod-proxy`                                     | auf dem Server, einmalig angelegt                                                 |
-| Block für `beinggod-62-83-23-90.sslip.io` + Netzwerk im Caddy | Repo `j4nric/haushalt-app`: `infra/production/Caddyfile` und `docker-compose.yml` |
-| Unser Container mit Alias `beinggod-web`                      | `deploy/docker-compose.yml` in diesem Repo                                        |
-| Dateien auf dem Server                                        | `/opt/being-god` (`site/`, `docker-compose.yml`, `Caddyfile`, `up.sh`)            |
+| Was                                          | Wo                                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Netzwerk `edge`, Volume `caddy-sites`        | auf dem Server; `up.sh` legt beide an, falls sie fehlen                              |
+| Eintrag für `beinggod-62-83-23-90.sslip.io`  | `deploy/site.caddy` in diesem Repo, im Volume als `beinggod.caddy`                   |
+| Import, Label und Netzwerk im vorderen Caddy | Repo `j4nric/haushalt-app`: `infra/production/` (einmalig, für alle Apps)            |
+| Unser Container mit Alias `beinggod-web`     | `deploy/docker-compose.yml` in diesem Repo                                           |
+| Dateien auf dem Server                       | `/opt/being-god` (`site/`, `docker-compose.yml`, `Caddyfile`, `site.caddy`, `up.sh`) |
+
+**Übergang.** Bisher stand ein Block für unsere Domain direkt in der Caddyfile der Haushalt-App, erreichbar über das
+eigene Netzwerk `beinggod-proxy`. Bis ein späterer Haushalt-PR diesen alten Block löscht (nachdem alle Apps ihren
+Eintrag ausgerollt haben), hängt unser Container in beiden Netzen mit demselben Alias `beinggod-web`. Jeder Hostname
+darf auf dem Server nur einmal vorkommen; `site.caddy` enthält genau die Hosts des alten Blocks.
 
 Die Domain kommt von sslip.io: Jede Subdomain mit eingebetteter IP zeigt automatisch auf diese IP – kostenlos und ohne
-Registrierung. Eine eigene Domain kann später den Block im Haushalt-Caddy ersetzen.
+Registrierung. Eine eigene Domain ist später nur eine Änderung an `deploy/site.caddy`.
 
 ## Einmalige Einrichtung – genau in dieser Reihenfolge
 
-> **Wichtig:** Schritt 1 muss vor Schritt 2 passieren. Die Haushalt-App rollt sich nach jedem Merge selbst aus;
-> fehlt das Netzwerk dann noch, startet ihr Caddy nicht – und damit wären **alle** Apps auf dem Server offline.
-
-**1. Netzwerk anlegen** (auf dem Server, per SSH als Nutzer mit Docker-Rechten):
-
-```sh
-docker network create beinggod-proxy
-```
-
-**2. Haushalt-Caddy erweitern.** Im Repo `j4nric/haushalt-app` müssen das Netzwerk und ein Block für unsere Domain
-eingetragen werden. Die fertige Änderung liegt hier als [`deploy/haushalt-app.patch`](haushalt-app.patch) (zwei Dateien:
-`infra/production/Caddyfile` und `infra/production/docker-compose.yml`, nach dem Muster von Stammtisch und Uhrturm).
-Entweder in einer Claude-Sitzung mit Zugriff auf `haushalt-app` sagen: „Wende `deploy/haushalt-app.patch` aus
-`j4nric/ecosystem-loop` an und erstelle einen PR“ – oder selbst:
-
-```sh
-git clone https://github.com/j4nric/haushalt-app.git && cd haushalt-app
-git checkout -b being-god-proxy
-curl -fsSL https://raw.githubusercontent.com/j4nric/ecosystem-loop/main/deploy/haushalt-app.patch | git apply
-git commit -am "Being God hinter den Caddy hängen (Netzwerk beinggod-proxy)"
-git push -u origin being-god-proxy   # dann PR öffnen und mergen
-```
-
-Der Haushalt-Deploy startet den Caddy nach dem Merge mit dem neuen Netzwerk neu. Danach prüfen, dass die anderen Apps
-weiterlaufen (siehe Fehlersuche).
+**1. und 2. (erledigt bzw. Sache der Haushalt-App).** Früher wurden hier das Netzwerk `beinggod-proxy` von Hand
+angelegt und ein Block im Haushalt-Caddy per Patch eingetragen. Das Netzwerk `edge` und das Volume `caddy-sites` legt
+jetzt `up.sh` an; Import, Label und Netzwerk `edge` im vorderen Caddy kommen einmalig für alle Apps aus dem Repo
+`j4nric/haushalt-app`. Danach prüfen, dass die anderen Apps weiterlaufen (siehe Fehlersuche).
 
 **3. Ordner und Deploy-Schlüssel** auf dem Server. Der Nutzer `deploy` existiert schon (Stammtisch) und ist in der
 Gruppe `docker`. Being God bekommt einen eigenen Ordner und einen eigenen Schlüssel:
@@ -102,15 +90,20 @@ iPhone über _Teilen → Zum Home-Bildschirm_ als App ablegen.
 ## Was bei jedem Deploy passiert (`.github/workflows/deploy.yml`)
 
 1. **CI** (`ci.yml`, als `workflow_call`): Format, Lint, Typecheck, alle Tests, Datenprüfung, Absturz-Test der Bots,
-   Web-Build. Der Build wird als Artefakt `web-dist` aufbewahrt. Außerdem prüft die CI `deploy/Caddyfile` mit
-   `caddy validate` und `deploy/docker-compose.yml` mit `docker compose config`.
+   Web-Build. Der Build wird als Artefakt `web-dist` aufbewahrt. Außerdem prüft die CI `deploy/Caddyfile` und
+   `deploy/site.caddy` mit `caddy validate` und `deploy/docker-compose.yml` mit `docker compose config`.
 2. **Deploy** – nur wenn die CI komplett grün ist, nie zwei gleichzeitig:
    - `web-dist` laden, `version.json` mit Commit und Zeit dazulegen.
    - `site/` per `rsync --delete-after --delay-updates` nach `/opt/being-god/site`: neue Dateien landen erst unter
      vorläufigen Namen und werden am Ende gemeinsam umbenannt; niemand lädt einen halben Build.
-   - `docker-compose.yml`, `Caddyfile`, `up.sh` nach `/opt/being-god`.
-   - `up.sh`: Netzwerk anlegen, falls es fehlt; `docker compose pull` (Patch-Stände von `caddy:2.11-alpine`); Container
-     starten; Caddy neu starten, wenn sich die Caddyfile geändert hat.
+   - `docker-compose.yml`, `Caddyfile`, `site.caddy`, `up.sh` nach `/opt/being-god`.
+   - `up.sh`: Netzwerke `beinggod-proxy` und `edge` anlegen, falls sie fehlen; `docker compose pull` (Patch-Stände von
+     `caddy:2.11-alpine`); Container starten; Caddy neu starten, wenn sich die Caddyfile geändert hat.
+   - `up.sh`, Eintrag im vorderen Caddy: `site.caddy` allein mit `caddy validate` prüfen, den bisherigen Eintrag als
+     `beinggod.caddy.prev` aufheben, den neuen als `beinggod.caddy` ins Volume `caddy-sites` legen. Dann den vorderen
+     Caddy über `docker ps --filter label=edge.caddy=true` suchen, dort die ganze Konfiguration prüfen und
+     `caddy reload` (ohne Neustart). Lehnt er sie ab, kommt `.prev` zurück und der Deploy schlägt fehl. Gibt es noch
+     keinen Caddy mit dem Label, bleibt es bei einer Warnung; er lädt den Eintrag beim nächsten Start.
    - Mit `DEPLOY_URL`: prüfen, dass die Seite den neuen Commit ausliefert.
 
 Ohne die vier Pflicht-Secrets wird der Server-Schritt mit einer Warnung übersprungen; der Lauf bleibt grün.
@@ -131,18 +124,23 @@ sichern.
 ```sh
 cd /opt/being-god && docker compose ps
 cd /opt/being-god && docker compose logs --tail 50
-docker network inspect beinggod-proxy --format '{{range .Containers}}{{.Name}} {{end}}'
+docker network inspect edge --format '{{range .Containers}}{{.Name}} {{end}}'
+docker run --rm -v caddy-sites:/sites caddy:2.11-alpine cat /sites/beinggod.caddy  # Eintrag im Volume
 curl -s https://beinggod-62-83-23-90.sslip.io/version.json        # Commit des ausgelieferten Stands
 curl -sI https://beinggod-62-83-23-90.sslip.io/ | grep -i content-security
 sh /opt/being-god/up.sh                                            # alles neu starten
 ```
 
 „tlsv1 alert internal error“ beim Abruf heißt: Der Haushalt-Caddy hat (noch) kein Zertifikat für die Domain –
-entweder ist der Haushalt-Deploy mit dem Block für `beinggod-62-83-23-90.sslip.io` noch nicht ausgerollt, oder
+entweder kennt er weder den alten Block noch `beinggod.caddy` (Import im Haushalt-Repo noch nicht ausgerollt), oder
 Let's Encrypt stellt es gerade aus (erster Abruf, bis zu einer Minute).
 
 Der Netzwerk-Befehl muss `being-god-web-1` und `haushalt-prod-caddy-1` zeigen. Fehlt der Caddy, ist der Haushalt-PR
 noch nicht ausgerollt. Antwortet die Domain mit 502, läuft unser Container nicht (`docker compose ps`).
+
+Schlägt der Deploy mit „Der vordere Caddy hat deploy/site.caddy abgelehnt“ fehl, steht die Meldung von
+`caddy validate` direkt darüber im Log. Häufigster Grund: ein Hostname, den es auf dem Server schon gibt (etwa noch im
+alten Block der Haushalt-Caddyfile).
 
 Laufen nach dem Haushalt-Merge auch die anderen Apps? Kurz prüfen:
 
@@ -152,5 +150,7 @@ docker ps --format '{{.Names}}\t{{.Status}}' | sort
 
 ## Später
 
-- **Eigene Domain:** DNS auf `62.83.23.90`, im Haushalt-Caddy den Block umbenennen (PR dort).
+- **Eigene Domain:** DNS auf `62.83.23.90`, Host in `deploy/site.caddy` ergänzen (PR hier).
+- **Altes Netz abbauen:** Sobald der alte Block im Haushalt-Caddy weg ist, `beinggod-proxy` aus
+  `deploy/docker-compose.yml` und `up.sh` streichen.
 - **Native Apps** (Capacitor, App Store/Play Store): eigener Weg, siehe `docs/entwicklungsplan.md` Phase 8.

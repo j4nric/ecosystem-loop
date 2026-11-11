@@ -1,0 +1,15 @@
+# Unser Eintrag im vorderen Caddy des Servers (Muster aus j4nric/skat-roguelite,
+# ADR 0024 dort). up.sh legt diese Datei als beinggod.caddy in das gemeinsame
+# Docker-Volume `caddy-sites`; der vordere Caddy (Haushalt-App, Label
+# edge.caddy=true) importiert jede *.caddy-Datei darin und lädt ohne Neustart
+# neu. Eine Domain-Änderung für Being God braucht damit nur noch dieses Repo.
+#
+# Der vordere Caddy beendet HTTPS (er holt die Zertifikate) und leitet über das
+# gemeinsame Netzwerk `edge` an unseren Caddy weiter (Alias beinggod-web,
+# deploy/Caddyfile). Jeder Hostname darf auf dem ganzen Server nur einmal
+# vorkommen, sonst lehnt der vordere Caddy die neue Konfiguration ab.
+
+beinggod-62-83-23-90.sslip.io {
+	encode zstd gzip
+	reverse_proxy beinggod-web:80
+}
