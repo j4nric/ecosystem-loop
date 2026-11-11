@@ -3,8 +3,9 @@
 # und up.sh dorthin und führt up.sh aus.
 #
 # Ports 80/443 gehören dem Caddy der Haushalt-App (Repo j4nric/haushalt-app,
-# infra/production). Dieser Caddy beendet HTTPS für beinggod-62-83-23-90.sslip.io und
-# leitet über das gemeinsame Netzwerk `beinggod-proxy` an den Alias `beinggod-web`
+# infra/production). Dieser Caddy beendet HTTPS für unsere Domain (Eintrag
+# deploy/site.caddy, den up.sh ihm übergibt) und leitet über das gemeinsame Netzwerk
+# `edge` (und bis zu seinem Umzug noch `beinggod-proxy`) an den Alias `beinggod-web`
 # weiter. Dieser Container veröffentlicht keine Ports – dasselbe Muster wie
 # Stammtisch (skat-roguelite) und Uhrturm (auto-battle). Siehe deploy/README.md.
 
@@ -28,8 +29,15 @@ services:
     networks:
       proxy:
         aliases: [beinggod-web]
+      # Gemeinsames Netz des vorderen Caddy; `proxy` bleibt, bis der Haushalt-Caddy
+      # umgezogen ist. Aliase müssen in `edge` eindeutig sein.
+      edge:
+        aliases: [beinggod-web]
 
 networks:
   proxy:
     name: beinggod-proxy
+    external: true
+  edge:
+    name: edge
     external: true
